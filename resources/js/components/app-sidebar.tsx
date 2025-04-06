@@ -14,10 +14,16 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Promocion',
-        url: '/dashboard',
+        title: 'Tutores',
+        url: '/tutores',
         icon: LayoutGrid,
     },
+    {
+        title: 'Estudiantes',
+        url: '/estudiantes',
+        icon: LayoutGrid,
+    },
+
 ];
 
 const footerNavItems: NavItem[] = [

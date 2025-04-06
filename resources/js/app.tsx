@@ -8,6 +8,8 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
+import { Toaster } from 'sonner';
+import { useEffect, useState } from 'react';
 
 // Declaración global para jQuery y Owl Carousel
 declare global {
@@ -41,6 +43,23 @@ const loadScripts = () => {
   });
 };
 
+const ThemeAwareToaster = () => {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+
+    return () => observer.disconnect();
+  }, []);
+
+  return <Toaster theme={theme} position="top-right" />;
+};
+
 createInertiaApp({
   title: (title) => `${title} - ${appName}`,
   resolve: (name) => resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx')),
@@ -49,7 +68,12 @@ createInertiaApp({
 
     // Cargar scripts antes de renderizar la app
     loadScripts().then(() => {
-      root.render(<App {...props} />);
+      root.render(
+        <>
+          <ThemeAwareToaster /> {/* 🔹 Toaster que sigue el tema de la página */}
+          <App {...props} />
+        </>
+      );
     });
   },
   progress: {

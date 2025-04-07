@@ -1,50 +1,60 @@
 <?php
+// app/Http/Controllers/EstudianteController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Estudiante;
-use App\Models\Carrera;
-use App\Models\Grupo;
-
 use Illuminate\Http\Request;
-
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class EstudianteController extends Controller
 {
     public function index()
     {
-        return inertia('Estudiantes/index', [
-            'carreras' => Carrera::with('grupos')->get(),
-            'estudiantes' => Estudiante::with(['grupo.carrera', 'tutor'])->get(),
-            'grupos' => Grupo::with('carrera')->orderBy('nombre')->get(),
-            'carreras' => Carrera::orderBy('nombre')->get(),
-        ]);
+        $carreras = \App\Models\Carrera::with('grupos')->get();
+        $grupos = \App\Models\Grupo::with('carrera')->orderBy('nombre')->get();
 
-        
+        return inertia('Estudiantes/index', [
+            'carreras' => $carreras,
+            'grupos' => $grupos,
+        ]);
     }
 
-    public function store(Request $request)
+    public function cargarExcel(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
-            'apellido' => 'required|string|max:255',
-            'grupo_id' => 'required|exists:grupos,id',
-            'tutor_id' => 'nullable|exists:tutors,id',
+            'grupo_id' => ['required', 'exists:grupos,id'],
+            'excel' => ['required', 'file', 'mimes:xlsx,xls'],
         ]);
 
-        Estudiante::create([
-            'nombre' => $request->nombre,
-            'apellido' => $request->apellido,
-            'grupo_id' => $request->grupo_id,
-            'tutor_id' => $request->tutor_id,
-        ]);
+        $archivo = $request->file('excel');
+        $grupoId = $request->grupo_id;
 
-        return redirect()->back()->with('success', 'Estudiante registrado correctamente.');
-    }
+        $spreadsheet = IOFactory::load($archivo->getPathname());
+        $worksheet = $spreadsheet->getActiveSheet();
+        $rows = $worksheet->toArray();
 
-    public function destroy(Estudiante $estudiante)
-    {
-        $estudiante->delete();
-        return redirect()->back()->with('success', 'Estudiante eliminado.');
+        $header = array_map('trim', $rows[0]); // primera fila como encabezado
+
+        foreach (array_slice($rows, 1) as $fila) {
+            $data = array_combine($header, $fila);
+
+            Estudiante::create([
+                'numero' => $data['No.'] ?? null,
+                'codigo' => $data['CODIGO'] ?? null,
+                'apellidos' => $data['APELLIDOS'] ?? null,
+                'nombres' => $data['NOMBRES'] ?? null,
+                'tipo_identificacion' => $data['TIPO IDENTIFICACIÓN'] ?? null,
+                'identificacion' => $data['IDENTIFICACIÓN'] ?? null,
+                'ciudad_expedicion' => $data['CIUDAD DE EXPEDICIÓN'] ?? null,
+                'sexo' => $data['SEXO'] ?? null,
+                'programa' => $data['PROGRAMA'] ?? null,
+                'semestre' => $data['SEMESTRE'] ?? null,
+                'correo_institucional' => $data['CORREO INSTITUCIONAL'] ?? null,
+                'grupo_id' => $grupoId,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Estudiantes importados correctamente.');
     }
 }

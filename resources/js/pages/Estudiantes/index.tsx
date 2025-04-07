@@ -1,13 +1,14 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 
 import AgregarCarrera from '@/pages/Estudiantes/AgregarCarrera';
 import AgregarGrupo from '@/pages/Estudiantes/AgregarGrupo';
 import TablaGrupo from '@/pages/Estudiantes/TablaGrupos';
 import TablaCarreras from '@/pages/Estudiantes/TablaCarreras';
+import SubidaExcel from '@/pages/Estudiantes/SubidaExcel';
 
 type Carrera = {
   id: number;
@@ -31,7 +32,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function EstudiantesIndex({ carreras, grupos }: Props) {
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [grupoSeleccionado, setGrupoSeleccionado] = useState<Grupo | null>(null);
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -62,8 +64,18 @@ export default function EstudiantesIndex({ carreras, grupos }: Props) {
           <div className="flex gap-4 mb-4">
             <AgregarGrupo />
           </div>
-          <TablaGrupo />
+          <TablaGrupo grupos={grupos} onSeleccionarGrupo={setGrupoSeleccionado} />
         </div>
+
+        {/* --- Subida Excel --- */}
+        {grupoSeleccionado && (
+          <div className="mt-6">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Subir Estudiantes al Grupo: {grupoSeleccionado.nombre}
+            </h2>
+            <SubidaExcel grupoId={grupoSeleccionado.id} />
+          </div>
+        )}
 
       </div>
     </AppLayout>

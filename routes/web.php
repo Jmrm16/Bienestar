@@ -6,6 +6,9 @@ use App\Http\Controllers\AsignaturaController;
 use App\Http\Controllers\EstudianteController;
 use App\Http\Controllers\CarreraController;
 use App\Http\Controllers\GrupoController;
+use App\Http\Controllers\ImportarEstudiantesController;
+
+
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -27,6 +30,9 @@ Route::resource('estudiantes', EstudianteController::class)->except(['create', '
 Route::resource('carreras', CarreraController::class)->except(['create', 'edit']);
 
 Route::resource('grupos',GrupoController::class)->except(['create', 'edit']);
+
+Route::post('/estudiantes/cargar-excel', [EstudianteController::class, 'cargarExcel']);
+
 
 
 

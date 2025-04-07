@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PencilLine, Delete, Eye } from "lucide-react";
-import { router, usePage } from "@inertiajs/react";
+import { router } from "@inertiajs/react";
 import { toast } from "sonner";
 
 interface Grupo {
@@ -34,9 +34,12 @@ interface Grupo {
   };
 }
 
-const TablaGrupo = () => {
-  const { grupos } = usePage().props as { grupos?: Grupo[] };
+interface Props {
+  grupos: Grupo[];
+  onSeleccionarGrupo: (grupo: Grupo) => void;
+}
 
+const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
   const [selectedGrupo, setSelectedGrupo] = useState<Grupo | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -94,7 +97,13 @@ const TablaGrupo = () => {
                 {/* Ver */}
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" onClick={() => setSelectedGrupo(grupo)}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedGrupo(grupo);
+                        onSeleccionarGrupo(grupo); // <- Notificamos al padre
+                      }}
+                    >
                       <Eye />
                     </Button>
                   </DialogTrigger>

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PencilLine, Delete, Eye } from "lucide-react";
+import { PencilLine, Delete, Eye, Upload } from "lucide-react";
 import { router } from "@inertiajs/react";
 import { toast } from "sonner";
 
@@ -47,19 +47,23 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
   const actualizarGrupo = () => {
     if (!selectedGrupo) return;
 
-    router.patch(`/grupos/${selectedGrupo.id}`, {
-      nombre: selectedGrupo.nombre,
-      codigo: selectedGrupo.codigo,
-      carrera_id: selectedGrupo.carrera.id,
-    }, {
-      preserveScroll: true,
-      onSuccess: () => {
-        toast.success("Grupo actualizado correctamente");
-        setIsEditOpen(false);
-        setSelectedGrupo(null);
+    router.patch(
+      `/grupos/${selectedGrupo.id}`,
+      {
+        nombre: selectedGrupo.nombre,
+        codigo: selectedGrupo.codigo,
+        carrera_id: selectedGrupo.carrera.id,
       },
-      onError: () => toast.error("Error al actualizar el grupo"),
-    });
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          toast.success("Grupo actualizado correctamente");
+          setIsEditOpen(false);
+          setSelectedGrupo(null);
+        },
+        onError: () => toast.error("Error al actualizar el grupo"),
+      }
+    );
   };
 
   const eliminarGrupo = () => {
@@ -94,34 +98,22 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
               <TableCell>{grupo.codigo}</TableCell>
               <TableCell>{grupo.carrera?.nombre}</TableCell>
               <TableCell className="text-right space-x-2">
-                {/* Ver */}
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedGrupo(grupo);
-                        onSeleccionarGrupo(grupo); // <- Notificamos al padre
-                      }}
-                    >
-                      <Eye />
-                    </Button>
-                  </DialogTrigger>
-                  {selectedGrupo?.id === grupo.id && (
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Detalles del Grupo</DialogTitle>
-                        <DialogDescription asChild>
-                          <div>
-                            <p><strong>Nombre:</strong> {selectedGrupo.nombre}</p>
-                            <p><strong>Código:</strong> {selectedGrupo.codigo}</p>
-                            <p><strong>Carrera:</strong> {selectedGrupo.carrera.nombre}</p>
-                          </div>
-                        </DialogDescription>
-                      </DialogHeader>
-                    </DialogContent>
-                  )}
-                </Dialog>
+                {/* Botón Ver Detalles (redirige) */}
+                <Button
+                  variant="ghost"
+                  onClick={() => router.visit(`/estudiantes/grupos/${grupo.id}`)}
+                >
+                  <Eye />
+                </Button>
+
+                {/* Botón Subir Excel */}
+                <Button
+                  variant="secondary"
+                  onClick={() => onSeleccionarGrupo(grupo)}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Subir Excel
+                </Button>
 
                 {/* Editar */}
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -145,18 +137,26 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
                       <Input
                         value={selectedGrupo?.nombre || ""}
                         onChange={(e) =>
-                          setSelectedGrupo({ ...selectedGrupo!, nombre: e.target.value })
+                          setSelectedGrupo({
+                            ...selectedGrupo!,
+                            nombre: e.target.value,
+                          })
                         }
                       />
                       <Label>Código</Label>
                       <Input
                         value={selectedGrupo?.codigo || ""}
                         onChange={(e) =>
-                          setSelectedGrupo({ ...selectedGrupo!, codigo: e.target.value })
+                          setSelectedGrupo({
+                            ...selectedGrupo!,
+                            codigo: e.target.value,
+                          })
                         }
                       />
                       <DialogFooter>
-                        <Button onClick={actualizarGrupo}>Guardar Cambios</Button>
+                        <Button onClick={actualizarGrupo}>
+                          Guardar Cambios
+                        </Button>
                       </DialogFooter>
                     </div>
                   </DialogContent>
@@ -187,7 +187,10 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
                       <Button variant="destructive" onClick={eliminarGrupo}>
                         Eliminar
                       </Button>
-                      <Button variant="ghost" onClick={() => setIsDeleteOpen(false)}>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsDeleteOpen(false)}
+                      >
                         Cancelar
                       </Button>
                     </DialogFooter>

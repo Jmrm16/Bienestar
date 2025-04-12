@@ -42,7 +42,7 @@ const PieChartComponent = () => {
   }, []);
 
   return (
-    <Card className="flex flex-col">
+    <Card className="">
       <CardHeader className="items-center pb-0">
         <CardTitle>Pie Chart - Donut with Text</CardTitle>
         <CardDescription>January - June 2024</CardDescription>

@@ -14,6 +14,34 @@ export interface NavGroup {
     title: string;
     items: NavItem[];
 }
+export type Estudiante = {
+    id: number;
+    codigo: string;
+    nombres: string;
+    apellidos: string;
+    identificacion: string;
+    correo_institucional: string;
+    grupo_id: number;
+  };
+
+  export type Carrera = {
+    id: number;
+    nombre: string;
+  };
+  
+  export type Grupo = {
+    id: number;
+    nombre: string;
+    carrera_id: number;
+    carrera: {
+      id: number;
+      nombre: string;
+    };
+    tutor_id?: number; // <-- agrega esto si lo necesitas
+  };
+  
+  
+  
 
 export interface NavItem {
     title: string;

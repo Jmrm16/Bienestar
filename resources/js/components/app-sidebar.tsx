@@ -23,6 +23,12 @@ const mainNavItems: NavItem[] = [
         url: '/estudiantes',
         icon: LayoutGrid,
     },
+    {
+        title: 'Acompañamiento',
+        url: '/acompañamientos',
+        icon: LayoutGrid,
+    },
+
 
 ];
 

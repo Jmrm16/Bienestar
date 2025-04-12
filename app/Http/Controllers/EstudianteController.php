@@ -1,60 +1,90 @@
 <?php
-// app/Http/Controllers/EstudianteController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Estudiante;
+use App\Models\Grupo;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class EstudianteController extends Controller
 {
     public function index()
     {
-        $carreras = \App\Models\Carrera::with('grupos')->get();
-        $grupos = \App\Models\Grupo::with('carrera')->orderBy('nombre')->get();
+        $grupos = Grupo::with('carrera')->orderBy('nombre')->get();
+        $carreras = \App\Models\Carrera::all();
 
-        return inertia('Estudiantes/index', [
-            'carreras' => $carreras,
+        return Inertia::render('Estudiantes/index', [
             'grupos' => $grupos,
+            'carreras' => $carreras,
+        ]);
+    }
+
+    public function showGrupo($grupoId)
+    {
+        $grupo = Grupo::with('carrera')->findOrFail($grupoId);
+        $estudiantes = Estudiante::where('grupo_id', $grupoId)->get();
+
+        return Inertia::render('Estudiantes/GrupoDetalle', [
+            'grupo' => $grupo,
+            'estudiantes' => $estudiantes,
         ]);
     }
 
     public function cargarExcel(Request $request)
     {
         $request->validate([
-            'grupo_id' => ['required', 'exists:grupos,id'],
-            'excel' => ['required', 'file', 'mimes:xlsx,xls'],
+            'grupo_id' => 'required|exists:grupos,id',
+            'archivo' => 'required|file|mimes:xlsx,xls',
         ]);
 
-        $archivo = $request->file('excel');
         $grupoId = $request->grupo_id;
+        $archivo = $request->file('archivo');
 
         $spreadsheet = IOFactory::load($archivo->getPathname());
-        $worksheet = $spreadsheet->getActiveSheet();
-        $rows = $worksheet->toArray();
+        $hoja = $spreadsheet->getActiveSheet();
+        $filas = $hoja->toArray(null, true, true, true);
 
-        $header = array_map('trim', $rows[0]); // primera fila como encabezado
+        foreach ($filas as $i => $fila) {
+            if ($i === 1) continue; // Saltar encabezado
 
-        foreach (array_slice($rows, 1) as $fila) {
-            $data = array_combine($header, $fila);
-
-            Estudiante::create([
-                'numero' => $data['No.'] ?? null,
-                'codigo' => $data['CODIGO'] ?? null,
-                'apellidos' => $data['APELLIDOS'] ?? null,
-                'nombres' => $data['NOMBRES'] ?? null,
-                'tipo_identificacion' => $data['TIPO IDENTIFICACIÓN'] ?? null,
-                'identificacion' => $data['IDENTIFICACIÓN'] ?? null,
-                'ciudad_expedicion' => $data['CIUDAD DE EXPEDICIÓN'] ?? null,
-                'sexo' => $data['SEXO'] ?? null,
-                'programa' => $data['PROGRAMA'] ?? null,
-                'semestre' => $data['SEMESTRE'] ?? null,
-                'correo_institucional' => $data['CORREO INSTITUCIONAL'] ?? null,
-                'grupo_id' => $grupoId,
-            ]);
+            Estudiante::updateOrCreate(
+                ['identificacion' => $fila['F']], // Clave única
+                [
+                    'grupo_id' => $grupoId,
+                    'numero' => $fila['A'],
+                    'codigo' => $fila['B'],
+                    'apellidos' => $fila['C'],
+                    'nombres' => $fila['D'],
+                    'tipo_identificacion' => $fila['E'],
+                    'identificacion' => $fila['F'],
+                    'ciudad_expedicion' => $fila['G'],
+                    'sexo' => $fila['H'],
+                    'programa' => $fila['I'],
+                    'semestre' => $fila['J'],
+                    'correo_institucional' => $fila['K'],
+                ]
+            );
         }
 
         return redirect()->back()->with('success', 'Estudiantes importados correctamente.');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $estudiante = Estudiante::findOrFail($id);
+
+        $estudiante->update($request->all());
+
+        return redirect()->back()->with('success', 'Estudiante actualizado correctamente.');
+    }
+
+    public function destroy($id)
+    {
+        $estudiante = Estudiante::findOrFail($id);
+        $estudiante->delete();
+
+        return redirect()->back()->with('success', 'Estudiante eliminado correctamente.');
     }
 }

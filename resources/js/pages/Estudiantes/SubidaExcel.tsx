@@ -19,7 +19,7 @@ export default function SubidaExcel({ grupoId }: Props) {
     }
 
     const formData = new FormData();
-    formData.append("excel", file);
+    formData.append("archivo", file); // 👈 Nombre correcto del campo
     formData.append("grupo_id", grupoId.toString());
 
     setLoading(true);
@@ -40,7 +40,7 @@ export default function SubidaExcel({ grupoId }: Props) {
   };
 
   return (
-    <div className="border rounded-xl p-4 space-y-4">
+    <div className="border rounded-xl p-4 space-y-4 bg-gray-900">
       <Input
         type="file"
         accept=".xlsx,.xls"

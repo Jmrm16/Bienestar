@@ -1,85 +1,133 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import React, { useEffect, useState } from 'react';
+import { Head } from '@inertiajs/react';
+
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import React from 'react';
+
 import AgregarTutor from '@/pages/Tutores/AgregaTutor';
 import AgregarAsignatura from '@/pages/Tutores/AgregarAsignatura';
-
 import TablaTutor from '@/pages/Tutores/TablaTutor';
 import TablaAsignatura from '@/pages/Tutores/TablaAsignatura';
-import { Button } from "@/components/ui/button";
-import { Delete ,PencilLine ,Eye } from "lucide-react";
-import PieChartComponent from "@/components/component/PieChartComponent";
 
-import {
-    Table,
-    TableBody,
-    TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { Calendar } from "@/components/ui/calendar";
+import { MetricCard } from '@/components/component/MetricCard';
+import { Cpu, HardDrive, Wifi } from 'lucide-react';
 
+import { Calendar } from '@/components/ui/calendar';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+
+import { motion } from 'framer-motion'; // Importar motion
+
+// Tipos
+interface Asignatura {
+  id: number;
+  nombre: string;
+  codigo: string;
+  docente: string;
+}
+
+interface Tutor {
+  id: number;
+  nombre: string;
+  apellido: string;
+  grupos: number;
+  asignaturas: Asignatura[];
+}
+
+interface Props {
+  tutores: Tutor[];
+  asignaturas: Asignatura[];
+}
+
+// Migas de pan
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Registro',
-        href: '/Registro',
-    },
+  {
+    title: 'Registro',
+    href: '/Registro',
+  },
 ];
 
-export default function index() {
-    const [date, setDate] = React.useState<Date | undefined>(new Date());
+export default function Index({ tutores, asignaturas }: Props) {
+  const [date, setDate] = useState<Date | undefined>(new Date());
 
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Dashboard" />
-            <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
-                <div className="p-6">
-      <h1 className="text-2xl font-bold text-white mb-4">Tutores</h1>
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Dashboard" />
 
+      <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
 
-        {/* Botón que abre el modal */}
-      <div className="flex space-x-4">
-      <AgregarTutor />
-      
-     </div>
+        {/* Métricas principales */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+          {/* Envuelve las MetricCard en motion.div */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} // Comienza con opacidad 0 y desplazada hacia abajo
+            animate={{ opacity: 1, y: 0 }} // Finaliza con opacidad 1 y sin desplazamiento
+            transition={{ duration: 0.5 }} // Duración de la animación
+          >
+            <MetricCard
+              title="Tutores"
+              value={tutores.length}
+              icon={Cpu}
+              color="cyan"
+              detail={`${tutores.length} registrados`}
+            />
+          </motion.div>
 
-   
-    
-      
-      {/* Puedes agregar más contenido aquí */}
-    </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }} // Con un pequeño retraso para dar un efecto de secuencia
+          >
+            <MetricCard
+              title="Asignaturas"
+              value={asignaturas.length}
+              icon={HardDrive}
+              color="purple"
+              detail={`${asignaturas.length} registradas`}
+            />
+          </motion.div>
 
-       {/*tabla tutor */}
-       < TablaTutor/>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <MetricCard
+              title="Red"
+              value={88}
+              icon={Wifi}
+              color="blue"
+              detail="Conexión estable"
+            />
+          </motion.div>
+        </div>
 
+        {/* Tutores */}
+        <section className="p-6">
+          <h2 className="text-2xl font-bold text-white mb-4">Tutores</h2>
 
+          {/* Agregar Tutor */}
+          <div className="flex space-x-4 mb-4">
+            <AgregarTutor />
+          </div>
 
+          {/* Tabla de tutores */}
+          <TablaTutor />
+        </section>
 
-       <h1 className="text-2xl font-bold text-white mb-4">Asignaturas</h1>
-       
-        {/* Botón que abre el modal */}
-      <div className="flex space-x-4">
-      <AgregarAsignatura />
-     </div>
-       {/*tabla tutor */}
-       < TablaAsignatura/>
-                               <div className="grid auto-rows-min gap-4 md:grid-cols-3 h-full">
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border flex-grow p-4 flex items-center justify-center">
-                        <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" />
-                    </div>
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border flex-grow p-4">
-                        {/* Contenido adicional aquí */}
-                        <PieChartComponent />
-                    </div>
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative overflow-hidden rounded-xl border flex-grow p-4">
-                        {/* Contenido adicional aquí */}
-                    </div>
-                </div>
-            </div>
-        </AppLayout>
-    );
+        {/* Asignaturas */}
+        <section className="p-6">
+          <h2 className="text-2xl font-bold text-white mb-4">Asignaturas</h2>
+
+          {/* Agregar Asignatura */}
+          <div className="flex space-x-4 mb-4">
+            <AgregarAsignatura />
+          </div>
+
+          {/* Tabla de asignaturas */}
+          <TablaAsignatura />
+        </section>
+
+      </div>
+    </AppLayout>
+  );
 }

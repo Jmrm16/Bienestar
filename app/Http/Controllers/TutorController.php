@@ -23,44 +23,63 @@ class TutorController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string',
-            'apellido' => 'required|string',
-            'grupos' => 'required|integer',
-            'asignaturas' => 'required|array',
-            'asignaturas.*' => 'exists:asignaturas,id',
-        ]);
+// TutorController.php
 
-        $tutor = Tutor::create($request->only(['nombre', 'apellido', 'grupos']));
-        $tutor->asignaturas()->attach($request->asignaturas);
+public function store(Request $request)
+{
+    $request->validate([
+        'nombre' => 'required|string|max:255',
+        'apellido' => 'required|string|max:255',
+        'asignaturas' => 'required|array', // Validar que sea un arreglo
+        'asignaturas.*' => 'exists:asignaturas,id', // Asegurarse de que las asignaturas existan en la base de datos
+    ]);
 
-        return redirect()->route('tutores.index')->with('success', 'Tutor agregado correctamente.');
-    }
+    // Crear el tutor
+    $tutor = Tutor::create([
+        'nombre' => $request->nombre,
+        'apellido' => $request->apellido,
+    ]);
 
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'nombre' => 'required|string',
-            'apellido' => 'required|string',
-            'grupos' => 'required|integer',
-            'asignaturas' => 'required|array',
-            'asignaturas.*' => 'exists:asignaturas,id',
-        ]);
+    // Asociar las asignaturas al tutor (relación de muchos a muchos)
+    $tutor->asignaturas()->sync($request->asignaturas);
 
-        $tutor = Tutor::findOrFail($id);
-        $tutor->update($request->only(['nombre', 'apellido', 'grupos']));
-        $tutor->asignaturas()->sync($request->asignaturas);
+    return redirect()->back()->with('success', 'Tutor registrado exitosamente.');
+}
 
-        return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');
-    }
+    
+    
+    
 
-    public function destroy(Tutor $tutor)
-    {
-        $tutor->asignaturas()->detach(); // Borra las relaciones antes de eliminar
-        $tutor->delete();
+// TutorController.php
 
-        return redirect()->route('tutores.index')->with('success', 'Tutor eliminado correctamente.');
-    }
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'nombre' => 'required|string',
+        'apellido' => 'required|string',
+        'asignaturas' => 'required|array',
+        'asignaturas.*' => 'exists:asignaturas,id',
+    ]);
+
+    $tutor = Tutor::findOrFail($id);
+    $tutor->update($request->only(['nombre', 'apellido']));
+    $tutor->asignaturas()->sync($request->asignaturas);
+
+    return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');
+}
+
+    
+
+    public function destroy($id)
+{
+    $tutor = Tutor::findOrFail($id); // Encuentra al tutor por ID
+    $tutor->delete(); // Elimina al tutor
+
+    return redirect()->back()->with('success', 'Tutor eliminado correctamente.');
+   
+}
+
+    
+    
+    
 }

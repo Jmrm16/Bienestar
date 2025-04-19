@@ -13,15 +13,18 @@ use App\Models\Tutor;
 class AsignaturaController extends Controller
 {
     public function index()
-    {
-        $tutores = Tutor::all();
-        $asignaturas = Asignatura::all(); // 🔹 Agregar asignaturas
-    
-        return Inertia::render('Tutores/index', [
-            'tutores' => $tutores,
-            'asignaturas' => $asignaturas, // 🔹 Enviar a la vista
-        ]);
-    }
+{
+    $tutores = Tutor::with('grupos')->get(); // Asegúrate de que los tutores se carguen con las relaciones
+    $asignaturas = Asignatura::all();
+    $totalTutores = Tutor::count();
+
+    return Inertia::render('Tutores/index', [
+        'tutores' => $tutores,
+        'asignaturas' => $asignaturas,
+        'totalTutores' => $totalTutores,
+    ]);
+}
+
   
 
 

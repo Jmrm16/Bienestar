@@ -42,7 +42,7 @@ const AgregarCarrera = () => {
         <div className="mb-6">
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline">Agregar Carrera</Button>
+                    <Button >Agregar Carrera</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>

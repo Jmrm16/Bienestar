@@ -42,7 +42,7 @@ const AgregarAsignatura = () => {
         <div className="mb-6">
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline">Agregar Asignatura</Button>
+                    <Button>Agregar Asignatura</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>

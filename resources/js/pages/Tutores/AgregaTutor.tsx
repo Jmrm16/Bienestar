@@ -20,14 +20,15 @@ interface Asignatura {
   codigo: string;
 }
 
+
 const AgregarTutor = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
-    grupos: "",
     asignaturas: [] as number[],
   });
+  
 
   const { asignaturas = [] } = usePage().props as { asignaturas?: Asignatura[] }; // 🔹 Evita el error de undefined
 
@@ -50,7 +51,7 @@ const AgregarTutor = () => {
       onSuccess: () => {
         toast.success("✅ Tutor agregado correctamente");
         setIsOpen(false);
-        setForm({ nombre: "", apellido: "", grupos: "", asignaturas: [] });
+        setForm({ nombre: "", apellido: "", asignaturas: [] });
       },
       onError: () => {
         toast.error("❌ Hubo un error al agregar el tutor");
@@ -62,7 +63,7 @@ const AgregarTutor = () => {
     <div className="mb-6">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline">Agregar Tutor</Button>
+          <Button>Agregar Tutor</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -78,10 +79,7 @@ const AgregarTutor = () => {
                 <Label>Apellido</Label>
                 <Input type="text" name="apellido" value={form.apellido} onChange={handleChange} required />
               </div>
-              <div>
-                <Label>Grupos</Label>
-                <Input type="number" name="grupos" value={form.grupos} onChange={handleChange} required />
-              </div>
+              
               <div>
                 <Label>Asignaturas</Label>
                 <div className="flex flex-wrap gap-2">

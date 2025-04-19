@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Estudiante;
 use App\Models\Grupo;
+use App\Models\Tutor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -22,15 +23,17 @@ class EstudianteController extends Controller
     }
 
     public function showGrupo($grupoId)
-    {
-        $grupo = Grupo::with('carrera')->findOrFail($grupoId);
-        $estudiantes = Estudiante::where('grupo_id', $grupoId)->get();
+{
+    $grupo = Grupo::with('carrera')->findOrFail($grupoId);
+    $estudiantes = Estudiante::where('grupo_id', $grupoId)->get();
+    $tutores = Tutor::all();  // Obtener todos los tutores
 
-        return Inertia::render('Estudiantes/GrupoDetalle', [
-            'grupo' => $grupo,
-            'estudiantes' => $estudiantes,
-        ]);
-    }
+    return Inertia::render('Estudiantes/GrupoDetalle', [
+        'grupo' => $grupo->load('tutores', 'carrera'),
+        'tutores' => Tutor::all(),
+        'estudiantes' => Estudiante::where('grupo_id', $grupo->id)->get(),
+    ]);
+}
 
     public function cargarExcel(Request $request)
     {

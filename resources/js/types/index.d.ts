@@ -32,6 +32,7 @@ export type Estudiante = {
   export type Grupo = {
     id: number;
     nombre: string;
+    codigo: string;
     carrera_id: number;
     carrera: {
       id: number;
@@ -43,12 +44,16 @@ export type Estudiante = {
   
   
 
-export interface NavItem {
+  export interface NavItem {
     title: string;
-    url: string;
+    url?: string; // <- puede no tener url si tiene hijos
     icon?: LucideIcon | null;
     isActive?: boolean;
+    children?: NavItem[]; // <- para submenús
 }
+
+
+
 
 export interface SharedData {
     name: string;

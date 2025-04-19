@@ -101,7 +101,7 @@ const TablaTutor = () => {
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead>Apellido</TableHead>
-            <TableHead>Grupos</TableHead>
+         
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -110,7 +110,7 @@ const TablaTutor = () => {
             <TableRow key={tutor.id}>
               <TableCell>{tutor.nombre}</TableCell>
               <TableCell>{tutor.apellido}</TableCell>
-              <TableCell>{tutor.grupos}</TableCell>
+            
               <TableCell className="text-right space-x-2">
 
 {/* Ver Detalles */}
@@ -129,7 +129,7 @@ const TablaTutor = () => {
         <div className="space-y-2 mt-2">
           <p><strong>Nombre:</strong> {selectedTutor?.nombre}</p>
           <p><strong>Apellido:</strong> {selectedTutor?.apellido}</p>
-          <p><strong>Grupos:</strong> {selectedTutor?.grupos}</p>
+        
           <div>
             <strong>Asignaturas:</strong>
             <ul className="list-disc ml-5 mt-1">
@@ -189,17 +189,7 @@ const TablaTutor = () => {
                           })
                         }
                       />
-                      <Label>Grupos</Label>
-                      <Input
-                        type="number"
-                        value={selectedTutor?.grupos || ""}
-                        onChange={(e) =>
-                          setSelectedTutor({
-                            ...selectedTutor!,
-                            grupos: parseInt(e.target.value),
-                          })
-                        }
-                      />
+
 
                       {/* Checkboxes de Asignaturas */}
                       <div className="mt-4">

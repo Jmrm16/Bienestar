@@ -65,7 +65,7 @@ const AgregarGrupo = () => {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Agregar nuevo grupo</DialogTitle>
+          <DialogTitle className="text-zinc-900 dark:text-white">Agregar nuevo grupo</DialogTitle>
           <DialogDescription>Llena la información para crear un nuevo grupo.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

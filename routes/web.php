@@ -20,7 +20,20 @@ Route::get('/', function () {
 
 
 
-// 🟢 Rutas para tutores
+
+
+// routes/web.php
+
+
+
+// 🟢 Rutas protegidas con autenticación
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('dashboard', function () {
+        return Inertia::render('dashboard');
+    })->name('dashboard');
+
+    Route::get('/estudiantes/grupos/{grupo}', [EstudianteController::class, 'showGrupo'])->name('estudiantes.grupos.show');
+    // 🟢 Rutas para tutores
 Route::resource('tutores', TutorController::class)->except(['create', 'edit']);
 
 // 🟢 Rutas para asignaturas (evita definirlas manualmente)
@@ -34,20 +47,13 @@ Route::resource('grupos',GrupoController::class)->except(['create', 'edit']);
 
 Route::resource('acompañamientos',AcompanamientoCarreraController::class)->except(['create', 'edit']);
 
+// Ruta para asignar un tutor a un grupo
+Route::post('/grupos/{grupo}/asignar-tutor', [GrupoController::class, 'asignarTutor']);
+
+
+
 
 Route::post('/estudiantes/cargar-excel', [EstudianteController::class, 'cargarExcel']);
-
-// routes/web.php
-
-
-
-// 🟢 Rutas protegidas con autenticación
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
-
-    Route::get('/estudiantes/grupos/{grupo}', [EstudianteController::class, 'showGrupo'])->name('estudiantes.grupos.show');
 });
 // 🔹 Incluyendo otros archivos de rutas
 require __DIR__.'/settings.php';

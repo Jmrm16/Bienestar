@@ -24,7 +24,7 @@ class CarreraController extends Controller
             'codigo' => $request->codigo,
         ]);
 
-        return redirect()->route('estudiantes.index')->with('success', 'Carrera registrada exitosamente.');
+        
     }
 
     // Actualizar una carrera existente
@@ -40,7 +40,7 @@ class CarreraController extends Controller
             'codigo' => $request->codigo,
         ]);
 
-        return redirect()->route('estudiantes.index')->with('success', 'Carrera actualizada correctamente.');
+        
     }
 
     // Eliminar una carrera

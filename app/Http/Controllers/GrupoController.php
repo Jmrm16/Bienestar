@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Grupo;
-use App\Models\Carrera;
+
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+
 
 class GrupoController extends Controller
 {

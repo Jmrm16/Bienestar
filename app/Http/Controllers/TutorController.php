@@ -15,13 +15,23 @@ class TutorController extends Controller
         $tutores = Tutor::with('asignaturas')->get();
         $asignaturas = Asignatura::all();
         $totalTutores = Tutor::count();
+        $carreras = \App\Models\Carrera::all();
+
 
         return Inertia::render('Tutores/index', [
             'tutores' => $tutores,
             'asignaturas' => $asignaturas,
             'totalTutores' => $totalTutores,
+            'carreras' => $carreras,
         ]);
     }
+    public function perfil(Tutor $tutor)
+{
+    return Inertia::render('Tutores/tutorprofile', [
+        'tutor' => $tutor->load('asignaturas'), // si necesitas las asignaturas
+    ]);
+}
+
 
 // TutorController.php
 

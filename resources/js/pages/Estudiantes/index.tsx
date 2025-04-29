@@ -48,27 +48,23 @@ export default function EstudiantesIndex({ carreras, grupos }: Props) {
       <Head title="Gestión de Estudiantes" />
       <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
       <div className="container mx-auto p-4">
-
-  {/* Aquí irán los cuadros */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <MetricCard
-  title="Carreras"
-  value={carreras.length}
-  icon={Cpu}
-  color="cyan"
-  detail={`${carreras.length} registradas`}
-/>
-
-<MetricCard
-  title="Grupos"
-  value={grupos.length}
-  icon={HardDrive}
-  color="purple"
-  detail={`${grupos.length} registrados`}
-/>
-</div>
-
-
+        {/* Métricas principales */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <MetricCard
+        title="Carreras"
+        value={carreras.length}
+        icon={Cpu}
+        color="cyan"
+        detail={`${carreras.length} registradas`}
+          />
+          <MetricCard
+        title="Grupos"
+        value={grupos.length}
+        icon={HardDrive}
+        color="purple"
+        detail={`${grupos.length} registrados`}
+          />
+        </div>
       </div>
       <motion.div
        initial={{ opacity: 0, y: 20 }}

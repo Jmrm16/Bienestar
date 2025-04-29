@@ -16,4 +16,5 @@ class Carrera extends Model
     {
         return $this->hasMany(Grupo::class);
     }
+
 }

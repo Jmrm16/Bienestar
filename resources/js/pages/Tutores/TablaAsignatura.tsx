@@ -70,7 +70,7 @@ const TablaAsignatura = () => {
   };
 
   return (
-    <div className="border rounded-xl p-4">
+    <div className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
       <Table>
         <TableCaption>Lista de asignaturas.</TableCaption>
         <TableHeader>

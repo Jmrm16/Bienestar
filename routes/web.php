@@ -16,6 +16,9 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
+Route::get('/graduacion', function () {
+    return Inertia::render('graduacion');
+})->name('graduacion');
 
 
 
@@ -45,11 +48,16 @@ Route::resource('carreras', CarreraController::class)->except(['create', 'edit']
 
 Route::resource('grupos',GrupoController::class)->except(['create', 'edit']);
 
+Route::resource('grupost',GrupoController::class)->except(['create', 'edit']);
+
 Route::resource('acompañamientos',AcompanamientoCarreraController::class)->except(['create', 'edit']);
 
 // Ruta para asignar un tutor a un grupo
 Route::post('/grupos/{grupo}/asignar-tutor', [GrupoController::class, 'asignarTutor']);
 
+// Ruta para el perfil del tutor
+Route::get('/tutores/{tutor}/perfil', [TutorController::class, 'perfil'])->name('tutores.perfil');
+Route::resource('tutores', TutorController::class);
 
 
 

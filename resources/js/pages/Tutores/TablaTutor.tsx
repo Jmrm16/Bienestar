@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Delete, PencilLine, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,13 +50,19 @@ const TablaTutor = () => {
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [deleteTutor, setDeleteTutor] = useState<Tutor | null>(null);
 
+  const asignaturasMap = useMemo(() => {
+    const map = new Map<number, Asignatura>();
+    asignaturas?.forEach((a) => map.set(a.id, a));
+    return map;
+  }, [asignaturas]);
+
   const handleCheckboxChange = (asignaturaId: number) => {
     if (!selectedTutor) return;
 
     const isSelected = selectedTutor.asignaturas.some((a) => a.id === asignaturaId);
     const updatedAsignaturas = isSelected
       ? selectedTutor.asignaturas.filter((a) => a.id !== asignaturaId)
-      : [...selectedTutor.asignaturas, asignaturas!.find((a) => a.id === asignaturaId)!];
+      : [...selectedTutor.asignaturas, asignaturasMap.get(asignaturaId)!];
 
     setSelectedTutor({ ...selectedTutor, asignaturas: updatedAsignaturas });
   };
@@ -101,7 +107,6 @@ const TablaTutor = () => {
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead>Apellido</TableHead>
-         
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -110,48 +115,16 @@ const TablaTutor = () => {
             <TableRow key={tutor.id}>
               <TableCell>{tutor.nombre}</TableCell>
               <TableCell>{tutor.apellido}</TableCell>
-            
               <TableCell className="text-right space-x-2">
+                {/* Ver perfil */}
+                <Button
+                  variant="ghost"
+                  onClick={() => router.get(`/tutores/${tutor.id}/perfil`)}
+                >
+                  <Eye />
+                </Button>
 
-{/* Ver Detalles */}
-<Dialog>
-  <DialogTrigger asChild>
-    <Button variant="ghost" onClick={() => setSelectedTutor(tutor)}>
-      <Eye />
-    </Button>
-  </DialogTrigger>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Detalles del Tutor</DialogTitle>
-
-      {/* 👇 Esto corrige el error de estructura anidada */}
-      <DialogDescription asChild>
-        <div className="space-y-2 mt-2">
-          <p><strong>Nombre:</strong> {selectedTutor?.nombre}</p>
-          <p><strong>Apellido:</strong> {selectedTutor?.apellido}</p>
-        
-          <div>
-            <strong>Asignaturas:</strong>
-            <ul className="list-disc ml-5 mt-1">
-              {selectedTutor?.asignaturas?.length ? (
-                selectedTutor.asignaturas.map((asig) => (
-                  <li key={asig.id}>
-                    {asig.nombre} ({asig.codigo}) - {asig.docente}
-                  </li>
-                ))
-              ) : (
-                <li>No tiene asignaturas asignadas</li>
-              )}
-            </ul>
-          </div>
-        </div>
-      </DialogDescription>
-
-    </DialogHeader>
-  </DialogContent>
-</Dialog>
-
-                {/* Editar Tutor */}
+                {/* Editar */}
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                   <DialogTrigger asChild>
                     <Button
@@ -169,29 +142,34 @@ const TablaTutor = () => {
                       <DialogTitle>Editar Tutor</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <Label>Nombre</Label>
-                      <Input
-                        value={selectedTutor?.nombre || ""}
-                        onChange={(e) =>
-                          setSelectedTutor({
-                            ...selectedTutor!,
-                            nombre: e.target.value,
-                          })
-                        }
-                      />
-                      <Label>Apellido</Label>
-                      <Input
-                        value={selectedTutor?.apellido || ""}
-                        onChange={(e) =>
-                          setSelectedTutor({
-                            ...selectedTutor!,
-                            apellido: e.target.value,
-                          })
-                        }
-                      />
+                      <div>
+                        <Label>Nombre</Label>
+                        <Input
+                          value={selectedTutor?.nombre || ""}
+                          onChange={(e) => {
+                            if (!selectedTutor) return;
+                            setSelectedTutor({
+                              ...selectedTutor,
+                              nombre: e.target.value,
+                            });
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label>Apellido</Label>
+                        <Input
+                          value={selectedTutor?.apellido || ""}
+                          onChange={(e) => {
+                            if (!selectedTutor) return;
+                            setSelectedTutor({
+                              ...selectedTutor,
+                              apellido: e.target.value,
+                            });
+                          }}
+                        />
+                      </div>
 
-
-                      {/* Checkboxes de Asignaturas */}
+                      {/* Asignaturas */}
                       <div className="mt-4">
                         <Label>Asignaturas</Label>
                         <div className="grid grid-cols-2 gap-2 mt-2">
@@ -201,7 +179,12 @@ const TablaTutor = () => {
                                 checked={selectedTutor?.asignaturas.some((a) => a.id === asig.id)}
                                 onCheckedChange={() => handleCheckboxChange(asig.id)}
                               />
-                              <span>{asig.nombre} ({asig.codigo})</span>
+                              <div className="flex flex-col text-sm">
+                                <span className="font-medium">{asig.nombre}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  {asig.codigo}
+                                </span>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -214,7 +197,7 @@ const TablaTutor = () => {
                   </DialogContent>
                 </Dialog>
 
-                {/* Eliminar Tutor */}
+                {/* Eliminar */}
                 <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                   <DialogTrigger asChild>
                     <Button
@@ -254,7 +237,6 @@ const TablaTutor = () => {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-
               </TableCell>
             </TableRow>
           ))}

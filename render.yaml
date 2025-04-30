@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: laravel-backend
+    env: docker
+    plan: free
+    region: oregon
+    buildCommand: ""
+    startCommand: ""
+    autoDeploy: true

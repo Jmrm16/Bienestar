@@ -1,9 +1,9 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Tutor;
 use App\Models\Estudiante;
-use App\Models\Acompanamiento;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -12,12 +12,10 @@ class DashboardController extends Controller
     {
         $totalTutores = Tutor::count();
         $totalEstudiantes = Estudiante::count();
-        $totalAcompanamientos = Acompanamiento::count();
 
-        return Inertia::render('Dashboard', [
+        return Inertia::render('dashboard', [
             'totalTutores' => $totalTutores,
             'totalEstudiantes' => $totalEstudiantes,
-            'totalAcompanamientos' => $totalAcompanamientos,
         ]);
     }
 }

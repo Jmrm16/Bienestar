@@ -4,14 +4,14 @@ import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
-import AgregarTutor from '@/pages/Tutores/AgregaTutor';
-import AgregarAsignatura from '@/pages/Tutores/AgregarAsignatura';
-import AgregarGrupo from '@/pages/Tutores/AgregarGrupo';
-import TablaTutor from '@/pages/Tutores/TablaTutor';
-import TablaAsignatura from '@/pages/Tutores/TablaAsignatura';
-import TablaGrupo from '@/pages/Tutores/TablaGrupos';
-import AgregarCarrera from '@/pages/Tutores/AgregarCarrera';
-import TablaCarreras from '@/pages/Tutores/TablaCarreras';
+import AgregarTutor from '@/Pages/Tutores/AgregaTutor';
+import AgregarAsignatura from '@/Pages/Tutores/AgregarAsignatura';
+import AgregarGrupo from '@/Pages/Tutores/AgregarGrupo';
+import TablaTutor from '@/Pages/Tutores/TablaTutor';
+import TablaAsignatura from '@/Pages/Tutores/TablaAsignatura';
+import TablaGrupo from '@/Pages/Tutores/TablaGrupos';
+import AgregarCarrera from '@/Pages/Tutores/AgregarCarrera';
+import TablaCarreras from '@/Pages/Tutores/TablaCarreras';
 
 import { MetricCard } from '@/components/component/MetricCard';
 import { Cpu, HardDrive, Wifi } from 'lucide-react';

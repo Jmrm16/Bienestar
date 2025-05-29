@@ -3,24 +3,22 @@ import { FaBars, FaTimes } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
+import { Button } from "@/components/ui/button";
 
 export const HeaderComponent = () => {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, url: currentPath } = usePage<SharedData>().props;
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    
+
     const menuItems = [
         { name: 'Home', route: 'home' },
-        { name: 'Graduacion', route: 'graduacion' },
+        { name: 'Permanencia y graduacion', route: 'graduacion' },
 
-
-        // Agrega más items de menú aquí según necesites
     ];
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
-    // Animaciones
     const containerVariants = {
         hidden: { opacity: 0 },
         show: {
@@ -37,7 +35,7 @@ export const HeaderComponent = () => {
     };
 
     return (
-        <motion.header 
+        <motion.header
             initial={{ y: -50 }}
             animate={{ y: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -46,57 +44,62 @@ export const HeaderComponent = () => {
             <div className="container mx-auto px-4 py-3">
                 <div className="flex items-center justify-between">
                     {/* Logo y menú principal */}
-                    <motion.div 
+                    <motion.div
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ duration: 0.3 }}
                         className="flex items-center space-x-8"
                     >
                         <Link href={route('home')} className="flex items-center">
-                            <motion.img 
+                            <motion.img
                                 whileHover={{ scale: 1.05 }}
-                                src="/logo.png" 
-                                alt="Site Logo" 
-                                className="h-10" 
+                                src="/img/logo.png"
+                                alt="Site Logo"
+                                className="h-10"
                             />
                         </Link>
-                        
+
                         {/* Menú de navegación (desktop) */}
                         <nav className="hidden md:block">
-                            <motion.ul 
+                            <motion.ul
                                 variants={containerVariants}
                                 initial="hidden"
                                 animate="show"
-                                className="flex space-x-6"
+                                className="flex space-x-4"
                             >
-                                {menuItems.map((item) => (
-                                    <motion.li 
-                                        key={item.route}
-                                        variants={itemVariants}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <Link 
-                                            href={route(item.route)} 
-                                            className="text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium"
+                                {menuItems.map((item) => {
+                                    const isActive = route(item.route) === currentPath;
+                                    return (
+                                        <motion.li
+                                            key={item.route}
+                                            variants={itemVariants}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
                                         >
-                                            {item.name}
-                                        </Link>
-                                    </motion.li>
-                                ))}
+                                            <Link href={route(item.route)}>
+                                                <Button
+                                                    variant={isActive ? "default" : "ghost"}
+                                                    className={isActive ? "text-primary font-bold" : "text-muted-foreground"}
+                                                >
+                                                    {item.name}
+                                                </Button>
+                                            </Link>
+                                        </motion.li>
+                                    );
+                                })}
                             </motion.ul>
                         </nav>
                     </motion.div>
 
                     {/* Controles de usuario */}
-                    <motion.div 
+                    <motion.div
                         initial={{ x: 20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         transition={{ duration: 0.3 }}
                         className="flex items-center space-x-4"
                     >
                         {/* Menú móvil */}
-                        <motion.button 
+                        <motion.button
                             onClick={toggleMobileMenu}
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
@@ -113,41 +116,17 @@ export const HeaderComponent = () => {
                         {/* Acciones de autenticación */}
                         <div className="hidden md:flex items-center space-x-3">
                             {auth.user ? (
-                                <motion.div
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <Link
-                                        href={route('dashboard')}
-                                        className="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                    >
-                                        Dashboard
-                                    </Link>
-                                </motion.div>
+                                <Link href={route('dashboard')}>
+                                    <Button variant="ghost">Dashboard</Button>
+                                </Link>
                             ) : (
                                 <>
-                                    <motion.div
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <Link
-                                            href={route('login')}
-                                            className="px-4 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                        >
-                                            Log in
-                                        </Link>
-                                    </motion.div>
-                                    <motion.div
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <Link
-                                            href={route('register')}
-                                            className="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                        >
-                                            Register
-                                        </Link>
-                                    </motion.div>
+                                    <Link href={route('login')}>
+                                        <Button variant="ghost">Log in</Button>
+                                    </Link>
+                                    <Link href={route('register')}>
+                                        <Button variant="ghost">Register</Button>
+                                    </Link>
                                 </>
                             )}
                         </div>
@@ -157,63 +136,60 @@ export const HeaderComponent = () => {
                 {/* Menú móvil (colapsable) */}
                 <AnimatePresence>
                     {isMobileMenuOpen && (
-                        <motion.nav 
+                        <motion.nav
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                             className="md:hidden overflow-hidden"
                         >
-                            <motion.ul 
+                            <motion.ul
                                 variants={containerVariants}
                                 initial="hidden"
                                 animate="show"
                                 className="flex flex-col space-y-2 py-2"
                             >
-                                {menuItems.map((item) => (
-                                    <motion.li 
-                                        key={`mobile-${item.route}`}
-                                        variants={itemVariants}
-                                        whileHover={{ x: 5 }}
-                                    >
-                                        <Link 
-                                            href={route(item.route)} 
-                                            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                                            onClick={toggleMobileMenu}
+                                {menuItems.map((item) => {
+                                    const isActive = route(item.route) === currentPath;
+                                    return (
+                                        <motion.li
+                                            key={`mobile-${item.route}`}
+                                            variants={itemVariants}
+                                            whileHover={{ x: 5 }}
                                         >
-                                            {item.name}
-                                        </Link>
-                                    </motion.li>
-                                ))}
-                                {/* Menú de autenticación para móviles */}
+                                            <Link href={route(item.route)} onClick={toggleMobileMenu}>
+                                                <Button
+                                                    variant={isActive ? "default" : "ghost"}
+                                                    className={`w-full justify-start ${isActive ? "text-primary font-bold" : ""}`}
+                                                >
+                                                    {item.name}
+                                                </Button>
+                                            </Link>
+                                        </motion.li>
+                                    );
+                                })}
                                 {auth.user ? (
                                     <motion.li variants={itemVariants}>
-                                        <Link
-                                            href={route('dashboard')}
-                                            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                                            onClick={toggleMobileMenu}
-                                        >
-                                            Dashboard
+                                        <Link href={route('dashboard')} onClick={toggleMobileMenu}>
+                                            <Button variant="ghost" className="w-full justify-start">
+                                                Dashboard
+                                            </Button>
                                         </Link>
                                     </motion.li>
                                 ) : (
                                     <>
                                         <motion.li variants={itemVariants}>
-                                            <Link
-                                                href={route('login')}
-                                                className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                                                onClick={toggleMobileMenu}
-                                            >
-                                                Log in
+                                            <Link href={route('login')} onClick={toggleMobileMenu}>
+                                                <Button variant="ghost" className="w-full justify-start">
+                                                    Log in
+                                                </Button>
                                             </Link>
                                         </motion.li>
                                         <motion.li variants={itemVariants}>
-                                            <Link
-                                                href={route('register')}
-                                                className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                                                onClick={toggleMobileMenu}
-                                            >
-                                                Register
+                                            <Link href={route('register')} onClick={toggleMobileMenu}>
+                                                <Button variant="ghost" className="w-full justify-start">
+                                                    Register
+                                                </Button>
                                             </Link>
                                         </motion.li>
                                     </>

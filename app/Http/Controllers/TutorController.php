@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tutor;
 use App\Models\Asignatura;
 use App\Models\Carrera;
-use App\Models\Grupo;
+
 use App\Models\GrupoT;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,8 +22,9 @@ class TutorController extends Controller
         $totalTutores = Tutor::count();
         $carreras = Carrera::all();
 
-        $grupos = Grupo::with('carrera')->get();    // carga grupos normales con carrera relacionada
-        $gruposT = GrupoT::with('carrera')->get();  // carga gruposT con carrera relacionada
+        $grupos = GrupoT::with('carrera')->orderBy('nombre')->get();
+
+
 
         return Inertia::render('Tutores/index', [
             'tutores' => $tutores,
@@ -31,7 +32,6 @@ class TutorController extends Controller
             'carreras' => $carreras,
             'totalTutores' => $totalTutores,
             'grupos' => $grupos,
-            'gruposT' => $gruposT,
         ]);
     }
 

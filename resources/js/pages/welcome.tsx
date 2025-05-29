@@ -91,7 +91,7 @@ export default function Welcome() {
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.5, type: 'spring' }}
                   >
-                    CHEN <span className="text-yellow-400">VIEJO</span>
+                    <span className="text-yellow-400"></span>
                   </motion.h2>
                   <motion.p 
                     className="my-4"

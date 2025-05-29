@@ -36,12 +36,12 @@ interface Grupo {
 }
 
 interface Props {
-  grupos: Grupo[];
-  gruposT: Grupo[];
+  grupos?: Grupo[];   // ← con fallback opcional
+  gruposT?: Grupo[];  // ← con fallback opcional
   onSeleccionarGrupo: (grupo: Grupo) => void;
 }
 
-const TablaGrupo = ({ grupos, gruposT, onSeleccionarGrupo }: Props) => {
+const TablaGrupo = ({ grupos = [], gruposT = [], onSeleccionarGrupo }: Props) => {
   const [selectedGrupo, setSelectedGrupo] = useState<Grupo | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -87,8 +87,8 @@ const TablaGrupo = ({ grupos, gruposT, onSeleccionarGrupo }: Props) => {
 
   // Unimos ambas listas y les marcamos el tipo
   const listaGrupos = [
-    ...grupos.map((g) => ({ ...g, tipo: 'Grupo' })),
-    ...gruposT.map((g) => ({ ...g, tipo: 'GrupoT' })),
+    ...(grupos || []).map((g) => ({ ...g, tipo: 'Grupo' })),
+    ...(gruposT || []).map((g) => ({ ...g, tipo: 'GrupoT' })),
   ];
 
   return (

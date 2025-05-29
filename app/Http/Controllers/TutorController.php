@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Tutor;
 use App\Models\Asignatura;
 use App\Models\Carrera;
-use App\Models\GrupoT; // <--- Asegúrate de tener este modelo creado
+use App\Models\Grupo;
+use App\Models\GrupoT;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TutorController extends Controller
 {
     /**
-     * Mostrar todos los tutores + asignaturas + carreras + grupo_t.
+     * Mostrar todos los tutores y recursos relacionados.
      */
     public function index()
     {
@@ -20,20 +21,22 @@ class TutorController extends Controller
         $asignaturas = Asignatura::all();
         $totalTutores = Tutor::count();
         $carreras = Carrera::all();
-    
-        $gruposT = GrupoT::all();   // <- tabla 'grupo_t'
-    
+
+        $grupos = Grupo::with('carrera')->get();    // carga grupos normales con carrera relacionada
+        $gruposT = GrupoT::with('carrera')->get();  // carga gruposT con carrera relacionada
+
         return Inertia::render('Tutores/index', [
             'tutores' => $tutores,
             'asignaturas' => $asignaturas,
-            'totalTutores' => $totalTutores,
             'carreras' => $carreras,
+            'totalTutores' => $totalTutores,
+            'grupos' => $grupos,
             'gruposT' => $gruposT,
         ]);
     }
 
     /**
-     * Mostrar perfil detallado de un tutor.
+     * Mostrar perfil de un tutor.
      */
     public function perfil(Tutor $tutor)
     {
@@ -65,7 +68,7 @@ class TutorController extends Controller
     }
 
     /**
-     * Actualizar un tutor.
+     * Actualizar un tutor existente.
      */
     public function update(Request $request, $id)
     {

@@ -4,92 +4,93 @@ namespace App\Http\Controllers;
 
 use App\Models\Tutor;
 use App\Models\Asignatura;
+use App\Models\Carrera;
+use App\Models\GrupoT; // <--- Asegúrate de tener este modelo creado
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TutorController extends Controller
 {
+    /**
+     * Mostrar todos los tutores + asignaturas + carreras + grupo_t.
+     */
     public function index()
     {
-        // Carga los tutores con sus asignaturas relacionadas
         $tutores = Tutor::with('asignaturas')->get();
         $asignaturas = Asignatura::all();
         $totalTutores = Tutor::count();
-        $carreras = \App\Models\Carrera::all();
-
-
+        $carreras = Carrera::all();
+    
+        $gruposT = GrupoT::all();   // <- tabla 'grupo_t'
+    
         return Inertia::render('Tutores/index', [
             'tutores' => $tutores,
             'asignaturas' => $asignaturas,
             'totalTutores' => $totalTutores,
             'carreras' => $carreras,
+            'gruposT' => $gruposT,
         ]);
     }
+
+    /**
+     * Mostrar perfil detallado de un tutor.
+     */
     public function perfil(Tutor $tutor)
-{
-    return Inertia::render('Tutores/tutorprofile', [
-        'tutor' => $tutor->load('asignaturas'), // si necesitas las asignaturas
-    ]);
-}
+    {
+        return Inertia::render('Tutores/tutorprofile', [
+            'tutor' => $tutor->load('asignaturas'),
+        ]);
+    }
 
+    /**
+     * Registrar un nuevo tutor.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'apellido' => 'required|string|max:255',
+            'asignaturas' => 'required|array',
+            'asignaturas.*' => 'exists:asignaturas,id',
+        ]);
 
-// TutorController.php
+        $tutor = Tutor::create([
+            'nombre' => $request->nombre,
+            'apellido' => $request->apellido,
+        ]);
 
-public function store(Request $request)
-{
-    $request->validate([
-        'nombre' => 'required|string|max:255',
-        'apellido' => 'required|string|max:255',
-        'asignaturas' => 'required|array', // Validar que sea un arreglo
-        'asignaturas.*' => 'exists:asignaturas,id', // Asegurarse de que las asignaturas existan en la base de datos
-    ]);
+        $tutor->asignaturas()->sync($request->asignaturas);
 
-    // Crear el tutor
-    $tutor = Tutor::create([
-        'nombre' => $request->nombre,
-        'apellido' => $request->apellido,
-    ]);
+        return redirect()->back()->with('success', 'Tutor registrado exitosamente.');
+    }
 
-    // Asociar las asignaturas al tutor (relación de muchos a muchos)
-    $tutor->asignaturas()->sync($request->asignaturas);
+    /**
+     * Actualizar un tutor.
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'apellido' => 'required|string|max:255',
+            'asignaturas' => 'required|array',
+            'asignaturas.*' => 'exists:asignaturas,id',
+        ]);
 
-    return redirect()->back()->with('success', 'Tutor registrado exitosamente.');
-}
+        $tutor = Tutor::findOrFail($id);
+        $tutor->update($request->only(['nombre', 'apellido']));
+        $tutor->asignaturas()->sync($request->asignaturas);
 
-    
-    
-    
+        return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');
+    }
 
-// TutorController.php
-
-public function update(Request $request, $id)
-{
-    $request->validate([
-        'nombre' => 'required|string',
-        'apellido' => 'required|string',
-        'asignaturas' => 'required|array',
-        'asignaturas.*' => 'exists:asignaturas,id',
-    ]);
-
-    $tutor = Tutor::findOrFail($id);
-    $tutor->update($request->only(['nombre', 'apellido']));
-    $tutor->asignaturas()->sync($request->asignaturas);
-
-    return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');
-}
-
-    
-
+    /**
+     * Eliminar un tutor.
+     */
     public function destroy($id)
-{
-    $tutor = Tutor::findOrFail($id); // Encuentra al tutor por ID
-    $tutor->delete(); // Elimina al tutor
+    {
+        $tutor = Tutor::findOrFail($id);
+        $tutor->delete();
 
-    return redirect()->back()->with('success', 'Tutor eliminado correctamente.');
-   
-}
-
-    
-    
-    
+        return redirect()->back()->with('success', 'Tutor eliminado correctamente.');
+    }
 }

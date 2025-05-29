@@ -32,14 +32,16 @@ interface Grupo {
     id: number;
     nombre: string;
   };
+  tipo?: string; // Añadido para marcar si es 'Grupo' o 'GrupoT'
 }
 
 interface Props {
   grupos: Grupo[];
+  gruposT: Grupo[];
   onSeleccionarGrupo: (grupo: Grupo) => void;
 }
 
-const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
+const TablaGrupo = ({ grupos, gruposT, onSeleccionarGrupo }: Props) => {
   const [selectedGrupo, setSelectedGrupo] = useState<Grupo | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -47,8 +49,10 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
   const actualizarGrupo = () => {
     if (!selectedGrupo) return;
 
+    const endpoint = selectedGrupo.tipo === 'GrupoT' ? 'grupost' : 'grupos';
+
     router.patch(
-      `/grupos/${selectedGrupo.id}`,
+      `/${endpoint}/${selectedGrupo.id}`,
       {
         nombre: selectedGrupo.nombre,
         codigo: selectedGrupo.codigo,
@@ -69,7 +73,9 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
   const eliminarGrupo = () => {
     if (!selectedGrupo) return;
 
-    router.delete(`/grupos/${selectedGrupo.id}`, {
+    const endpoint = selectedGrupo.tipo === 'GrupoT' ? 'grupost' : 'grupos';
+
+    router.delete(`/${endpoint}/${selectedGrupo.id}`, {
       onSuccess: () => {
         toast.success("Grupo eliminado correctamente");
         setIsDeleteOpen(false);
@@ -79,26 +85,33 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
     });
   };
 
+  // Unimos ambas listas y les marcamos el tipo
+  const listaGrupos = [
+    ...grupos.map((g) => ({ ...g, tipo: 'Grupo' })),
+    ...gruposT.map((g) => ({ ...g, tipo: 'GrupoT' })),
+  ];
+
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
       <Table>
-        <TableCaption>Lista de grupos.</TableCaption>
+        <TableCaption>Lista de grupos (normales y T).</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead>Código</TableHead>
             <TableHead>Carrera</TableHead>
+            <TableHead>Tipo</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {grupos?.map((grupo) => (
-            <TableRow key={grupo.id}>
+          {listaGrupos.map((grupo) => (
+            <TableRow key={`${grupo.tipo}-${grupo.id}`}>
               <TableCell>{grupo.nombre}</TableCell>
               <TableCell>{grupo.codigo}</TableCell>
               <TableCell>{grupo.carrera?.nombre}</TableCell>
+              <TableCell>{grupo.tipo}</TableCell>
               <TableCell className="text-right space-x-2">
-                {/* Botón Ver Detalles (redirige) */}
                 <Button
                   variant="ghost"
                   onClick={() => router.visit(`/estudiantes/grupos/${grupo.id}`)}
@@ -106,7 +119,6 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
                   <Eye />
                 </Button>
 
-                {/* Botón Subir Excel */}
                 <Button
                   variant="secondary"
                   onClick={() => onSeleccionarGrupo(grupo)}
@@ -115,7 +127,6 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
                   Subir Excel
                 </Button>
 
-                {/* Editar */}
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                   <DialogTrigger asChild>
                     <Button
@@ -162,7 +173,6 @@ const TablaGrupo = ({ grupos, onSeleccionarGrupo }: Props) => {
                   </DialogContent>
                 </Dialog>
 
-                {/* Eliminar */}
                 <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                   <DialogTrigger asChild>
                     <Button

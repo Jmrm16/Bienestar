@@ -37,46 +37,49 @@ export type Estudiante = {
   codigo: string;
   nombres: string;
   apellidos: string;
+  tipo_identificacion: string;
   identificacion: string;
+  ide_programa: string;
+  programa: string;
+  semestre: string;
+  ide_materia: string;
+  materia: string;
+  grupo: string;
+  primer_corte: string;
+  segundo_corte: string;
+  tercer_corte: string;
+  definitiva: string;
+  habilitacion: string;
+  final: string;
+  anio: string;
+  periodo: string;
   correo_institucional: string;
+  email: string;
+  celular: string;
+  nota_faltante: string;
 };
 
 export const columnsEstudiantes: ColumnDef<Estudiante>[] = [
-  {
-    accessorKey: "codigo",
-    header: "Código",
-    cell: ({ getValue }) => (
-      <div className="text-sm">{getValue() as string}</div>
-    ),
-  },
-  {
-    accessorKey: "nombres",
-    header: "Nombres",
-    cell: ({ getValue }) => (
-      <div className="text-sm">{getValue() as string}</div>
-    ),
-  },
-  {
-    accessorKey: "apellidos",
-    header: "Apellidos",
-    cell: ({ getValue }) => (
-      <div className="text-sm">{getValue() as string}</div>
-    ),
-  },
-  {
-    accessorKey: "identificacion",
-    header: "Identificación",
-    cell: ({ getValue }) => (
-      <div className="text-sm">{getValue() as string}</div>
-    ),
-  },
-  {
-    accessorKey: "correo_institucional",
-    header: "Correo",
-    cell: ({ getValue }) => (
-      <div className="text-sm">{getValue() as string}</div>
-    ),
-  },
+  { accessorKey: "codigo", header: "Código" },
+  { accessorKey: "nombres", header: "Nombres" },
+  { accessorKey: "apellidos", header: "Apellidos" },
+  { accessorKey: "tipo_identificacion", header: "Tipo Identificación" },
+  { accessorKey: "identificacion", header: "Identificación" },
+  { accessorKey: "ide_programa", header: "IDE Programa" },
+  { accessorKey: "programa", header: "Programa" },
+  { accessorKey: "semestre", header: "Semestre" },
+  { accessorKey: "ide_materia", header: "IDE Materia" },
+  { accessorKey: "materia", header: "Materia" },
+  { accessorKey: "grupo", header: "Grupo" },
+  { accessorKey: "primer_corte", header: "1er Corte" },
+  { accessorKey: "segundo_corte", header: "2do Corte" },
+  { accessorKey: "tercer_corte", header: "3er Corte" },
+  { accessorKey: "definitiva", header: "Definitiva" },
+  { accessorKey: "anio", header: "Año" },
+  { accessorKey: "periodo", header: "Periodo" },
+  { accessorKey: "correo_institucional", header: "Correo Institucional" },
+  { accessorKey: "celular", header: "Celular" },
+  { accessorKey: "nota_faltante", header: "Nota Faltante" },
   {
     id: "actions",
     header: () => <div className="text-center w-full text-sm">Acciones</div>,
@@ -90,9 +93,7 @@ export const columnsEstudiantes: ColumnDef<Estudiante>[] = [
       const actualizarEstudiante = () => {
         router.patch(
           `/acompanamiento-estudiantes/${selectedEstudiante.id}`,
-          {
-            ...selectedEstudiante,
-          },
+          { ...selectedEstudiante },
           {
             preserveScroll: true,
             onSuccess: () => {
@@ -106,9 +107,7 @@ export const columnsEstudiantes: ColumnDef<Estudiante>[] = [
 
       const eliminarEstudiante = () => {
         router.delete(`/acompanamiento-estudiantes/${estudiante.id}`, {
-          onSuccess: () => {
-            toast.success("Estudiante eliminado");
-          },
+          onSuccess: () => toast.success("Estudiante eliminado"),
           onError: () => toast.error("Error al eliminar el estudiante"),
         });
       };
@@ -133,12 +132,12 @@ export const columnsEstudiantes: ColumnDef<Estudiante>[] = [
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Detalles del Estudiante</DialogTitle>
-                  <DialogDescription className="space-y-1">
-                    <p><strong>Código:</strong> {estudiante.codigo}</p>
-                    <p><strong>Nombres:</strong> {estudiante.nombres}</p>
-                    <p><strong>Apellidos:</strong> {estudiante.apellidos}</p>
-                    <p><strong>Identificación:</strong> {estudiante.identificacion}</p>
-                    <p><strong>Correo:</strong> {estudiante.correo_institucional}</p>
+                  <DialogDescription className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {Object.entries(estudiante).map(([key, value]) => (
+                      <p key={key}>
+                        <strong>{key}:</strong> {value || '—'}
+                      </p>
+                    ))}
                   </DialogDescription>
                 </DialogHeader>
               </DialogContent>
@@ -165,44 +164,33 @@ export const columnsEstudiantes: ColumnDef<Estudiante>[] = [
                 <div className="space-y-4">
                   <Label>Nombres</Label>
                   <Input
-                    value={selectedEstudiante.nombres}
+                    value={selectedEstudiante.nombres || ''}
                     onChange={(e) =>
-                      setSelectedEstudiante({
-                        ...selectedEstudiante,
-                        nombres: e.target.value,
-                      })
+                      setSelectedEstudiante({ ...selectedEstudiante, nombres: e.target.value })
                     }
                   />
                   <Label>Apellidos</Label>
                   <Input
-                    value={selectedEstudiante.apellidos}
+                    value={selectedEstudiante.apellidos || ''}
                     onChange={(e) =>
-                      setSelectedEstudiante({
-                        ...selectedEstudiante,
-                        apellidos: e.target.value,
-                      })
+                      setSelectedEstudiante({ ...selectedEstudiante, apellidos: e.target.value })
                     }
                   />
                   <Label>Identificación</Label>
                   <Input
-                    value={selectedEstudiante.identificacion}
+                    value={selectedEstudiante.identificacion || ''}
                     onChange={(e) =>
-                      setSelectedEstudiante({
-                        ...selectedEstudiante,
-                        identificacion: e.target.value,
-                      })
+                      setSelectedEstudiante({ ...selectedEstudiante, identificacion: e.target.value })
                     }
                   />
-                  <Label>Correo</Label>
+                  <Label>Correo Institucional</Label>
                   <Input
-                    value={selectedEstudiante.correo_institucional}
+                    value={selectedEstudiante.correo_institucional || ''}
                     onChange={(e) =>
-                      setSelectedEstudiante({
-                        ...selectedEstudiante,
-                        correo_institucional: e.target.value,
-                      })
+                      setSelectedEstudiante({ ...selectedEstudiante, correo_institucional: e.target.value })
                     }
                   />
+                  {/* Puedes agregar aquí más campos al modal si los necesitas */}
                   <div className="flex justify-end">
                     <Button onClick={actualizarEstudiante}>Guardar Cambios</Button>
                   </div>

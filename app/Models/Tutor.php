@@ -9,7 +9,20 @@ class Tutor extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'apellido'];
+    protected $fillable = [
+    'nombre',
+    'apellido',
+    'tipo_documento',
+    'documento',
+    'lugar_expedicion',
+    'sexo',
+    'grupo_priorizado',
+    'sede',
+    'programa_academico',
+    'correo',
+    'telefono'
+];
+
 
     // Relación muchos a muchos con Asignatura
     public function asignaturas()

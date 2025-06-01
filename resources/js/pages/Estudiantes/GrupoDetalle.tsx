@@ -100,15 +100,17 @@ export default function GrupoDetalle({ grupo, estudiantes: initialEstudiantes, t
           </CardHeader>
 
           <CardContent>
-            <div className="p-4 border rounded-xl">
+            <div className="p-4 border rounded-xl overflow-x-auto">
               {loading ? (
                 <p>Cargando estudiantes...</p>
               ) : estudiantes.length > 0 ? (
-                <DataTable
-                  columns={columnsEstudiantes}
-                  data={estudiantes}
-                  searchKey="nombres"
-                />
+                <div className="min-w-[1500px]">
+                  <DataTable
+                    columns={columnsEstudiantes}
+                    data={estudiantes}
+                    searchKey="nombres"
+                  />
+                </div>
               ) : (
                 <p>No hay estudiantes disponibles.</p>
               )}

@@ -11,21 +11,33 @@ class Estudiante extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'numero',
-        'codigo',
-        'apellidos',
-        'nombres',
-        'tipo_identificacion',
-        'identificacion',
-        'ciudad_expedicion',
-        'sexo',
-        'programa',
-        'semestre',
-        'correo_institucional',
-        'grupo_id',
-        'tutor_id',
-    ];
+protected $fillable = [
+    'codigo',
+    'apellidos',
+    'nombres',
+    'tipo_identificacion',
+    'identificacion',
+    'ide_programa',
+    'programa',
+    'semestre',
+    'ide_materia',
+    'materia',
+    'grupo',
+    'primer_corte',
+    'segundo_corte',
+    'tercer_corte',
+    'definitiva',
+    'habilitacion',
+    'final',
+    'anio',
+    'periodo',
+    'email',
+    'celular',
+    'nota_faltante',
+    'grupo_id',
+    'tutor_id',
+    'correo_institucional'
+];
 
     public function grupo()
     {

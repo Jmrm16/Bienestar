@@ -53,34 +53,56 @@ class TutorController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'apellido' => 'required|string|max:255',
+            'tipo_documento' => 'required|string|max:50',
+            'documento' => 'required|string|max:50|unique:tutors',
+            'lugar_expedicion' => 'required|string|max:255',
+            'sexo' => 'required|string|max:10',
+            'grupo_priorizado' => 'required|string|max:255',
+            'sede' => 'required|string|max:255',
+            'programa_academico' => 'required|string|max:255',
+            'correo' => 'required|email|unique:tutors',
+            'telefono' => 'required|string|max:20',
             'asignaturas' => 'required|array',
             'asignaturas.*' => 'exists:asignaturas,id',
         ]);
 
-        $tutor = Tutor::create([
-            'nombre' => $request->nombre,
-            'apellido' => $request->apellido,
-        ]);
+        $tutor = Tutor::create($request->only([
+            'nombre', 'apellido', 'tipo_documento', 'documento',
+            'lugar_expedicion', 'sexo', 'grupo_priorizado', 'sede',
+            'programa_academico', 'correo', 'telefono'
+        ]));
 
         $tutor->asignaturas()->sync($request->asignaturas);
 
         return redirect()->back()->with('success', 'Tutor registrado exitosamente.');
     }
 
-    /**
-     * Actualizar un tutor existente.
-     */
     public function update(Request $request, $id)
     {
+        $tutor = Tutor::findOrFail($id);
+
         $request->validate([
             'nombre' => 'required|string|max:255',
             'apellido' => 'required|string|max:255',
+            'tipo_documento' => 'required|string|max:50',
+            'documento' => 'required|string|max:50|unique:tutors,documento,' . $tutor->id,
+            'lugar_expedicion' => 'required|string|max:255',
+            'sexo' => 'required|string|max:10',
+            'grupo_priorizado' => 'required|string|max:255',
+            'sede' => 'required|string|max:255',
+            'programa_academico' => 'required|string|max:255',
+            'correo' => 'required|email|unique:tutors,correo,' . $tutor->id,
+            'telefono' => 'required|string|max:20',
             'asignaturas' => 'required|array',
             'asignaturas.*' => 'exists:asignaturas,id',
         ]);
 
-        $tutor = Tutor::findOrFail($id);
-        $tutor->update($request->only(['nombre', 'apellido']));
+        $tutor->update($request->only([
+            'nombre', 'apellido', 'tipo_documento', 'documento',
+            'lugar_expedicion', 'sexo', 'grupo_priorizado', 'sede',
+            'programa_academico', 'correo', 'telefono'
+        ]));
+
         $tutor->asignaturas()->sync($request->asignaturas);
 
         return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');

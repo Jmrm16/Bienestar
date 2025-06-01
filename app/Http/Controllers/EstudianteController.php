@@ -49,30 +49,84 @@ class EstudianteController extends Controller
         $hoja = $spreadsheet->getActiveSheet();
         $filas = $hoja->toArray(null, true, true, true);
 
+        $creados = 0;
+        $actualizados = 0;
+
+        // Mapeo flexible de encabezados
+        $headerMappings = [
+            'codigo' => ['codigo', 'código', 'codigo estudiante', 'id estudiante'],
+            'nombres' => ['nombres', 'nombre'],
+            'apellidos' => ['apellidos', 'apellido'],
+            'tipo_identificacion' => ['tipo identificacion', 'tipo documento'],
+            'identificacion' => ['identificacion', 'número identificacion', 'documento'],
+            'ide_programa' => ['ide programa'],
+            'programa' => ['programa'],
+            'semestre' => ['semestre'],
+            'ide_materia' => ['ide materia'],
+            'materia' => ['materia'],
+            'grupo' => ['grupo'],
+            'primer_corte' => ['1er', 'primer corte'],
+            'segundo_corte' => ['2er', 'segundo corte'],
+            'tercer_corte' => ['3er', 'tercer corte'],
+            'definitiva' => ['def', 'definitiva'],
+            'habilitacion' => ['hab', 'habilitacion'],
+            'final' => ['final'],
+            'anio' => ['año', 'anio'],
+            'periodo' => ['periodo'],
+            'email' => ['email', 'correo', 'correo electronico'],
+            'celular' => ['celular', 'telefono'],
+            'nota_faltante' => ['nota faltante'],
+            'correo_institucional' => ['correo institucional'],
+        ];
+
+        // Leer encabezados reales de Excel
+        $headerRow = $filas[1];
+        $columnToField = [];
+
+        foreach ($headerRow as $colKey => $header) {
+            $headerClean = strtolower(trim($header));
+            foreach ($headerMappings as $dbField => $aliases) {
+                if (in_array($headerClean, $aliases)) {
+                    $columnToField[$colKey] = $dbField;
+                    break;
+                }
+            }
+        }
+
         foreach ($filas as $i => $fila) {
             if ($i === 1) continue; // Saltar encabezado
 
-            Estudiante::updateOrCreate(
-                ['identificacion' => $fila['F']], // Clave única
-                [
-                    'grupo_id' => $grupoId,
-                    'numero' => $fila['A'],
-                    'codigo' => $fila['B'],
-                    'apellidos' => $fila['C'],
-                    'nombres' => $fila['D'],
-                    'tipo_identificacion' => $fila['E'],
-                    'identificacion' => $fila['F'],
-                    'ciudad_expedicion' => $fila['G'],
-                    'sexo' => $fila['H'],
-                    'programa' => $fila['I'],
-                    'semestre' => $fila['J'],
-                    'correo_institucional' => $fila['K'],
-                ]
-            );
+            $data = ['grupo_id' => $grupoId];
+
+            foreach ($fila as $colKey => $value) {
+                if (isset($columnToField[$colKey])) {
+                    $data[$columnToField[$colKey]] = $value ?? null;
+                }
+            }
+
+            if (empty($data['codigo'])) continue; // Saltar si no hay código
+
+            $estudiante = Estudiante::where('codigo', $data['codigo'])
+                ->where('grupo_id', $grupoId)
+                ->first();
+
+            if ($estudiante) {
+                $estudiante->update($data);
+                $actualizados++;
+            } else {
+                Estudiante::create($data);
+                $creados++;
+            }
         }
 
-        return redirect()->back()->with('success', 'Estudiantes importados correctamente.');
+        return redirect()->back()->with('success', "✅ $creados estudiantes creados, $actualizados actualizados.");
     }
+
+
+
+
+
+
 
     public function update(Request $request, $id)
     {

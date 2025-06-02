@@ -12,6 +12,8 @@ export const HeaderComponent = () => {
     const menuItems = [
         { name: 'Home', route: 'home' },
         { name: 'Permanencia y graduacion', route: 'graduacion' },
+        { name: 'Cultura', route: 'cultura' },
+
 
     ];
 

@@ -12,7 +12,7 @@ import {
   import { NavUser } from '@/components/nav-user';
   import { type NavItem } from '@/types';
   import { Link } from '@inertiajs/react';
-  import { BookOpen, Folder, LayoutGrid, Users, Layers } from 'lucide-react';
+  import { BookOpen, Folder, LayoutGrid, Users, Layers, Flower } from 'lucide-react';
   import AppLogo from './app-logo';
   
   const mainNavItems: NavItem[] = [
@@ -38,6 +38,12 @@ import {
         },
       ],
     },
+    {
+      title: 'Cultura',
+      url: '/cultura',
+      icon: Flower,
+    },
+    
   ];
   
   const footerNavItems: NavItem[] = [

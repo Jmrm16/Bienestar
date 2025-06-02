@@ -10,13 +10,17 @@ use App\Http\Controllers\GrupoTController;
 use App\Http\Controllers\ImportarEstudiantesController;
 use App\Http\Controllers\AcompanamientoCarreraController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TutoriasController;
 use Inertia\Inertia;
 
 // 🔹 Página principal
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
-
+Route::get('/permanencia/tutorias', [TutoriasController::class, 'index'])->name('tutorias.index');
+Route::get('/cultura', function () {
+    return Inertia::render('cultura');
+})->name('cultura');
 Route::get('/graduacion', function () {
     return Inertia::render('graduacion');
 })->name('graduacion');

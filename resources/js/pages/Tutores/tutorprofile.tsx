@@ -1,6 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 import ProfileSection from '@/components/component/profile-section';
 import Estado from '@/components/component/estado';
 
@@ -10,6 +12,7 @@ interface Asignatura {
 }
 
 interface Tutor {
+  id: number;
   nombre: string;
   apellido: string;
   tipo_documento: string;
@@ -32,6 +35,18 @@ export default function TutorProfile() {
     <AppLayout>
       <Head title={`Perfil del Tutor - ${tutor.nombre} ${tutor.apellido}`} />
 
+      {/* Botón icono regresar */}
+      <div className="mb-4">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="size-8"
+          onClick={() => router.visit('/tutores')}
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+      </div>
+
       <motion.div
         className="flex flex-col gap-8 rounded-xl p-6 h-full flex-grow bg-gray-100 dark:bg-zinc-900"
         initial={{ opacity: 0, y: 20 }}
@@ -42,18 +57,17 @@ export default function TutorProfile() {
           Perfil del Tutor
         </h1>
 
-        {/* Fila 1: ProfileSection + Estado */}
+        {/* Fila superior */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-zinc-800 p-6 rounded-lg shadow hover:shadow-lg transition">
             <ProfileSection tutor={tutor} />
           </div>
-
           <div className="bg-white dark:bg-zinc-800 p-6 rounded-lg shadow hover:shadow-lg transition">
             <Estado />
           </div>
         </div>
 
-        {/* Fila 2: Información personal + asignaturas */}
+        {/* Fila inferior */}
         <div className="flex flex-col gap-6">
           <div className="bg-white dark:bg-zinc-800 p-6 rounded-lg shadow hover:shadow-lg transition">
             <h2 className="text-xl font-semibold mb-4 border-b pb-2">

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogTitle } from "@radix-ui/react-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Asignatura {
   id: number;
@@ -41,6 +42,10 @@ const AgregarTutor = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    setForm({ ...form, [field]: value });
   };
 
   const handleAsignaturasChange = (id: number) => {
@@ -89,51 +94,85 @@ const AgregarTutor = () => {
           <DialogHeader>
             <DialogTitle>Registrar Nuevo Tutor</DialogTitle>
           </DialogHeader>
-          {/* Área de scroll */}
+
           <div className="overflow-y-auto pr-2">
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="w-full">
                   <Label>Nombre</Label>
                   <Input name="nombre" value={form.nombre} onChange={handleChange} required />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label>Apellido</Label>
                   <Input name="apellido" value={form.apellido} onChange={handleChange} required />
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Tipo de Documento</Label>
-                  <Input name="tipo_documento" value={form.tipo_documento} onChange={handleChange} required />
+                  <Select onValueChange={(value) => handleSelectChange("tipo_documento", value)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona un tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CC">Cédula de Ciudadanía</SelectItem>
+                      <SelectItem value="TI">Tarjeta de Identidad</SelectItem>
+                      <SelectItem value="CE">Cédula de Extranjería</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Número de Documento</Label>
                   <Input name="documento" value={form.documento} onChange={handleChange} required />
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Lugar de Expedición</Label>
                   <Input name="lugar_expedicion" value={form.lugar_expedicion} onChange={handleChange} required />
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Sexo</Label>
-                  <Input name="sexo" value={form.sexo} onChange={handleChange} required />
+                  <Select onValueChange={(value) => handleSelectChange("sexo", value)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona un sexo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Masculino</SelectItem>
+                      <SelectItem value="F">Femenino</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Grupo Priorizado</Label>
-                  <Input name="grupo_priorizado" value={form.grupo_priorizado} onChange={handleChange} required />
+                  <Select onValueChange={(value) => handleSelectChange("grupo_priorizado", value)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona un grupo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ninguno">Ninguno</SelectItem>
+                      <SelectItem value="discapacidad">Discapacidad</SelectItem>
+                      <SelectItem value="etnia">Grupo Étnico</SelectItem>
+                      <SelectItem value="victima">Víctima del conflicto</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Sede</Label>
                   <Input name="sede" value={form.sede} onChange={handleChange} required />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label>Programa Académico</Label>
                   <Input name="programa_academico" value={form.programa_academico} onChange={handleChange} required />
                 </div>
-                <div>
+
+                <div className="w-full">
                   <Label>Correo</Label>
                   <Input name="correo" value={form.correo} onChange={handleChange} required />
                 </div>
-                <div>
+                <div className="w-full">
                   <Label>Teléfono</Label>
                   <Input name="telefono" value={form.telefono} onChange={handleChange} required />
                 </div>
@@ -157,7 +196,7 @@ const AgregarTutor = () => {
               </div>
             </form>
           </div>
-          {/* Footer fijo */}
+
           <div className="p-4 flex justify-end gap-2 border-t">
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancelar</Button>

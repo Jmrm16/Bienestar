@@ -1,11 +1,11 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { type Grupo } from '@/types';
 
 import { columnsEstudiantes, type Estudiante } from './columns';
 import { DataTable } from "@/components/ui/data-table";
 import { MetricCard } from "@/components/component/MetricCard";
-import { Cpu } from "lucide-react";
+import { Cpu, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
@@ -32,7 +32,6 @@ type Props = {
 };
 
 export default function GrupoDetalle({ grupo, estudiantes: initialEstudiantes, tutores }: Props) {
-  const [date] = useState<Date | undefined>(new Date());
   const [selectedTutor, setSelectedTutor] = useState<number | undefined>(grupo.tutor_id);
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,9 +66,21 @@ export default function GrupoDetalle({ grupo, estudiantes: initialEstudiantes, t
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
-        <Head title={`Grupo ${grupo.nombre} - Detalle`} />
+      <Head title={`Grupo ${grupo.nombre} - Detalle`} />
 
+      {/* Botón de regresar */}
+      <div className="mb-4">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="size-8"
+          onClick={() => router.visit('/estudiantes')}
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
         {/* Métricas */}
         <div className="container mx-auto p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -11,6 +11,7 @@ use App\Http\Controllers\ImportarEstudiantesController;
 use App\Http\Controllers\AcompanamientoCarreraController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TutoriasController;
+use App\Http\Controllers\CulturaController;
 use Inertia\Inertia;
 
 // 🔹 Página principal
@@ -53,6 +54,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 🟢 GruposT (controlador separado, si realmente lo usas aparte)
     Route::resource('grupost', GrupoTController::class)->except(['create', 'edit']);
     Route::post('/grupost/{grupo}/asignar-tutor', [GrupoTController::class, 'asignarTutor'])->name('grupost.asignar-tutor');
+
+    Route::get('/culturas', [CulturaController::class, 'index'])->name('cultura.index');
+    Route::get('/culturas/create', [CulturaController::class, 'create'])->name('cultura.create');
+    Route::post('/culturas', [CulturaController::class, 'store'])->name('cultura.store');
+    Route::get('/culturas/{cultura}/edit', [CulturaController::class, 'edit'])->name('cultura.edit');
+    Route::put('/culturas/{cultura}', [CulturaController::class, 'update'])->name('cultura.update');
+    Route::delete('/culturas/{cultura}', [CulturaController::class, 'destroy'])->name('cultura.destroy');
 
     // 🟢 Acompañamientos
     Route::resource('acompañamientos', AcompanamientoCarreraController::class)->except(['create', 'edit']);

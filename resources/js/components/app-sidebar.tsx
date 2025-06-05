@@ -40,7 +40,7 @@ import {
     },
     {
       title: 'Cultura',
-      url: '/cultura',
+      url: '/culturas',
       icon: Flower,
     },
     

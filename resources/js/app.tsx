@@ -10,8 +10,9 @@ import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 import { Toaster } from 'sonner';
 import { useEffect, useState } from 'react';
+import { Loader } from '@/components/ui/loader';
+import { Inertia } from '@inertiajs/inertia';
 
-// Declaración global para jQuery y Owl Carousel
 declare global {
   interface Window {
     $: any;
@@ -21,7 +22,6 @@ declare global {
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-// Cargar jQuery y Owl Carousel dinámicamente
 const loadScripts = () => {
   return new Promise<void>((resolve) => {
     if (window.$ && window.$.fn.owlCarousel) {
@@ -65,21 +65,47 @@ createInertiaApp({
   resolve: (name) => resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx')),
   setup({ el, App, props }) {
     const root = createRoot(el);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
 
-    // Cargar scripts antes de renderizar la app
-    loadScripts().then(() => {
-      root.render(
-        <>
-          <ThemeAwareToaster /> {/* 🔹 Toaster que sigue el tema de la página */}
-          <App {...props} />
-        </>
-      );
-    });
+    // Estado y lógica global del loader
+    const LoaderWrapper = () => {
+      const [loading, setLoading] = useState(false);
+
+      useEffect(() => {
+        const handleStart = (event: any) => {
+          if (!event.detail.visit.prefetch) {
+            setLoading(true);
+          }
+        };
+
+        const handleFinish = () => setLoading(false);
+
+        window.addEventListener('inertia:start', handleStart);
+        window.addEventListener('inertia:finish', handleFinish);
+
+        return () => {
+          window.removeEventListener('inertia:start', handleStart);
+          window.removeEventListener('inertia:finish', handleFinish);
+        };
+      }, []);
+
+      return loading ? <Loader /> : null;
+    };
+
+    root.render(
+      <>
+        <LoaderWrapper />
+        <ThemeAwareToaster />
+        <App {...props} />
+      </>
+    );
+
+    loadScripts();
   },
   progress: {
     color: '#4B5563',
   },
 });
 
-// Inicializar el tema
 initializeTheme();

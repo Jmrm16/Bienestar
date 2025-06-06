@@ -40,9 +40,18 @@ export type Estudiante = {
     };
     tutor_id?: number; // <-- agrega esto si lo necesitas
   };
-  
-  
-  
+
+  // src/types/index.ts
+
+export interface Cultura {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  tipo: string;
+  fecha: string; // formato ISO, por ejemplo "2025-06-05T00:00:00.000000Z"
+  imagen_banner?: string;
+  contenido_json?: any; // JSON de bloques Editor.js
+}
 
   export interface NavItem {
     title: string;

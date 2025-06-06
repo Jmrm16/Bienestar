@@ -18,6 +18,8 @@ return new class extends Migration
             $table->date('fecha')->nullable();
             $table->boolean('publicado')->default(false);
             $table->timestamps();
+            $table->json('contenido_json')->nullable(); // ✅ nuevo
+
         });
     }
 

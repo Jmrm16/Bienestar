@@ -1,5 +1,13 @@
-import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
+import { useEffect, useState } from "react";
+import AppLayout from "@/layouts/app-layout";
+import { Head, useForm } from "@inertiajs/react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import EditorCultura from "./EditorCultura"; // 👈 asegúrate de que esté en el mismo folder
 
 interface Cultura {
   id: number;
@@ -8,6 +16,7 @@ interface Cultura {
   tipo: string;
   fecha: string;
   publicado: boolean;
+  contenido_json: any; // JSON de bloques Editor.js
 }
 
 interface EditCulturaProps {
@@ -16,116 +25,137 @@ interface EditCulturaProps {
 
 export default function EditCultura({ cultura }: EditCulturaProps) {
   const { data, setData, post, processing, errors, transform } = useForm({
-    _method: 'PUT',
-    titulo: cultura.titulo || '',
-    descripcion: cultura.descripcion || '',
-    tipo: cultura.tipo || '',
-    fecha: cultura.fecha || '',
+    _method: "PUT",
+    titulo: cultura.titulo,
+    descripcion: cultura.descripcion,
+    tipo: cultura.tipo,
+    fecha: cultura.fecha,
     imagen_banner: null as File | null,
-    publicado: cultura.publicado || false,
+    publicado: cultura.publicado,
   });
+
+  const [contenido, setContenido] = useState<any>(() => {
+  try {
+    if (!cultura.contenido_json) return null;
+    return typeof cultura.contenido_json === 'string'
+      ? JSON.parse(cultura.contenido_json)
+      : cultura.contenido_json;
+  } catch (err) {
+    console.error("Error al parsear contenido_json:", err);
+    return null;
+  }
+});
+
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    transform((data) => {
+    transform(() => {
       const formData = new FormData();
-      formData.append('_method', 'PUT');
-      formData.append('titulo', data.titulo);
-      formData.append('descripcion', data.descripcion);
-      formData.append('tipo', data.tipo);
-      formData.append('fecha', data.fecha);
-      formData.append('publicado', data.publicado ? '1' : '0');
+      formData.append("_method", "PUT");
+      formData.append("titulo", data.titulo);
+      formData.append("descripcion", data.descripcion);
+      formData.append("tipo", data.tipo);
+      formData.append("fecha", data.fecha);
+      formData.append("publicado", data.publicado ? "1" : "0");
+      formData.append("contenido_json", JSON.stringify(contenido));
       if (data.imagen_banner) {
-        formData.append('imagen_banner', data.imagen_banner);
+        formData.append("imagen_banner", data.imagen_banner);
       }
       return formData;
     });
 
-    post(`/cultura/${cultura.id}`);
+    post(`/culturas/${cultura.id}`);
   };
 
   return (
-    <AppLayout breadcrumbs={[{ title: 'Cultura', href: '/cultura' }, { title: 'Editar', href: '#' }]}>
+    <AppLayout breadcrumbs={[{ title: "Cultura", href: "/culturas" }, { title: "Editar", href: "#" }]}>
       <Head title="Editar publicación cultural" />
-      <div className="p-4 max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Editar publicación</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
-          <div>
-            <label className="block font-medium">Título</label>
-            <input
-              type="text"
-              className="input w-full"
-              value={data.titulo}
-              onChange={e => setData('titulo', e.target.value)}
-            />
-            {errors.titulo && <div className="text-red-500 text-sm">{errors.titulo}</div>}
-          </div>
+      <div className="p-4 max-w-4xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Editar publicación cultural</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
+              <div>
+                <Label htmlFor="titulo">Título</Label>
+                <Input id="titulo" value={data.titulo} onChange={(e) => setData("titulo", e.target.value)} />
+                {errors.titulo && <p className="text-sm text-red-500">{errors.titulo}</p>}
+              </div>
 
-          <div>
-            <label className="block font-medium">Descripción</label>
-            <textarea
-              className="input w-full"
-              rows={4}
-              value={data.descripcion}
-              onChange={e => setData('descripcion', e.target.value)}
-            />
-            {errors.descripcion && <div className="text-red-500 text-sm">{errors.descripcion}</div>}
-          </div>
+              <div>
+                <Label htmlFor="descripcion">Descripción corta</Label>
+                <Textarea
+                  id="descripcion"
+                  rows={3}
+                  value={data.descripcion}
+                  onChange={(e) => setData("descripcion", e.target.value)}
+                />
+                {errors.descripcion && <p className="text-sm text-red-500">{errors.descripcion}</p>}
+              </div>
 
-          <div>
-            <label className="block font-medium">Tipo</label>
-            <select
-              className="input w-full"
-              value={data.tipo}
-              onChange={e => setData('tipo', e.target.value)}
-            >
-              <option value="noticia">Noticia</option>
-              <option value="evento">Evento</option>
-              <option value="actividad">Actividad</option>
-            </select>
-            {errors.tipo && <div className="text-red-500 text-sm">{errors.tipo}</div>}
-          </div>
+              <div>
+                <Label htmlFor="tipo">Tipo</Label>
+                <select
+                  id="tipo"
+                  className="border-input w-full rounded-md p-2 text-sm"
+                  value={data.tipo}
+                  onChange={(e) => setData("tipo", e.target.value)}
+                >
+                  <option value="noticia">Noticia</option>
+                  <option value="evento">Evento</option>
+                  <option value="actividad">Actividad</option>
+                </select>
+                {errors.tipo && <p className="text-sm text-red-500">{errors.tipo}</p>}
+              </div>
 
-          <div>
-            <label className="block font-medium">Fecha</label>
-            <input
-              type="date"
-              className="input w-full"
-              value={data.fecha}
-              onChange={e => setData('fecha', e.target.value)}
-            />
-            {errors.fecha && <div className="text-red-500 text-sm">{errors.fecha}</div>}
-          </div>
+              <div>
+                <Label htmlFor="fecha">Fecha</Label>
+                <Input
+                  id="fecha"
+                  type="date"
+                  value={data.fecha}
+                  onChange={(e) => setData("fecha", e.target.value)}
+                />
+                {errors.fecha && <p className="text-sm text-red-500">{errors.fecha}</p>}
+              </div>
 
-          <div>
-            <label className="block font-medium">Banner (opcional)</label>
-            <input
-              type="file"
-              className="input w-full"
-              onChange={e => {
-                const file = e.target.files?.[0] ?? null;
-                setData('imagen_banner' as 'imagen_banner', file); // 👈 error solucionado aquí
-              }}
-            />
-            {errors.imagen_banner && <div className="text-red-500 text-sm">{errors.imagen_banner}</div>}
-          </div>
+              <div>
+                <Label htmlFor="imagen_banner">Imagen Banner</Label>
+                <Input
+                  id="imagen_banner"
+                  type="file"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    setData("imagen_banner" as "imagen_banner", file);
+                  }}
+                />
+                {errors.imagen_banner && <p className="text-sm text-red-500">{errors.imagen_banner}</p>}
+              </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              id="publicado"
-              type="checkbox"
-              checked={data.publicado}
-              onChange={e => setData('publicado', e.target.checked)}
-            />
-            <label htmlFor="publicado" className="text-sm">¿Publicado?</label>
-          </div>
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="publicado"
+                  checked={data.publicado}
+                  onCheckedChange={(value) => setData("publicado", value)}
+                />
+                <Label htmlFor="publicado">¿Publicado?</Label>
+              </div>
 
-          <button type="submit" className="btn btn-primary" disabled={processing}>
-            Actualizar
-          </button>
-        </form>
+              {/* 🔥 Bloques Editor.js */}
+              <div>
+                <Label>Contenido extendido (por bloques)</Label>
+                <EditorCultura data={contenido} onChange={setContenido} />
+              </div>
+
+              <Button type="submit" disabled={processing}>
+                Actualizar publicación
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );

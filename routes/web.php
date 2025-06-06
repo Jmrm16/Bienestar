@@ -26,6 +26,9 @@ Route::get('/graduacion', function () {
     return Inertia::render('graduacion');
 })->name('graduacion');
 
+Route::get('/cultura/{cultura}/item', [CulturaController::class, 'show'])->name('cultura.show');
+
+
 // 🟢 Rutas protegidas con autenticación
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -61,6 +64,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/culturas/{cultura}/edit', [CulturaController::class, 'edit'])->name('cultura.edit');
     Route::put('/culturas/{cultura}', [CulturaController::class, 'update'])->name('cultura.update');
     Route::delete('/culturas/{cultura}', [CulturaController::class, 'destroy'])->name('cultura.destroy');
+    Route::post('/culturas/upload-image', [CulturaController::class, 'uploadImage'])->name('cultura.uploadImage');
+    Route::get('/cultura/publica', [CulturaController::class, 'vistaPublica']);
+
+
 
     // 🟢 Acompañamientos
     Route::resource('acompañamientos', AcompanamientoCarreraController::class)->except(['create', 'edit']);

@@ -9,7 +9,7 @@ export default function HeaderpermaComponent() {
 
   const menuItems = [
     { name: 'Inicio', href: '/cultura' },
-    { name: 'cositas', href: '/cultura/tutorias' },
+    { name: 'cositas', href: '/cultura/publica' },
 
   ];
 

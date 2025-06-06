@@ -14,11 +14,14 @@ class Cultura extends Model
         'imagenes_extra',
         'fecha',
         'publicado',
+        'contenido_json', // ✅ nuevo
     ];
 
     protected $casts = [
         'imagenes_extra' => 'array',
+        'contenido_json' => 'array', // ✅ nuevo
         'fecha' => 'date',
         'publicado' => 'boolean',
     ];
+
 }

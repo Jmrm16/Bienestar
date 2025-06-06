@@ -44,7 +44,7 @@ export default function CulturaIndex({ culturas }: CulturaIndexProps) {
                 <p className="text-sm text-muted-foreground">{item.descripcion.slice(0, 100)}...</p>
                 <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                   <span>{item.tipo}</span>
-                  <Link href={`/cultura/${item.id}/edit`} className="text-primary hover:underline">
+                  <Link href={`/culturas/${item.id}/edit`} className="text-primary hover:underline">
                     Editar
                   </Link>
                 </div>

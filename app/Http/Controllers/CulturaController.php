@@ -29,11 +29,14 @@ class CulturaController extends Controller
             'fecha' => 'nullable|date',
             'imagen_banner' => 'nullable|image|max:2048',
             'publicado' => 'boolean',
+            'contenido_json' => 'nullable|json', // ✅ validación para bloques
         ]);
 
         if ($request->hasFile('imagen_banner')) {
             $data['imagen_banner'] = $request->file('imagen_banner')->store('cultura', 'public');
         }
+
+        $data['contenido_json'] = $request->input('contenido_json'); // ✅ guardar bloques
 
         Cultura::create($data);
         return redirect()->route('cultura.index');
@@ -53,6 +56,7 @@ class CulturaController extends Controller
             'fecha' => 'nullable|date',
             'imagen_banner' => 'nullable|image|max:2048',
             'publicado' => 'boolean',
+            'contenido_json' => 'nullable|json', // ✅ validación para bloques
         ]);
 
         if ($request->hasFile('imagen_banner')) {
@@ -61,6 +65,8 @@ class CulturaController extends Controller
             }
             $data['imagen_banner'] = $request->file('imagen_banner')->store('cultura', 'public');
         }
+
+        $data['contenido_json'] = $request->input('contenido_json'); // ✅ actualizar bloques
 
         $cultura->update($data);
         return redirect()->route('cultura.index');
@@ -71,7 +77,40 @@ class CulturaController extends Controller
         if ($cultura->imagen_banner) {
             Storage::disk('public')->delete($cultura->imagen_banner);
         }
+
         $cultura->delete();
         return redirect()->route('cultura.index');
     }
+public function uploadImage(Request $request)
+{
+    $request->validate([
+        'image' => 'required|image|max:2048',
+    ]);
+
+    $path = $request->file('image')->store('cultura/editor', 'public');
+
+    return response()->json([
+        'success' => 1,
+        'file' => [
+            'url' => asset('storage/' . $path), // ✅ corregido
+        ],
+    ]);
+}
+public function vistaPublica()
+{
+    $culturas = Cultura::where('publicado', true)->latest()->get();
+    return Inertia::render('Cultura_vistas/Cultura', [
+        'culturas' => $culturas,
+    ]);
+}
+public function show(Cultura $cultura)
+{
+    return Inertia::render('Cultura_vistas/ShowCultura', [
+        'cultura' => $cultura
+    ]);
+}
+
+
+
+
 }

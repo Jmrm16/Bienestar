@@ -11,10 +11,15 @@ class Carrera extends Model
 
     protected $fillable = ['nombre', 'codigo'];
 
-
-    public function grupos()
+    // Relación con asignaturas
+    public function asignaturas()
     {
-        return $this->hasMany(Grupo::class);
+        return $this->hasMany(Asignatura::class);
     }
 
+    // Relación con grupos
+    public function grupos()
+    {
+        return $this->hasMany(GrupoT::class); // Asegúrate de que el modelo sea GrupoT, no Grupo
+    }
 }

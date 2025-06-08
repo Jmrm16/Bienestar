@@ -29,17 +29,32 @@ export type Estudiante = {
     nombre: string;
   };
   
-  export type Grupo = {
+export type Grupo = {
+  id: number;
+  nombre: string;
+  codigo: string;
+  carrera_id: number;
+  carrera: {
     id: number;
     nombre: string;
-    codigo: string;
-    carrera_id: number;
-    carrera: {
-      id: number;
-      nombre: string;
-    };
-    tutor_id?: number; // <-- agrega esto si lo necesitas
   };
+  tutor_id?: number; // opcional, por si se va a asignar más adelante
+  asignatura_id: number;
+};
+export type GrupoExtendido = {
+  id: number;
+  nombre: string;
+  codigo: string;
+  carrera_id: number;
+  asignatura_id: number;
+  carrera: {
+    id: number;
+    nombre: string;
+  };
+  tipo?: string;
+};
+
+
 
   // src/types/index.ts
 
@@ -61,8 +76,16 @@ export interface Cultura {
     children?: NavItem[]; // <- para submenús
 }
 
-
-
+export interface Asignatura{
+    id: number;
+    nombre: string;
+    codigo: string;
+    docente: string;
+    carrera_id: number;
+    grupos: Grupo[];
+    carrera: Carrera;
+    [key: string]: unknown; // This allows for additional properties...
+}
 
 export interface SharedData {
     name: string;

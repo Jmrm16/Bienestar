@@ -8,25 +8,28 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class GrupoT extends Model
 {
     use HasFactory;
-    protected $table = 'grupo_t'; // <-- Aquí le indicas la tabla correcta
 
-    // Asegúrate de que 'tutor_id' NO esté en el $fillable, porque es manejado en la tabla pivote
-    protected $fillable = ['nombre', 'codigo', 'carrera_id'];
+    protected $table = 'grupo_t';
+
+    protected $fillable = ['nombre', 'codigo', 'carrera_id', 'asignatura_id'];
 
     public function carrera()
     {
         return $this->belongsTo(Carrera::class);
     }
 
-    public function estudiantes()
+    public function asignatura()
     {
-        return $this->hasMany(Estudiante::class);
+        return $this->belongsTo(Asignatura::class);
     }
 
     public function tutores()
     {
-        // Relación muchos a muchos con Tutor a través de la tabla pivote 'grupo_tutor'
-        return $this->belongsToMany(Tutor::class,'grupo_tutor' );
+        return $this->belongsToMany(Tutor::class, 'grupo_tutor', 'grupo_t_id', 'tutor_id');
     }
-    //
+
+    public function estudiantes()
+    {
+        return $this->hasMany(Estudiante::class);
+    }
 }

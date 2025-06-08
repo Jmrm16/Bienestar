@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { router, usePage } from "@inertiajs/react";
+import { router, usePage, Link } from "@inertiajs/react";
 import { toast } from "sonner";
 
 interface Asignatura {
@@ -88,31 +88,12 @@ const TablaAsignatura = () => {
               <TableCell>{asignatura.codigo}</TableCell>
               <TableCell>{asignatura.docente}</TableCell>
               <TableCell className="text-right space-x-2">
-                {/* Modal Ver */}
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setSelectedAsignatura(asignatura)}
-                    >
-                      <Eye />
-                    </Button>
-                  </DialogTrigger>
-                  {selectedAsignatura && selectedAsignatura.id === asignatura.id && (
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Detalles de la Asignatura</DialogTitle>
-                        <DialogDescription asChild>
-                          <div className="space-y-2">
-                            <p><strong>Nombre:</strong> {selectedAsignatura.nombre}</p>
-                            <p><strong>Código:</strong> {selectedAsignatura.codigo}</p>
-                            <p><strong>Docente:</strong> {selectedAsignatura.docente}</p>
-                          </div>
-                        </DialogDescription>
-                      </DialogHeader>
-                    </DialogContent>
-                  )}
-                </Dialog>
+                {/* ✅ Link al show */}
+                <Link href={`/asignaturas/${asignatura.id}`}>
+                  <Button variant="ghost">
+                    <Eye />
+                  </Button>
+                </Link>
 
                 {/* Modal Editar */}
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -160,7 +141,7 @@ const TablaAsignatura = () => {
                   </DialogContent>
                 </Dialog>
 
-                {/* Modal Confirmación de Eliminación */}
+                {/* Modal Eliminar */}
                 <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
                   <DialogTrigger asChild>
                     <Button
@@ -176,11 +157,9 @@ const TablaAsignatura = () => {
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Eliminar Asignatura</DialogTitle>
-                      <DialogDescription asChild>
-                        <div>
-                          ¿Estás seguro de que deseas eliminar{" "}
-                          <strong>{deleteAsignatura?.nombre}</strong>?
-                        </div>
+                      <DialogDescription>
+                        ¿Estás seguro de que deseas eliminar{" "}
+                        <strong>{deleteAsignatura?.nombre}</strong>?
                       </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

@@ -45,7 +45,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tutores/{tutor}/perfil', [TutorController::class, 'perfil'])->name('tutores.perfil');
 
     // 🟢 Asignaturas
-    Route::resource('asignaturas', AsignaturaController::class)->except(['create', 'edit']);
+    Route::resource('asignaturas', AsignaturaController::class)->except(['create', 'edit' ]);
+    Route::get('/asignaturas/{asignatura}', [AsignaturaController::class, 'show'])->name('asignaturas.show');
+
 
     // 🟢 Carreras
     Route::resource('carreras', CarreraController::class)->except(['create', 'edit']);

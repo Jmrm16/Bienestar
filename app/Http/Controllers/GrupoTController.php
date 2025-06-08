@@ -10,22 +10,25 @@ class GrupoTController extends Controller
     /**
      * Registrar un nuevo grupo.
      */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:255',
-            'carrera_id' => 'required|exists:carreras,id',
-        ]);
+        public function store(Request $request)
+        {
+            $request->validate([
+                'nombre' => 'required|string|max:255',
+                'codigo' => 'required|string|max:255',
+                'carrera_id' => 'required|exists:carreras,id',
+                'asignatura_id' => 'required|exists:asignaturas,id', // 👈 FALTA ESTA LÍNEA
+            ]);
 
-        GrupoT::create([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-            'carrera_id' => $request->carrera_id,
-        ]);
+            GrupoT::create([
+                'nombre' => $request->nombre,
+                'codigo' => $request->codigo,
+                'carrera_id' => $request->carrera_id,
+                'asignatura_id' => $request->asignatura_id, // 👈 Y ESTA TAMBIÉN
+            ]);
 
-        return redirect()->back()->with('success', 'Grupo registrado exitosamente.');
-    }
+            return redirect()->back()->with('success', 'Grupo registrado exitosamente.');
+        }
+
 
     /**
      * Actualizar un grupo existente.
@@ -37,6 +40,7 @@ class GrupoTController extends Controller
             'codigo' => 'required|string|max:255',
             'carrera_id' => 'required|exists:carreras,id',
             'tutor_id' => 'nullable|exists:tutors,id',
+            'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
         $grupo->update([
@@ -44,6 +48,7 @@ class GrupoTController extends Controller
             'codigo' => $request->codigo,
             'carrera_id' => $request->carrera_id,
             'tutor_id' => $request->tutor_id,
+            'asignatura_id' => $request->asignatura_id,
         ]);
 
         return redirect()->back()->with('success', 'Grupo actualizado correctamente.');

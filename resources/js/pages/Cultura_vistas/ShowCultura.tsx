@@ -20,7 +20,7 @@ export default function ShowCultura({ cultura }: Props) {
 
       <main className="bg-gray-50 text-gray-800">
         <section className="max-w-5xl mx-auto py-12 px-4">
-          <h1 className="text-3xl font-bold text-blue-800 mb-2">{cultura.titulo}</h1>
+          <h1 className="text-3xl font-bold text-orange-500 mb-2">{cultura.titulo}</h1>
           <div className="w-24 h-1 bg-orange-500 mb-6" />
 
           {/* Imagen principal */}

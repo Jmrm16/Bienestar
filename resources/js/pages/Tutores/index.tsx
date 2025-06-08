@@ -121,7 +121,7 @@ export default function Index({
         <div className="p-6">
           <p style={{ fontSize: '30px', fontWeight: 'bold' }} className="mb-4">Asignaturas</p>
           <div className="flex space-x-4 mb-4">
-            <AgregarAsignatura />
+            <AgregarAsignatura carreras={carreras} />
           </div>
           <TablaAsignatura />
         </div>

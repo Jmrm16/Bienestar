@@ -11,14 +11,34 @@ import {
 import { router } from "@inertiajs/react";
 import { toast } from "sonner";
 
-const AgregarAsignatura = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [form, setForm] = useState({ nombre: "", codigo: "", docente: "" });
-    const [errors, setErrors] = useState<{ nombre?: string; codigo?: string; docente?: string }>({});
+interface Carrera {
+    id: number;
+    nombre: string;
+}
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+interface Props {
+    carreras: Carrera[];
+}
+
+const AgregarAsignatura = ({ carreras }: Props) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [form, setForm] = useState({
+        nombre: "",
+        codigo: "",
+        docente: "",
+        carrera_id: "",
+    });
+
+    const [errors, setErrors] = useState<{
+        nombre?: string;
+        codigo?: string;
+        docente?: string;
+        carrera_id?: string;
+    }>({});
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
-        setErrors({ ...errors, [e.target.name]: "" }); // Limpiar error al escribir
+        setErrors({ ...errors, [e.target.name]: "" });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -27,7 +47,7 @@ const AgregarAsignatura = () => {
             onSuccess: () => {
                 toast.success("✅ Asignatura agregada correctamente");
                 setIsOpen(false);
-                setForm({ nombre: "", codigo: "", docente: "" });
+                setForm({ nombre: "", codigo: "", docente: "", carrera_id: "" });
                 setErrors({});
             },
             onError: (serverErrors) => {
@@ -86,10 +106,30 @@ const AgregarAsignatura = () => {
                                 />
                                 {errors.docente && <p className="text-red-500 text-sm">{errors.docente}</p>}
                             </div>
+                            <div>
+                                <label className="block">Carrera</label>
+                                <select
+                                    name="carrera_id"
+                                    value={form.carrera_id}
+                                    onChange={handleChange}
+                                    className="w-full p-2 border rounded"
+                                    required
+                                >
+                                    <option value="">Seleccione una carrera</option>
+                                    {carreras.map((carrera) => (
+                                        <option key={carrera.id} value={carrera.id}>
+                                            {carrera.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.carrera_id && <p className="text-red-500 text-sm">{errors.carrera_id}</p>}
+                            </div>
                         </div>
                         <div className="p-4">
                             <DialogFooter>
-                                <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancelar</Button>
+                                <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>
+                                    Cancelar
+                                </Button>
                                 <Button type="submit">Guardar</Button>
                             </DialogFooter>
                         </div>

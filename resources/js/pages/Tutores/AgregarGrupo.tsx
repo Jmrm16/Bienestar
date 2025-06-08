@@ -20,21 +20,26 @@ interface Carrera {
   nombre: string;
 }
 
-// Extender PageProps de Inertia correctamente
+interface Asignatura {
+  id: number;
+  nombre: string;
+}
+
 interface PageProps extends InertiaPageProps {
   carreras: Carrera[];
+  asignaturas: Asignatura[];
   errors?: Record<string, string>;
 }
 
 const AgregarGrupo = () => {
-  const { carreras = [], errors = {} } = usePage<PageProps>().props;
-  console.log('Carreras recibidas:', carreras); // <-- Añade esto
+  const { carreras = [], asignaturas = [], errors = {} } = usePage<PageProps>().props;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     codigo: "",
     carrera_id: "",
+    asignatura_id: "", // <- Nueva clave
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -49,7 +54,7 @@ const AgregarGrupo = () => {
       preserveScroll: true,
       onSuccess: () => {
         toast.success("Grupo agregado correctamente");
-        setForm({ nombre: "", codigo: "", carrera_id: "" });
+        setForm({ nombre: "", codigo: "", carrera_id: "", asignatura_id: "" });
         setOpen(false);
       },
       onError: (errors) => {
@@ -72,28 +77,14 @@ const AgregarGrupo = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="nombre">Nombre</Label>
-            <Input
-              id="nombre"
-              name="nombre"
-              value={form.nombre}
-              onChange={handleChange}
-            />
-            {errors?.nombre && (
-              <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>
-            )}
+            <Input id="nombre" name="nombre" value={form.nombre} onChange={handleChange} />
+            {errors?.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>}
           </div>
 
           <div>
             <Label htmlFor="codigo">Código</Label>
-            <Input
-              id="codigo"
-              name="codigo"
-              value={form.codigo}
-              onChange={handleChange}
-            />
-            {errors?.codigo && (
-              <p className="text-red-500 text-sm mt-1">{errors.codigo}</p>
-            )}
+            <Input id="codigo" name="codigo" value={form.codigo} onChange={handleChange} />
+            {errors?.codigo && <p className="text-red-500 text-sm mt-1">{errors.codigo}</p>}
           </div>
 
           <div>
@@ -112,9 +103,26 @@ const AgregarGrupo = () => {
                 </option>
               ))}
             </select>
-            {errors?.carrera_id && (
-              <p className="text-red-500 text-sm mt-1">{errors.carrera_id}</p>
-            )}
+            {errors?.carrera_id && <p className="text-red-500 text-sm mt-1">{errors.carrera_id}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor="asignatura_id">Asignatura</Label>
+            <select
+              id="asignatura_id"
+              name="asignatura_id"
+              value={form.asignatura_id}
+              onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="">Selecciona una asignatura</option>
+              {asignaturas.map((asignatura) => (
+                <option key={asignatura.id} value={asignatura.id}>
+                  {asignatura.nombre}
+                </option>
+              ))}
+            </select>
+            {errors?.asignatura_id && <p className="text-red-500 text-sm mt-1">{errors.asignatura_id}</p>}
           </div>
 
           <DialogFooter>

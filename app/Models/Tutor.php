@@ -10,30 +10,26 @@ class Tutor extends Model
     use HasFactory;
 
     protected $fillable = [
-    'nombre',
-    'apellido',
-    'tipo_documento',
-    'documento',
-    'lugar_expedicion',
-    'sexo',
-    'grupo_priorizado',
-    'sede',
-    'programa_academico',
-    'correo',
-    'telefono'
-];
+        'nombre',
+        'apellido',
+        'tipo_documento',
+        'documento',
+        'lugar_expedicion',
+        'sexo',
+        'grupo_priorizado',
+        'sede',
+        'programa_academico',
+        'correo',
+        'telefono',
+    ];
 
+    public function grupos()
+    {
+        return $this->belongsToMany(GrupoT::class, 'grupo_tutor', 'tutor_id', 'grupo_t_id');
+    }
 
-    // Relación muchos a muchos con Asignatura
     public function asignaturas()
     {
         return $this->belongsToMany(Asignatura::class);
-    }
-
-    // Relación muchos a muchos con Grupo
-    // Asegúrate de que la tabla pivote se llame 'grupo_tutor'
-    public function grupos()
-    {
-        return $this->belongsToMany(Grupo::class,'grupo_tutor'); // Especificamos el nombre de la tabla pivote
     }
 }

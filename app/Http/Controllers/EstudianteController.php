@@ -26,11 +26,9 @@ class EstudianteController extends Controller
 {
     $grupo = Grupo::with('carrera')->findOrFail($grupoId);
     $estudiantes = Estudiante::where('grupo_id', $grupoId)->get();
-    $tutores = Tutor::all();  // Obtener todos los tutores
 
     return Inertia::render('Estudiantes/GrupoDetalle', [
-        'grupo' => $grupo->load('tutores', 'carrera'),
-        'tutores' => Tutor::all(),
+        'grupo' => $grupo->load('carrera'),
         'estudiantes' => Estudiante::where('grupo_id', $grupo->id)->get(),
     ]);
 }

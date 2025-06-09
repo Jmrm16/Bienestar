@@ -32,4 +32,12 @@ class GrupoT extends Model
     {
         return $this->hasMany(Estudiante::class);
     }
+
+    /**
+     * Relación: Un grupo tiene muchas asistencias
+     */
+    public function asistencias()
+    {
+        return $this->hasMany(Asistencia::class, 'grupo_id');
+    }
 }

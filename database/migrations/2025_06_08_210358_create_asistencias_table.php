@@ -9,6 +9,11 @@ return new class extends Migration {
     {
         Schema::create('asistencias', function (Blueprint $table) {
             $table->id();
+
+            // ✅ Relación con grupo_t
+            $table->foreignId('grupo_id')->constrained('grupo_t')->onDelete('cascade');
+
+            // ✅ Campos reales
             $table->string('nombres_del_estudiante');
             $table->string('apellidos_del_estudiante');
             $table->string('identificacion');
@@ -18,6 +23,10 @@ return new class extends Migration {
             $table->string('grupo_priorizado')->nullable();
             $table->date('fecha');
             $table->integer('horas')->default(1);
+
+            // ✅ Nuevo campo: número total de asistencias (evita duplicar)
+            $table->integer('total_asistencias')->default(0);
+
             $table->timestamps();
         });
     }

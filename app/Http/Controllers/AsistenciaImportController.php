@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asistencia;
+use App\Models\GrupoT;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Inertia\Inertia;
@@ -10,25 +11,32 @@ use Carbon\Carbon;
 
 class AsistenciaImportController extends Controller
 {
+    /**
+     * Vista general de asistencias
+     */
     public function index()
     {
         return Inertia::render('Asistencias/Importar', [
             'asistencias' => Asistencia::latest()->get(),
+            'grupos' => GrupoT::select('id', 'nombre')->get(),
         ]);
     }
 
+    /**
+     * Importar asistencias desde archivo Excel
+     */
     public function import(Request $request)
     {
         $request->validate([
             'archivo' => 'required|file|mimes:xlsx,xls',
+            'grupo_id' => 'required|exists:grupo_t,id',
         ]);
 
+        $grupoId = $request->input('grupo_id');
         $archivo = $request->file('archivo');
         $hoja = IOFactory::load($archivo)->getActiveSheet()->toArray(null, true, true, true);
 
         $diasColumna = [];
-
-        // Detectar columnas con fechas (días del mes) desde fila 12
         foreach ($hoja[12] as $col => $val) {
             if (is_numeric($val)) {
                 $diasColumna[$col] = intval($val);
@@ -37,7 +45,6 @@ class AsistenciaImportController extends Controller
 
         $importadas = 0;
 
-        // Recorrer desde fila 13 en adelante (donde inician los datos reales)
         foreach ($hoja as $index => $fila) {
             if ($index < 13 || empty($fila['C'])) continue;
 
@@ -56,25 +63,52 @@ class AsistenciaImportController extends Controller
             if (!empty($fila['N'])) $priorizados[] = 'Frontera';
             $grupo_priorizado = implode(', ', $priorizados);
 
-            // Procesar días con asistencia
+            // ✅ Contar cuántos días tiene marcado el 1
+            $totalAsistencias = 0;
             foreach ($diasColumna as $col => $dia) {
                 if (!empty($fila[$col]) && $fila[$col] == 1) {
-                    Asistencia::create([
+                    $totalAsistencias++;
+                }
+            }
+
+            if ($totalAsistencias > 0) {
+                // ✅ Registrar solo un registro por estudiante con total de asistencias
+                Asistencia::updateOrCreate(
+                    [
+                        'grupo_id' => $grupoId,
+                        'identificacion' => $identificacion,
+                        'fecha' => now()->startOfMonth()->toDateString(), // Mes de carga
+                    ],
+                    [
                         'nombres_del_estudiante' => $nombres,
                         'apellidos_del_estudiante' => $apellidos,
-                        'identificacion' => $identificacion,
                         'codigo_estudiantil' => $codigo_estudiantil,
                         'programa_academico' => $programa_academico,
                         'sexo' => $sexo,
                         'grupo_priorizado' => $grupo_priorizado,
-                        'fecha' => Carbon::createFromDate(2025, 3, $dia),
                         'horas' => 1,
-                    ]);
-                    $importadas++;
-                }
+                        'total_asistencias' => $totalAsistencias,
+                    ]
+                );
+
+                $importadas++;
             }
         }
 
         return redirect()->back()->with('success', "$importadas asistencias importadas correctamente.");
+    }
+
+    /**
+     * Vista para importar asistencias desde un grupo específico
+     */
+    public function importarPorGrupoVista($grupoId)
+    {
+        $grupo = GrupoT::with('asistencias')->findOrFail($grupoId);
+
+        return Inertia::render('Asistencias/Importar', [
+            'grupo' => $grupo,
+            'asistencias' => $grupo->asistencias ?? [],
+            'grupos' => GrupoT::select('id', 'nombre')->get(),
+        ]);
     }
 }

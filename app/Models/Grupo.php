@@ -22,9 +22,4 @@ class Grupo extends Model
         return $this->hasMany(Estudiante::class);
     }
 
-    public function tutores()
-    {
-        // Relación muchos a muchos con Tutor a través de la tabla pivote 'grupo_tutor'
-        return $this->belongsToMany(Tutor::class,'grupo_tutor' );
-    }
 }

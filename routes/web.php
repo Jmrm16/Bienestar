@@ -28,7 +28,6 @@ Route::get('/cultura/{cultura}/item', [CulturaController::class, 'show'])->name(
 // Tutorías permanencia
 Route::get('/permanencia/tutorias', [TutoriasController::class, 'index'])->name('tutorias.index');
 
-
 // 🟢 Rutas protegidas con autenticación
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -72,13 +71,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 🟨 Acompañamientos
     Route::resource('acompañamientos', AcompanamientoCarreraController::class)->except(['create', 'edit']);
 
-    // ✅ Importar asistencias (vista + acción usando el controlador)
+    // ✅ Importar asistencias (vista + acción global)
     Route::get('/asistencias/importar', [AsistenciaImportController::class, 'index'])->name('asistencias.importar.form');
     Route::post('/asistencias/importar', [AsistenciaImportController::class, 'import'])->name('asistencias.importar');
 
+    // ✅ Importar asistencias por grupo
+    Route::get('/grupost/{grupo}/asistencias/importar', [AsistenciaImportController::class, 'importarPorGrupoVista'])->name('grupost.asistencias.importar');
 });
 
-// 🔹 Archivos de configuración
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
-

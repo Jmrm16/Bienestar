@@ -49,11 +49,6 @@ const mainNavItems: NavItem[] = [
     url: '/culturas',
     icon: Flower,
   },
-  {
-    title: 'Importar Asistencias',
-    url: '/asistencias/importar',
-    icon: BookOpen,
-  },
 ];
 
 const footerNavItems: NavItem[] = [];

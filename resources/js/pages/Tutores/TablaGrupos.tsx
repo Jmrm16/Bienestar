@@ -12,11 +12,9 @@ import {
 import {
   Table, TableBody, TableCell, TableCaption, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PencilLine, Delete, Eye, Upload, UserPlus2 } from "lucide-react";
 import { router } from "@inertiajs/react";
 import { toast } from "sonner";
+import { UserPlus2, Upload } from "lucide-react";
 
 interface Tutor {
   id: number;
@@ -87,6 +85,15 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores, onSeleccionarGrupo }: 
               <TableCell>{grupo.tipo}</TableCell>
               <TableCell className="text-right space-x-2">
 
+                {/* Botón importar asistencias */}
+                <Button
+                  variant="ghost"
+                  onClick={() => router.visit(`/grupost/${grupo.id}/asistencias/importar`)}
+                  title="Importar asistencias"
+                >
+                  <Upload className="w-4 h-4" />
+                </Button>
+
                 {/* Botón asignar tutor */}
                 <Dialog open={isAsignarOpen} onOpenChange={setIsAsignarOpen}>
                   <DialogTrigger asChild>
@@ -96,8 +103,9 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores, onSeleccionarGrupo }: 
                         setSelectedGrupo(grupo);
                         setIsAsignarOpen(true);
                       }}
+                      title="Asignar tutor"
                     >
-                      <UserPlus2 />
+                      <UserPlus2 className="w-4 h-4" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent>

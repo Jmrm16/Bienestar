@@ -1,5 +1,4 @@
 import { useForm, usePage, Head } from '@inertiajs/react'
-import { useState } from 'react'
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -19,13 +18,26 @@ interface Asistencia {
   grupo_priorizado: string
   fecha: string
   horas: number
+  total_asistencias: number // ✅ Nuevo campo
+}
+
+interface Grupo {
+  id: number
+  nombre: string
+}
+
+interface Props {
+  asistencias: Asistencia[]
+  grupo?: Grupo
+  grupos?: Grupo[]
 }
 
 export default function Importar() {
-  const { asistencias } = (usePage().props as unknown as { asistencias: Asistencia[] })
+  const { asistencias, grupo, grupos } = usePage().props as unknown as Props
 
   const { data, setData, post, processing } = useForm({
     archivo: null as File | null,
+    grupo_id: grupo?.id ?? "",
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,8 +67,28 @@ export default function Importar() {
             <CardTitle>Importar archivo Excel</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4 items-start md:items-end">
-              <div className="flex flex-col w-full">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {!grupo && grupos && (
+                <div>
+                  <Label htmlFor="grupo_id">Selecciona el grupo</Label>
+                  <select
+                    className="w-full border px-3 py-2 rounded mt-1"
+                    name="grupo_id"
+                    value={data.grupo_id}
+                    onChange={(e) => setData('grupo_id', e.target.value)}
+                    required
+                  >
+                    <option value="">-- Selecciona un grupo --</option>
+                    {grupos.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="flex flex-col">
                 <Label htmlFor="archivo">Selecciona un archivo</Label>
                 <Input
                   type="file"
@@ -65,6 +97,7 @@ export default function Importar() {
                   required
                 />
               </div>
+
               <Button type="submit" disabled={processing}>
                 {processing ? 'Importando...' : 'Importar'}
               </Button>
@@ -91,8 +124,8 @@ export default function Importar() {
                       <th className="p-2">Programa</th>
                       <th className="p-2">Sexo</th>
                       <th className="p-2">Grupo Priorizado</th>
-                      <th className="p-2">Fecha</th>
-                      <th className="p-2">Horas</th>
+                      <th className="p-2">Asistencias</th>
+                      <th className="p-2">Fecha de registro</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -105,8 +138,8 @@ export default function Importar() {
                         <td className="p-2">{a.programa_academico}</td>
                         <td className="p-2">{a.sexo}</td>
                         <td className="p-2">{a.grupo_priorizado}</td>
+                        <td className="p-2 font-semibold">{a.total_asistencias}</td>
                         <td className="p-2">{a.fecha}</td>
-                        <td className="p-2">{a.horas}</td>
                       </tr>
                     ))}
                   </tbody>

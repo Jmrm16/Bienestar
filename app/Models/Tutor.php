@@ -25,7 +25,7 @@ class Tutor extends Model
 
     public function grupos()
     {
-        return $this->belongsToMany(GrupoT::class, 'grupo_tutor', 'tutor_id', 'grupo_t_id');
+        return $this->belongsToMany(GrupoT::class, 'tutor_id', 'grupo_t_id');
     }
 
     public function asignaturas()

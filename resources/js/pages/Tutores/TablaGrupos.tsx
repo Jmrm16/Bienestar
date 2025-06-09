@@ -10,19 +10,19 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableCaption,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableCaption, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PencilLine, Delete, Eye, Upload } from "lucide-react";
+import { PencilLine, Delete, Eye, Upload, UserPlus2 } from "lucide-react";
 import { router } from "@inertiajs/react";
 import { toast } from "sonner";
+
+interface Tutor {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
 
 interface Grupo {
   id: number;
@@ -32,69 +32,43 @@ interface Grupo {
     id: number;
     nombre: string;
   };
-  tipo?: string; // Añadido para marcar si es 'Grupo' o 'GrupoT'
+  tipo?: string;
 }
 
 interface Props {
-  grupos?: Grupo[];   // ← con fallback opcional
-  gruposT?: Grupo[];  // ← con fallback opcional
+  grupos?: Grupo[];
+  gruposT?: Grupo[];
+  tutores: Tutor[];
   onSeleccionarGrupo: (grupo: Grupo) => void;
 }
 
-const TablaGrupo = ({ grupos = [], gruposT = [], onSeleccionarGrupo }: Props) => {
+const TablaGrupo = ({ grupos = [], gruposT = [], tutores, onSeleccionarGrupo }: Props) => {
   const [selectedGrupo, setSelectedGrupo] = useState<Grupo | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isAsignarOpen, setIsAsignarOpen] = useState(false);
+  const [tutorId, setTutorId] = useState<string>("");
 
-  const actualizarGrupo = () => {
-    if (!selectedGrupo) return;
+  const handleAsignar = () => {
+    if (!selectedGrupo || !tutorId) return;
 
-    const endpoint = selectedGrupo.tipo === 'GrupoT' ? 'grupost' : 'grupos';
-
-    router.patch(
-      `/${endpoint}/${selectedGrupo.id}`,
-      {
-        nombre: selectedGrupo.nombre,
-        codigo: selectedGrupo.codigo,
-        carrera_id: selectedGrupo.carrera.id,
-      },
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          toast.success("Grupo actualizado correctamente");
-          setIsEditOpen(false);
-          setSelectedGrupo(null);
-        },
-        onError: () => toast.error("Error al actualizar el grupo"),
-      }
-    );
-  };
-
-  const eliminarGrupo = () => {
-    if (!selectedGrupo) return;
-
-    const endpoint = selectedGrupo.tipo === 'GrupoT' ? 'grupost' : 'grupos';
-
-    router.delete(`/${endpoint}/${selectedGrupo.id}`, {
+    router.post(`/grupost/${selectedGrupo.id}/asignar-tutor`, { tutor_id: tutorId }, {
       onSuccess: () => {
-        toast.success("Grupo eliminado correctamente");
-        setIsDeleteOpen(false);
-        setSelectedGrupo(null);
+        toast.success("Tutor asignado correctamente");
+        setTutorId("");
+        setIsAsignarOpen(false);
       },
-      onError: () => toast.error("Error al eliminar el grupo"),
+      onError: () => toast.error("Error al asignar el tutor"),
     });
   };
 
-  // Unimos ambas listas y les marcamos el tipo
   const listaGrupos = [
-    ...(grupos || []).map((g) => ({ ...g, tipo: 'Grupo' })),
-    ...(gruposT || []).map((g) => ({ ...g, tipo: 'GrupoT' })),
+    ...grupos.map((g) => ({ ...g, tipo: 'Grupo' })),
+    ...gruposT.map((g) => ({ ...g, tipo: 'GrupoT' })),
   ];
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
       <Table>
-        <TableCaption>Lista de grupos (normales y T).</TableCaption>
+        <TableCaption>Lista de grupos.</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
@@ -109,103 +83,49 @@ const TablaGrupo = ({ grupos = [], gruposT = [], onSeleccionarGrupo }: Props) =>
             <TableRow key={`${grupo.tipo}-${grupo.id}`}>
               <TableCell>{grupo.nombre}</TableCell>
               <TableCell>{grupo.codigo}</TableCell>
-              <TableCell>{grupo.carrera?.nombre}</TableCell>
+              <TableCell>{grupo.carrera.nombre}</TableCell>
               <TableCell>{grupo.tipo}</TableCell>
               <TableCell className="text-right space-x-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => router.visit(`/estudiantes/grupos/${grupo.id}`)}
-                >
-                  <Eye />
-                </Button>
 
-                <Button
-                  variant="secondary"
-                  onClick={() => onSeleccionarGrupo(grupo)}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Subir Excel
-                </Button>
-
-                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                {/* Botón asignar tutor */}
+                <Dialog open={isAsignarOpen} onOpenChange={setIsAsignarOpen}>
                   <DialogTrigger asChild>
                     <Button
                       variant="ghost"
                       onClick={() => {
                         setSelectedGrupo(grupo);
-                        setIsEditOpen(true);
+                        setIsAsignarOpen(true);
                       }}
                     >
-                      <PencilLine />
+                      <UserPlus2 />
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Editar Grupo</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <Label>Nombre</Label>
-                      <Input
-                        value={selectedGrupo?.nombre || ""}
-                        onChange={(e) =>
-                          setSelectedGrupo({
-                            ...selectedGrupo!,
-                            nombre: e.target.value,
-                          })
-                        }
-                      />
-                      <Label>Código</Label>
-                      <Input
-                        value={selectedGrupo?.codigo || ""}
-                        onChange={(e) =>
-                          setSelectedGrupo({
-                            ...selectedGrupo!,
-                            codigo: e.target.value,
-                          })
-                        }
-                      />
-                      <DialogFooter>
-                        <Button onClick={actualizarGrupo}>
-                          Guardar Cambios
-                        </Button>
-                      </DialogFooter>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedGrupo(grupo);
-                        setIsDeleteOpen(true);
-                      }}
-                    >
-                      <Delete />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Eliminar Grupo</DialogTitle>
+                      <DialogTitle>Asignar Tutor</DialogTitle>
                       <DialogDescription>
-                        ¿Estás seguro de que deseas eliminar el grupo{" "}
-                        <strong>{selectedGrupo?.nombre}</strong>?
+                        Selecciona un tutor para el grupo{" "}
+                        <strong>{selectedGrupo?.nombre}</strong>
                       </DialogDescription>
                     </DialogHeader>
+                    <select
+                      className="w-full border rounded px-3 py-2 mt-2"
+                      value={tutorId}
+                      onChange={(e) => setTutorId(e.target.value)}
+                    >
+                      <option value="">Selecciona un tutor</option>
+                      {tutores.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.nombre} {t.apellido}
+                        </option>
+                      ))}
+                    </select>
                     <DialogFooter>
-                      <Button variant="destructive" onClick={eliminarGrupo}>
-                        Eliminar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setIsDeleteOpen(false)}
-                      >
-                        Cancelar
-                      </Button>
+                      <Button onClick={handleAsignar}>Asignar</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+
               </TableCell>
             </TableRow>
           ))}

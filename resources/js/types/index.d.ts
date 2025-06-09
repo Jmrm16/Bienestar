@@ -28,6 +28,21 @@ export type Estudiante = {
     id: number;
     nombre: string;
   };
+  export type Tutor = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  tipo_documento?: string;
+  documento?: string;
+  lugar_expedicion?: string;
+  sexo?: string;
+  grupo_priorizado?: string;
+  sede?: string;
+  programa_academico?: string;
+  correo?: string;
+  telefono?: string;
+};
+
   
 export type Grupo = {
   id: number;

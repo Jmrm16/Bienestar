@@ -6,6 +6,7 @@ use App\Models\Asignatura;
 use App\Models\Carrera;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Tutor;
 
 class AsignaturaController extends Controller
 {
@@ -23,16 +24,21 @@ class AsignaturaController extends Controller
         return redirect()->route('tutores.index')->with('success', 'Asignatura creada exitosamente.');
     }
 
-            public function show(Asignatura $asignatura)
-            {
-                $asignatura->load('carrera', 'grupos');
 
-                return Inertia::render('Tutores/ShowAsignatura', [
-                    'asignatura' => $asignatura,
-                    'carreras' => Carrera::all(),
-                    'asignaturas' => Asignatura::all(), // <-- esto es clave
-                ]);
-            }
+
+public function show(Asignatura $asignatura)
+{
+    $asignatura->load('carrera', 'grupos.carrera');
+
+    return Inertia::render('Tutores/ShowAsignatura', [
+        'asignatura' => $asignatura,
+        'tutores' => Tutor::all(),
+        'carreras' => Carrera::all(), // ✅ necesario para el <select> de carrera
+        'asignaturas' => Asignatura::all(), // ✅ necesario para el <select> de asignatura
+    ]);
+}
+
+
 
 
     public function update(Request $request, Asignatura $asignatura)

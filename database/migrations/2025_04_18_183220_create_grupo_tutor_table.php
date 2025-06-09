@@ -8,8 +8,8 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('grupo_tutor', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('grupo_id')->constrained()->onDelete('cascade');
-            $table->foreignId('tutor_id')->constrained()->onDelete('cascade');
+            $table->foreignId('grupo_t_id')->constrained('grupo_t')->onDelete('cascade'); // 👈 corregido
+            $table->foreignId('tutor_id')->constrained('tutors')->onDelete('cascade');
             $table->timestamps();
         });
     }

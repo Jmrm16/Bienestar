@@ -132,11 +132,7 @@ export default function Index({
           <div className="flex space-x-4 mb-4">
             <AgregarGrupo />
           </div>
-          <TablaGrupo
-            grupos={grupos}
-            gruposT={gruposT}
-            onSeleccionarGrupo={setGrupoSeleccionado}
-          />
+  
         </div>
 
         {/* Carreras */}

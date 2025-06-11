@@ -168,3 +168,7 @@
   z-index: 1;
   height: 100%;
   width: 100%; }
+.owl-carousel .owl-nav .owl-prev,
+.owl-carousel .owl-nav .owl-next {
+  font-size: 0 !important;
+}

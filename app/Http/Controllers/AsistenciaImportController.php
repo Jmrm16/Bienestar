@@ -111,4 +111,17 @@ class AsistenciaImportController extends Controller
             'grupos' => GrupoT::select('id', 'nombre')->get(),
         ]);
     }
+
+    // AsistenciaImportController.php
+
+public function verAsistenciasPorGrupo($grupoId)
+{
+    $grupo = GrupoT::with('asistencias')->findOrFail($grupoId);
+
+    return Inertia::render('Asistencias/TablaAsistencias', [
+        'grupo' => $grupo,
+        'asistencias' => $grupo->asistencias ?? [],
+    ]);
+}
+
 }

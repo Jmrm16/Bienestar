@@ -12,10 +12,14 @@ declare global {
   }
 }
 
-// Animaciones reutilizables
+// Reusable animations
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
 };
 
 const staggerContainer = {
@@ -23,8 +27,17 @@ const staggerContainer = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.15
     }
+  }
+};
+
+const slideInFromLeft = {
+  hidden: { x: -100, opacity: 0 },
+  visible: { 
+    x: 0, 
+    opacity: 1,
+    transition: { duration: 0.8, ease: "easeOut" }
   }
 };
 
@@ -34,13 +47,15 @@ export default function Welcome() {
       if (window.$ && window.$.fn && window.$.fn.owlCarousel) {
         $('.hero-slider').owlCarousel({
           loop: true,
-          nav: false,
+          nav: true,
           dots: true,
           items: 1,
           autoplay: true,
-          autoplayTimeout: 5000,
+          autoplayTimeout: 7000,
           autoplayHoverPause: true,
-          smartSpeed: 1000
+          smartSpeed: 1000,
+          animateOut: 'fadeOut',
+          animateIn: 'fadeIn'
         });
       } else {
         setTimeout(initOwlCarousel, 100);
@@ -56,364 +71,401 @@ export default function Welcome() {
     };
   }, []);
 
+  // Data for sections
+  const features = [
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "new",
+      title: "Programas Académicos",
+      desc: "Explora nuestra amplia oferta de programas de pregrado y posgrado."
+    },
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "event",
+      title: "Eventos Culturales",
+      desc: "Participa en nuestras actividades culturales y artísticas."
+    },
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "research",
+      title: "Investigación",
+      desc: "Conoce nuestros proyectos de investigación e innovación."
+    },
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "international",
+      title: "Cooperación Internacional",
+      desc: "Oportunidades de movilidad y convenios internacionales."
+    }
+  ];
+
+  const recentNews = [
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "announcement",
+      title: "Convocatorias Abiertas",
+      desc: "Nuevas convocatorias para becas y ayudas económicas.",
+      date: "15 Junio 2024"
+    },
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "event",
+      title: "Semana de la Ciencia",
+      desc: "Participa en nuestra semana dedicada a la divulgación científica.",
+      date: "20 Junio 2024"
+    },
+    {
+      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      category: "academic",
+      title: "Nuevos Programas",
+      desc: "Conoce nuestros nuevos programas académicos para el próximo semestre.",
+      date: "25 Junio 2024"
+    }
+  ];
+
+  const testimonials = [
+    {
+      quote: "La Universidad de La Guajira me ha brindado herramientas valiosas para mi desarrollo profesional.",
+      author: "María González",
+      role: "Egresada de Ingeniería"
+    },
+    {
+      quote: "Excelente ambiente académico y docentes altamente capacitados.",
+      author: "Carlos Mendoza",
+      role: "Estudiante de Derecho"
+    },
+    {
+      quote: "Las oportunidades de investigación son increíbles, muy contento con mi experiencia.",
+      author: "Luisa Fernández",
+      role: "Investigadora"
+    }
+  ];
+    useEffect(() => {
+    const initOwlCarousel = () => {
+      if (window.$ && window.$.fn && window.$.fn.owlCarousel) {
+        $('.hero-slider').owlCarousel({
+          loop: true,
+          nav: true,
+          dots: true,
+          items: 1,
+          autoplay: true,
+          autoplayTimeout: 6000,
+          autoplayHoverPause: true,
+          smartSpeed: 1000,
+          navText: ["", ""]
+        });
+      } else {
+        setTimeout(initOwlCarousel, 200);
+      }
+    };
+
+    initOwlCarousel();
+
+    return () => {
+      if (window.$ && window.$.fn && window.$.fn.owlCarousel) {
+        $('.hero-slider').trigger('destroy.owl.carousel');
+      }
+    };
+  }, []);
+
+  const slides = [
+    {
+      img: "https://diariodelnorte.net/wp-content/uploads/2024/02/edificio-Uniguajira-750x375.png",
+      title: "Universidad de La Guajira",
+      subtitle: "Educación superior de calidad en la región",
+      button: "Conócenos",
+    },
+    {
+      img: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
+      title: "Oportunidades Académicas",
+      subtitle: "Programas, becas y desarrollo estudiantil",
+      button: "Explorar programas",
+    },
+  ];
+
+
+
   return (
     <>
-      <Head title="Welcome">
+      <Head title="Inicio | Universidad de La Guajira">
         <link rel="preconnect" href="https://fonts.bunny.net" />
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+        <meta name="description" content="Página oficial de la Universidad de La Guajira - Educación superior de calidad en la región" />
       </Head>
 
       <HeaderComponent />
 
       <main className="flex min-h-screen flex-col items-center bg-[#FDFDFC] text-[#1b1b18]">
-        {/* Hero Section - Carrusel */}
+        {/* Hero Carousel */}
+     <section className="w-full relative z-0 mb-12">
+      <div className="hero-slider owl-carousel">
+        {slides.map((slide, i) => (
+          <div
+            key={i}
+            className="relative min-h-[500px] bg-cover bg-center flex items-center justify-center"
+            style={{ backgroundImage: `url(${slide.img})` }}
+          >
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/50 z-0" />
 
-        <div className="hero-slider owl-carousel">
-            <motion.div 
-              className="hs-item h-[500px] bg-cover bg-center relative" 
-              style={{ 
-                backgroundImage: "url('https://diariodelnorte.net/wp-content/uploads/2024/02/edificio-Uniguajira-750x375.png')"
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8 }}
-            >
-              <motion.div 
-                className="hs-text absolute bottom-0 left-0 right-0 p-5 bg-opacity-50 text-white"
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
+            {/* Text Content */}
+            <div className="z-10 text-center text-white px-4">
+              <h2 className="text-4xl font-bold mb-4 drop-shadow-md">{slide.title}</h2>
+              <p className="text-lg mb-6 drop-shadow-sm">{slide.subtitle}</p>
+              <Link
+                href="#"
+                className="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-2 text-white font-semibold rounded-lg transition"
               >
-                <div className="container mx-auto">
-                  <motion.h2 
-                    className="text-4xl font-bold"
-                    initial={{ x: -30, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, type: 'spring' }}
-                  >
-                    <span className="text-yellow-400"></span>
-                  </motion.h2>
-                  <motion.p 
-                    className="my-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                  >
-                    <br/><br/>
-                  </motion.p>
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.9 }}
-                  >
-                    <Link href="#" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                      Read More
-                    </Link>
-                  </motion.div>
-                </div>
-              </motion.div>
-            </motion.div>
-            
-            {/* Segundo slide del carrusel */}
-            <div 
-              className="hs-item h-[500px] bg-cover bg-center relative" 
-              style={{ 
-                backgroundImage: "url('https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp')"
-              }}
-            >
-              <div className="hs-text absolute bottom-0 left-0 right-0 p-5 bg-opacity-50 text-white">
-                <div className="container mx-auto">
-                  <h2 className="text-4xl font-bold">The Best <span className="text-yellow-400">Games</span> Out There</h2>
-                  <p className="my-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-                  <Link href="#" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                    Read More
-                  </Link>
-                </div>
-              </div>
+                {slide.button}
+              </Link>
             </div>
           </div>
-        {/* Feature Section */}
+        ))}
+      </div>
+    </section>
+
+        {/* Quick Links */}
+        <motion.section 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          className="w-full bg-white dark:bg-gray-900 shadow-md py-6 -mt-10 z-10 relative"
+        >
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { icon: "📚", title: "Académicos", link: "/academicos" },
+                { icon: "🏛️", title: "Admisiones", link: "/admisiones" },
+                { icon: "🔬", title: "Investigación", link: "/investigacion" },
+                { icon: "🌎", title: "Internacional", link: "/internacional" }
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  whileHover={{ y: -5 }}
+                  className="text-center"
+                >
+                  <Link 
+                    href={item.link}
+                    className="block p-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                  >
+                    <span className="text-3xl mb-2 block">{item.icon}</span>
+                    <span className="font-medium">{item.title}</span>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Features Section */}
         <motion.section 
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={staggerContainer}
-          className="feature-section w-full py-12"
+          className="w-full py-16 bg-gray-50 dark:bg-gray-900"
         >
-          <div className="container mx-auto">
+          <div className="container mx-auto px-4">
             <motion.div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-              variants={staggerContainer}
+              className="text-center mb-12"
+              variants={fadeInUp}
             >
-              {[
-                {
-                  bg: "https://dragonraja.zloong.com/img/ss.png",
-                  category: "new",
-                  title: "Suspendisse ut justo tem por, rutrum",
-                  desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-                },
-                // ... otros items del feature
-              ].map((item, index) => (
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Nuestras <span className="text-blue-600">Fortalezas</span></h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Descubre lo que hace especial a nuestra institución y cómo podemos ayudarte a alcanzar tus metas académicas.
+              </p>
+            </motion.div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {features.map((item, index) => (
                 <motion.div 
                   key={index}
                   variants={fadeInUp}
-                  whileHover={{ y: -5 }}
-                  className="w-full"
+                  whileHover={{ y: -10 }}
+                  className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl"
                 >
                   <div 
-                    className="feature-item h-64 bg-cover bg-center relative rounded-lg overflow-hidden shadow-md"
+                    className="h-48 bg-cover bg-center relative"
                     style={{ backgroundImage: `url('${item.bg}')` }}
                   >
-                    <motion.span 
-                      className={`absolute top-2 left-2 ${item.category === 'new' ? 'bg-red-600' : 'bg-blue-600'} text-white px-2 py-1 rounded text-xs`}
-                      whileHover={{ scale: 1.1 }}
+                    <span className={`absolute top-3 left-3 ${
+                      item.category === 'new' ? 'bg-red-600' : 
+                      item.category === 'event' ? 'bg-green-600' : 
+                      item.category === 'research' ? 'bg-purple-600' : 'bg-blue-600'
+                    } text-white px-3 py-1 rounded-full text-xs`}>
+                      {item.category === 'new' ? 'Nuevo' : 
+                       item.category === 'event' ? 'Evento' : 
+                       item.category === 'research' ? 'Investigación' : 'Internacional'}
+                    </span>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">{item.desc}</p>
+                    <Link 
+                      href="#" 
+                      className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 font-medium inline-flex items-center"
                     >
-                      {item.category}
-                    </motion.span>
-                    <div className="fi-content absolute bottom-0 left-0 right-0 p-4 bg-black bg-opacity-70 text-white">
-                      <h5 className="font-semibold">
-                        <Link href="#" className="hover:underline">{item.title}</Link>
-                      </h5>
-                      <p className="text-sm my-2">{item.desc}</p>
-                      <Link href="#" className="text-blue-300 text-sm hover:underline">
-                        3 Comments
-                      </Link>
-                    </div>
+                      Ver más
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </Link>
                   </div>
                 </motion.div>
               ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* News Section */}
+        <motion.section 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+          className="w-full py-16 bg-white dark:bg-gray-900"
+        >
+          <div className="container mx-auto px-4">
+            <motion.div 
+              className="text-center mb-12"
+              variants={fadeInUp}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Noticias <span className="text-blue-600">Recientes</span></h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Mantente informado sobre los últimos acontecimientos en nuestra universidad.
+              </p>
+            </motion.div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {recentNews.map((item, index) => (
+                <motion.div 
+                  key={index}
+                  variants={fadeInUp}
+                  className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl"
+                >
+                  <div 
+                    className="h-48 bg-cover bg-center"
+                    style={{ backgroundImage: `url('${item.bg}')` }}
+                  ></div>
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${
+                        item.category === 'announcement' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                        item.category === 'event' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                      }`}>
+                        {item.category === 'announcement' ? 'Anuncio' : 
+                         item.category === 'event' ? 'Evento' : 'Académico'}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{item.date}</span>
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">{item.desc}</p>
+                    <Link 
+                      href="#" 
+                      className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 font-medium inline-flex items-center"
+                    >
+                      Leer más
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </Link>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            
+            <motion.div 
+              className="text-center mt-12"
+              variants={fadeInUp}
+            >
+              <Link 
+                href="/noticias" 
+                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-300"
+              >
+                Ver Todas las Noticias
+              </Link>
             </motion.div>
           </div>
         </motion.section>
 
-        {/* Recent Games Section */}
+        {/* Testimonials */}
+        <motion.section 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
+          className="w-full py-16 bg-gray-50 dark:bg-gray-800"
+        >
+          <div className="container mx-auto px-4">
+            <motion.div 
+              className="text-center mb-12"
+              variants={fadeInUp}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Testimonios <span className="text-blue-600">de Nuestra Comunidad</span></h2>
+              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Lo que dicen nuestros estudiantes, egresados y colaboradores sobre su experiencia en la universidad.
+              </p>
+            </motion.div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {testimonials.map((item, index) => (
+                <motion.div 
+                  key={index}
+                  variants={fadeInUp}
+                  className="bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg"
+                >
+                  <div className="mb-6 text-yellow-400">
+                    {[...Array(5)].map((_, i) => (
+                      <svg key={i} className="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300 italic mb-6">"{item.quote}"</p>
+                  <div className="flex items-center">
+                    <div className="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold">
+                      {item.author.charAt(0)}
+                    </div>
+                    <div className="ml-4">
+                      <h4 className="font-bold">{item.author}</h4>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">{item.role}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Call to Action */}
         <motion.section 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="recent-game-section w-full py-12 bg-cover bg-center"
-          style={{ backgroundImage: "url('/img/recent-game-bg.png')" }}
+          className="w-full py-16 bg-blue-600 text-white"
         >
-          <div className="container mx-auto">
-            <motion.div 
-              className="section-title text-center mb-8"
-              initial={{ y: -20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-            >
-              <div className="cata bg-red-600 text-white px-3 py-1 rounded-full text-xs inline-block">
-                new
-              </div>
-              <h2 className="text-3xl font-bold mt-2">Recent Games</h2>
-            </motion.div>
-            
-            <motion.div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              {[
-                {
-                  bg: "/img/recent-game/1.jpg",
-                  category: "new",
-                  title: "Suspendisse ut justo tem por, rutrum",
-                  desc: "Lorem ipsum dolor sit amet, consectetur adipisc ing ipsum dolor sit amet, consectetur elit."
-                },
-                // ... otros items de juegos recientes
-              ].map((item, index) => (
-                <motion.div 
-                  key={index}
-                  variants={fadeInUp}
-                  whileHover={{ scale: 1.03 }}
-                  className="w-full"
-                >
-                  <div className="recent-game-item bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-                    <div 
-                      className="rgi-thumb h-48 bg-cover bg-center relative"
-                      style={{ backgroundImage: `url('${item.bg}')` }}
-                    >
-                      <div className={`cata absolute top-2 left-2 ${item.category === 'new' ? 'bg-red-600' : 'bg-yellow-600'} text-white px-2 py-1 rounded text-xs`}>
-                        {item.category}
-                      </div>
-                    </div>
-                    <div className="rgi-content p-4">
-                      <h5 className="text-lg font-semibold mb-2">{item.title}</h5>
-                      <p className="text-gray-600 dark:text-gray-300 mb-3">{item.desc}</p>
-                      <Link href="#" className="text-blue-500 hover:underline text-sm">
-                        3 Comments
-                      </Link>
-                      <div className="rgi-extra flex justify-between mt-3">
-                        <div className="rgi-star">
-                          <img src="/img/icons/star.png" alt="Rating" className="h-5 w-5"/>
-                        </div>
-                        <div className="rgi-heart">
-                          <img src="/img/icons/heart.png" alt="Likes" className="h-5 w-5"/>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">¿Listo para comenzar tu viaje académico?</h2>
+            <p className="text-xl mb-8 max-w-3xl mx-auto">
+              Únete a nuestra comunidad universitaria y descubre un mundo de oportunidades.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Link 
+                href="/admisiones" 
+                className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-lg transition duration-300"
+              >
+                Admisiones
+              </Link>
+              <Link 
+                href="/contacto" 
+                className="bg-transparent border-2 border-white hover:bg-white hover:text-blue-600 font-semibold px-8 py-3 rounded-lg transition duration-300"
+              >
+                Contáctanos
+              </Link>
+            </div>
           </div>
         </motion.section>
-
-        {/* Tournaments Section */}
-        <motion.section 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="tournaments-section w-full bg-gray-100 dark:bg-gray-900 py-12"
-        >
-          <div className="container mx-auto">
-            <motion.div 
-              className="tournament-title text-center mb-8"
-              initial={{ y: -20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-            >
-              Tournaments
-            </motion.div>
-            
-            <motion.div 
-              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              {[
-                {
-                  bg: "/img/tournament/1.jpg",
-                  title: "World Of WarCraft",
-                  details: [
-                    "Tournament Beggins: June 20, 2018",
-                    "Tounament Ends: July 01, 2018",
-                    "Participants: 10 teams",
-                    "Tournament Author: Admin"
-                  ],
-                  prizes: "1st place $2000, 2nd place: $1000, 3rd place: $500"
-                },
-                // ... otros items de torneos
-              ].map((item, index) => (
-                <motion.div 
-                  key={index}
-                  variants={fadeInUp}
-                  whileHover={{ y: -5 }}
-                  className="w-full"
-                >
-                  <div className="tournament-item bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl">
-                    <div className="ti-notic bg-blue-600 text-white px-4 py-2">
-                      Premium Tournament
-                    </div>
-                    <div className="ti-content p-4">
-                      <div 
-                        className="ti-thumb h-48 bg-cover bg-center mb-4 rounded"
-                        style={{ backgroundImage: `url('${item.bg}')` }}
-                      ></div>
-                      <div className="ti-text">
-                        <h4 className="text-xl font-bold mb-3">{item.title}</h4>
-                        <ul className="space-y-2 mb-4">
-                          {item.details.map((detail, i) => (
-                            <motion.li 
-                              key={i}
-                              className="flex"
-                              initial={{ x: -10, opacity: 0 }}
-                              whileInView={{ x: 0, opacity: 1 }}
-                              transition={{ delay: i * 0.1 }}
-                              viewport={{ once: true }}
-                            >
-                              <span className="font-semibold min-w-[150px]">{detail.split(':')[0]}:</span>
-                              <span>{detail.split(':')[1]}</span>
-                            </motion.li>
-                          ))}
-                        </ul>
-                        <p className="font-semibold">
-                          <span className="text-blue-600">Prizes:</span> {item.prizes}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </motion.section>
-
-        {/* Review Section */}
-        <motion.section 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="review-section w-full py-12 bg-cover bg-center"
-          style={{ backgroundImage: "url('/img/review-bg.png')" }}
-        >
-          <div className="container mx-auto">
-            <motion.div 
-              className="section-title text-center mb-8"
-              initial={{ y: -20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-            >
-              <div className="cata bg-red-600 text-white px-3 py-1 rounded-full text-xs inline-block mx-auto">
-                new
-              </div>
-              <h2 className="text-3xl font-bold mt-2">Recent Reviews</h2>
-            </motion.div>
-            
-            <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-            >
-              {[
-                {
-                  bg: "/img/review/1.jpg",
-                  score: "9.3",
-                  scoreClass: "bg-yellow-400",
-                  title: "Assasin's Creed",
-                  desc: "Lorem ipsum dolor sit amet, consectetur adipisc ing ipsum dolor sit ame."
-                },
-                // ... otros items de reviews
-              ].map((item, index) => (
-                <motion.div 
-                  key={index}
-                  variants={fadeInUp}
-                  whileHover={{ scale: 1.02 }}
-                  className="w-full"
-                >
-                  <div className="review-item bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg h-full">
-                    <div 
-                      className="review-cover h-48 bg-cover bg-center relative"
-                      style={{ backgroundImage: `url('${item.bg}')` }}
-                    >
-                      <motion.div 
-                        className={`score ${item.scoreClass} absolute top-2 right-2 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg`}
-                        whileHover={{ rotate: 360 }}
-                        transition={{ type: 'spring' }}
-                      >
-                        {item.score}
-                      </motion.div>
-                    </div>
-                    <div className="review-text p-4">
-                      <h5 className="text-lg font-semibold mb-2">{item.title}</h5>
-                      <p className="text-gray-600 dark:text-gray-300">{item.desc}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </motion.section>
-
-        <div className="hidden h-14 lg:block"></div>
       </main>
 
       <FooterComponent />

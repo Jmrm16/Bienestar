@@ -74,6 +74,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ✅ Importar asistencias (vista + acción global)
     Route::get('/asistencias/importar', [AsistenciaImportController::class, 'index'])->name('asistencias.importar.form');
     Route::post('/asistencias/importar', [AsistenciaImportController::class, 'import'])->name('asistencias.importar');
+Route::get('/grupos/{id}/asistencias', [AsistenciaImportController::class, 'verAsistenciasPorGrupo'])
+    ->name('asistencias.ver');
+
 
     // ✅ Importar asistencias por grupo
     Route::get('/grupost/{grupo}/asistencias/importar', [AsistenciaImportController::class, 'importarPorGrupoVista'])->name('grupost.asistencias.importar');

@@ -3,11 +3,11 @@ import { Head } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import React, { useState } from 'react';
 
-import AgregarCarrera from '@/Pages/Estudiantes/AgregarCarrera';
-import AgregarGrupo from '@/Pages/Estudiantes/AgregarGrupo';
-import TablaGrupo from '@/Pages/Estudiantes/TablaGrupos';
-import TablaCarreras from '@/Pages/Estudiantes/TablaCarreras';
-import SubidaExcel from '@/Pages/Estudiantes/SubidaExcel';
+import AgregarCarrera from '@/pages/Estudiantes/AgregarCarrera';
+import AgregarGrupo from '@/pages/Estudiantes/AgregarGrupo';
+import TablaGrupo from '@/pages/Estudiantes/TablaGrupos';
+import TablaCarreras from '@/pages/Estudiantes/TablaCarreras';
+import SubidaExcel from '@/pages/Estudiantes/SubidaExcel';
 import { MetricCard } from "@/components/component/MetricCard";
 import { Cpu, HardDrive } from "lucide-react";
 

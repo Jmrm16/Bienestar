@@ -25,14 +25,7 @@ const FooterComponent = () => {
         { name: "Cookie Policy", href: "/cookies" },
       ],
     },
-    {
-      title: "Resources",
-      links: [
-        { name: "Documentation", href: "/docs" },
-        { name: "API Status", href: "/status" },
-        { name: "Support", href: "/support" },
-      ],
-    },
+
   ];
 
   const socialLinks = [
@@ -133,3 +126,4 @@ const FooterComponent = () => {
 };
 
 export default FooterComponent;
+

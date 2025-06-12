@@ -18,7 +18,7 @@ use App\Http\Controllers\CulturaController;
 use App\Http\Controllers\AsistenciaImportController;
 
 // 🔹 Página pública
-Route::get('/', fn () => Inertia::render('welcome'))->name('home');
+Route::get('/', [CulturaController::class, 'home'])->name('home');
 Route::get('/graduacion', fn () => Inertia::render('graduacion'))->name('graduacion');
 Route::get('/cultura', fn () => Inertia::render('cultura'))->name('cultura');
 

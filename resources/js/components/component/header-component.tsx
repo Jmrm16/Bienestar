@@ -84,7 +84,7 @@ export const HeaderComponent = () => {
                                     className="h-8 md:h-10"
                                 />
                                 <span className="ml-2 text-xl font-bold hidden md:block text-gray-800 dark:text-white">
-                                    YourBrand
+                                    Uniguajira
                                 </span>
                             </motion.div>
                         </Link>

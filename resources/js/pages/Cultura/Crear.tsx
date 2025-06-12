@@ -135,7 +135,7 @@ const CreateCulturaModal = () => {
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Publicar</Button>
+            <Button type="submit">Crear</Button>
           </DialogFooter>
         </form>
       </DialogContent>

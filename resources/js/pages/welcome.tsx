@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeaderComponent from '@/../js/components/component/header-component';
@@ -11,6 +11,17 @@ declare global {
     owlCarousel: any;
   }
 }
+
+interface Cultura {
+  id: number;
+  tipo: string;
+  titulo: string;
+  descripcion: string;
+  imagen_banner?: string; // ✅ esta es la clave que necesitas
+  fecha?: string; // si usas fecha de evento
+  
+}
+
 
 // Reusable animations
 const fadeInUp = {
@@ -42,6 +53,42 @@ const slideInFromLeft = {
 };
 
 export default function Welcome() {
+  // Obtenemos los datos dinámicos de la página
+  const { culturas } = (usePage().props as unknown as { culturas: Cultura[] });
+
+  // Función para asignar color según tipo
+  const getBadgeColor = (tipo: string) => {
+    switch (tipo.toLowerCase()) {
+      case 'evento':
+        return 'bg-green-600';
+      case 'investigacion':
+        return 'bg-purple-600';
+      case 'internacional':
+        return 'bg-blue-600';
+      case 'nuevo':
+      case 'noticia':
+        return 'bg-red-600';
+      default:
+        return 'bg-gray-600';
+    }
+  };
+
+  // Función para formatear fecha
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Fecha no disponible';
+    
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString('es-ES', options);
+  };
+
+  // Tomamos solo las primeras 4 publicaciones para mostrar como fortalezas
+  const fortalezas = culturas.slice(0, 4);
+
+  // Filtramos las noticias (culturas de tipo 'noticia')
+  const noticiasRecientes = culturas
+    .filter(item => item.tipo.toLowerCase() === 'noticia')
+    .slice(0, 3); // Tomamos solo las 3 más recientes
+
   useEffect(() => {
     const initOwlCarousel = () => {
       if (window.$ && window.$.fn && window.$.fn.owlCarousel) {
@@ -71,58 +118,6 @@ export default function Welcome() {
     };
   }, []);
 
-  // Data for sections
-  const features = [
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "new",
-      title: "Programas Académicos",
-      desc: "Explora nuestra amplia oferta de programas de pregrado y posgrado."
-    },
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "event",
-      title: "Eventos Culturales",
-      desc: "Participa en nuestras actividades culturales y artísticas."
-    },
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "research",
-      title: "Investigación",
-      desc: "Conoce nuestros proyectos de investigación e innovación."
-    },
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "international",
-      title: "Cooperación Internacional",
-      desc: "Oportunidades de movilidad y convenios internacionales."
-    }
-  ];
-
-  const recentNews = [
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "announcement",
-      title: "Convocatorias Abiertas",
-      desc: "Nuevas convocatorias para becas y ayudas económicas.",
-      date: "15 Junio 2024"
-    },
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "event",
-      title: "Semana de la Ciencia",
-      desc: "Participa en nuestra semana dedicada a la divulgación científica.",
-      date: "20 Junio 2024"
-    },
-    {
-      bg: "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp",
-      category: "academic",
-      title: "Nuevos Programas",
-      desc: "Conoce nuestros nuevos programas académicos para el próximo semestre.",
-      date: "25 Junio 2024"
-    }
-  ];
-
   const testimonials = [
     {
       quote: "La Universidad de La Guajira me ha brindado herramientas valiosas para mi desarrollo profesional.",
@@ -140,33 +135,6 @@ export default function Welcome() {
       role: "Investigadora"
     }
   ];
-    useEffect(() => {
-    const initOwlCarousel = () => {
-      if (window.$ && window.$.fn && window.$.fn.owlCarousel) {
-        $('.hero-slider').owlCarousel({
-          loop: true,
-          nav: true,
-          dots: true,
-          items: 1,
-          autoplay: true,
-          autoplayTimeout: 6000,
-          autoplayHoverPause: true,
-          smartSpeed: 1000,
-          navText: ["", ""]
-        });
-      } else {
-        setTimeout(initOwlCarousel, 200);
-      }
-    };
-
-    initOwlCarousel();
-
-    return () => {
-      if (window.$ && window.$.fn && window.$.fn.owlCarousel) {
-        $('.hero-slider').trigger('destroy.owl.carousel');
-      }
-    };
-  }, []);
 
   const slides = [
     {
@@ -183,7 +151,8 @@ export default function Welcome() {
     },
   ];
 
-
+  // Imagen por defecto para noticias
+  const defaultNewsImage = "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp";
 
   return (
     <>
@@ -197,32 +166,32 @@ export default function Welcome() {
 
       <main className="flex min-h-screen flex-col items-center bg-[#FDFDFC] text-[#1b1b18]">
         {/* Hero Carousel */}
-     <section className="w-full relative z-0 mb-12">
-      <div className="hero-slider owl-carousel">
-        {slides.map((slide, i) => (
-          <div
-            key={i}
-            className="relative min-h-[500px] bg-cover bg-center flex items-center justify-center"
-            style={{ backgroundImage: `url(${slide.img})` }}
-          >
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-black/50 z-0" />
-
-            {/* Text Content */}
-            <div className="z-10 text-center text-white px-4">
-              <h2 className="text-4xl font-bold mb-4 drop-shadow-md">{slide.title}</h2>
-              <p className="text-lg mb-6 drop-shadow-sm">{slide.subtitle}</p>
-              <Link
-                href="#"
-                className="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-2 text-white font-semibold rounded-lg transition"
+        <section className="w-full relative z-0 mb-12">
+          <div className="hero-slider owl-carousel">
+            {slides.map((slide, i) => (
+              <div
+                key={i}
+                className="relative min-h-[500px] bg-cover bg-center flex items-center justify-center"
+                style={{ backgroundImage: `url(${slide.img})` }}
               >
-                {slide.button}
-              </Link>
-            </div>
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-black/50 z-0" />
+
+                {/* Text Content */}
+                <div className="z-10 text-center text-white px-4">
+                  <h2 className="text-4xl font-bold mb-4 drop-shadow-md">{slide.title}</h2>
+                  <p className="text-lg mb-6 drop-shadow-sm">{slide.subtitle}</p>
+                  <Link
+                    href="#"
+                    className="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-2 text-white font-semibold rounded-lg transition"
+                  >
+                    {slide.button}
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </section>
+        </section>
 
         {/* Quick Links */}
         <motion.section 
@@ -257,67 +226,88 @@ export default function Welcome() {
           </div>
         </motion.section>
 
-        {/* Features Section */}
-        <motion.section 
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="w-full py-16 bg-gray-50 dark:bg-gray-900"
-        >
-          <div className="container mx-auto px-4">
-            <motion.div 
-              className="text-center mb-12"
-              variants={fadeInUp}
-            >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Nuestras <span className="text-blue-600">Fortalezas</span></h2>
-              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                Descubre lo que hace especial a nuestra institución y cómo podemos ayudarte a alcanzar tus metas académicas.
-              </p>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {features.map((item, index) => (
-                <motion.div 
-                  key={index}
-                  variants={fadeInUp}
-                  whileHover={{ y: -10 }}
-                  className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl"
-                >
-                  <div 
-                    className="h-48 bg-cover bg-center relative"
-                    style={{ backgroundImage: `url('${item.bg}')` }}
-                  >
-                    <span className={`absolute top-3 left-3 ${
-                      item.category === 'new' ? 'bg-red-600' : 
-                      item.category === 'event' ? 'bg-green-600' : 
-                      item.category === 'research' ? 'bg-purple-600' : 'bg-blue-600'
-                    } text-white px-3 py-1 rounded-full text-xs`}>
-                      {item.category === 'new' ? 'Nuevo' : 
-                       item.category === 'event' ? 'Evento' : 
-                       item.category === 'research' ? 'Investigación' : 'Internacional'}
-                    </span>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-gray-600 dark:text-gray-300 mb-4">{item.desc}</p>
-                    <Link 
-                      href="#" 
-                      className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 font-medium inline-flex items-center"
-                    >
-                      Ver más
-                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-                      </svg>
-                    </Link>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
+        {/* Features Section - Datos dinámicos */}
+ 
+<motion.section 
+  initial="hidden"
+  whileInView="visible"
+  viewport={{ once: true }}
+  variants={staggerContainer}
+  className="w-full py-16 bg-gray-50 dark:bg-gray-900"
+>
+  <div className="container mx-auto px-4">
+    <motion.div 
+      className="text-center mb-12"
+      variants={fadeInUp}
+    >
+      <h2 className="text-3xl md:text-4xl font-bold mb-4">
+        Nuestras <span className="text-blue-600">Fortalezas</span>
+      </h2>
+      <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        Descubre lo que hace especial a nuestra institución y cómo podemos ayudarte a alcanzar tus metas académicas.
+      </p>
+    </motion.div>
 
-        {/* News Section */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      {fortalezas.map((item) => (
+        <motion.article 
+          key={item.id}
+          variants={fadeInUp}
+          className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          <a href={`/cultura/${item.id}/item`} className="block">
+            <div className="overflow-hidden">
+              <img
+                src={`/storage/${item.imagen_banner}`}
+                alt={item.titulo}
+                className="w-full h-40 object-cover transition-transform duration-300 hover:scale-105"
+              />
+            </div>
+          </a>
+
+          <div className="p-4">
+            {/* Badge dinámico */}
+            <span className={`inline-block mb-2 px-3 py-1 text-xs font-medium text-white rounded-full ${getBadgeColor(item.tipo)}`}>
+              {item.tipo.charAt(0).toUpperCase() + item.tipo.slice(1)}
+            </span>
+
+            <h3 className="text-base font-bold mb-1">
+              <a href={`/cultura/${item.id}/item`} className="hover:text-blue-600 transition">
+                {item.titulo}
+              </a>
+            </h3>
+
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-3">
+              {item.descripcion}
+            </p>
+
+            <p className="text-xs text-gray-400 mb-3">
+              <i className="far fa-calendar-alt mr-1"></i>
+              {item.fecha
+                ? new Date(item.fecha).toLocaleDateString("es-CO", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                  })
+                : "Sin fecha"}
+            </p>
+
+            <Link
+              href={`/cultura/${item.id}/item`}
+              className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 font-medium inline-flex items-center text-sm"
+            >
+              Ver más
+              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </motion.article>
+      ))}
+    </div>
+  </div>
+</motion.section>
+        {/* News Section - Ahora con datos dinámicos */}
         <motion.section 
           initial="hidden"
           whileInView="visible"
@@ -337,42 +327,53 @@ export default function Welcome() {
             </motion.div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {recentNews.map((item, index) => (
-                <motion.div 
-                  key={index}
-                  variants={fadeInUp}
-                  className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl"
-                >
-                  <div 
-                    className="h-48 bg-cover bg-center"
-                    style={{ backgroundImage: `url('${item.bg}')` }}
-                  ></div>
-                  <div className="p-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className={`text-xs font-medium px-2 py-1 rounded ${
-                        item.category === 'announcement' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        item.category === 'event' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                      }`}>
-                        {item.category === 'announcement' ? 'Anuncio' : 
-                         item.category === 'event' ? 'Evento' : 'Académico'}
-                      </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{item.date}</span>
+              {noticiasRecientes.length > 0 ? (
+                noticiasRecientes.map((noticia) => (
+                  <motion.div 
+                    key={noticia.id}
+                    variants={fadeInUp}
+                    className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl"
+                  >
+                    <div 
+                      className="h-48 bg-cover bg-center"
+                     style={{ backgroundImage: `url('${noticia.imagen_banner ? `/storage/${noticia.imagen_banner}` : defaultNewsImage}')` }}
+
+                    ></div>
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs font-medium px-2 py-1 rounded">
+                          Noticia
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {formatDate(noticia.fecha)}
+                        </span>
+                      </div>
+                      <h3 className="text-xl font-bold mb-3">{noticia.titulo}</h3>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
+                        {noticia.descripcion}
+                      </p>
+                      <Link 
+                        href={`/cultura/${noticia.id}/item`}
+                        className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 font-medium inline-flex items-center"
+                      >
+                        Leer más
+                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                      </Link>
                     </div>
-                    <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                    <p className="text-gray-600 dark:text-gray-300 mb-4">{item.desc}</p>
-                    <Link 
-                      href="#" 
-                      className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 font-medium inline-flex items-center"
-                    >
-                      Leer más
-                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-                      </svg>
-                    </Link>
-                  </div>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.div 
+                  variants={fadeInUp}
+                  className="col-span-full text-center py-10"
+                >
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No hay noticias disponibles en este momento.
+                  </p>
                 </motion.div>
-              ))}
+              )}
             </div>
             
             <motion.div 

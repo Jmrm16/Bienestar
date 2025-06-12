@@ -103,14 +103,24 @@ public function vistaPublica()
         'culturas' => $culturas,
     ]);
 }
+// Si decides dejarlo en CulturaController
+public function home()
+{
+    $culturas = Cultura::where('publicado', true)
+        ->orderBy('fecha', 'desc')
+        ->take(8)
+        ->get();
+
+    return Inertia::render('welcome', [
+        'culturas' => $culturas,
+    ]);
+}
+
 public function show(Cultura $cultura)
 {
     return Inertia::render('Cultura_vistas/ShowCultura', [
         'cultura' => $cultura
     ]);
 }
-
-
-
 
 }

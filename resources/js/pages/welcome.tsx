@@ -241,7 +241,7 @@ export default function Welcome() {
       variants={fadeInUp}
     >
       <h2 className="text-3xl md:text-4xl font-bold mb-4">
-        Nuestras <span className="text-blue-600">Fortalezas</span>
+        <span className="text-blue-600">Eventos</span>
       </h2>
       <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
         Descubre lo que hace especial a nuestra institución y cómo podemos ayudarte a alcanzar tus metas académicas.
@@ -381,7 +381,7 @@ export default function Welcome() {
               variants={fadeInUp}
             >
               <Link 
-                href="/noticias" 
+                href="/cultura/publica" 
                 className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-300"
               >
                 Ver Todas las Noticias
@@ -439,34 +439,7 @@ export default function Welcome() {
           </div>
         </motion.section>
 
-        {/* Call to Action */}
-        <motion.section 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="w-full py-16 bg-blue-600 text-white"
-        >
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">¿Listo para comenzar tu viaje académico?</h2>
-            <p className="text-xl mb-8 max-w-3xl mx-auto">
-              Únete a nuestra comunidad universitaria y descubre un mundo de oportunidades.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link 
-                href="/admisiones" 
-                className="bg-white text-blue-600 hover:bg-gray-100 font-semibold px-8 py-3 rounded-lg transition duration-300"
-              >
-                Admisiones
-              </Link>
-              <Link 
-                href="/contacto" 
-                className="bg-transparent border-2 border-white hover:bg-white hover:text-blue-600 font-semibold px-8 py-3 rounded-lg transition duration-300"
-              >
-                Contáctanos
-              </Link>
-            </div>
-          </div>
-        </motion.section>
+
       </main>
 
       <FooterComponent />

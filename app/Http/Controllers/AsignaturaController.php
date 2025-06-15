@@ -30,13 +30,19 @@ public function show(Asignatura $asignatura)
 {
     $asignatura->load('carrera', 'grupos.carrera');
 
+    // ✅ Filtrar tutores que dictan esta asignatura
+    $tutores = \App\Models\Tutor::whereHas('asignaturas', function ($query) use ($asignatura) {
+        $query->where('asignatura_id', $asignatura->id);
+    })->get();
+
     return Inertia::render('Tutores/ShowAsignatura', [
         'asignatura' => $asignatura,
-        'tutores' => Tutor::all(),
-        'carreras' => Carrera::all(), // ✅ necesario para el <select> de carrera
-        'asignaturas' => Asignatura::all(), // ✅ necesario para el <select> de asignatura
+        'tutores' => $tutores,
+        'carreras' => \App\Models\Carrera::all(),
+        'asignaturas' => \App\Models\Asignatura::all(),
     ]);
 }
+
 
 
 

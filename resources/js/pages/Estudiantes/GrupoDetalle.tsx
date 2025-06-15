@@ -35,60 +35,55 @@ export default function GrupoDetalle({ grupo, estudiantes: initialEstudiantes }:
     <AppLayout>
       <Head title={`Grupo ${grupo.nombre} - Detalle`} />
 
-      {/* Botón de regresar */}
-      <div className="mb-4">
+      {/* Botón + métrica alineados a la izquierda */}
+      <div className="mb-6 flex flex-col gap-4">
         <Button
-          variant="secondary"
-          size="icon"
-          className="size-8"
+          variant="ghost"
+          className="text-blue-500 hover:text-blue-700 flex items-center gap-2 w-fit"
           onClick={() => router.visit('/estudiantes')}
         >
           <ArrowLeft className="w-4 h-4" />
+          Volver atrás
         </Button>
-      </div>
 
-      <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
-        {/* Métricas */}
-        <div className="container mx-auto p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <MetricCard
-              title="Estudiantes"
-              value={estudiantes.length}
-              icon={Cpu}
-              color="cyan"
-              detail={`${estudiantes.length} registradas`}
-            />
-          </div>
+        <div className="max-w-xs">
+          <MetricCard
+            title="Estudiantes"
+            value={estudiantes.length}
+            icon={Cpu}
+            color="cyan"
+            detail={`${estudiantes.length} registradas`}
+          />
         </div>
-
-        {/* Información del grupo */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-white text-2xl">
-              Estudiantes del Grupo: {grupo.nombre} {grupo.codigo}
-            </CardTitle>
-            <p className="text-muted-foreground">Carrera: {grupo.carrera?.nombre || '—'}</p>
-          </CardHeader>
-
-          <CardContent>
-            <div className="p-4 border rounded-xl overflow-x-auto">
-              {loading ? (
-                <p>Cargando estudiantes...</p>
-              ) : estudiantes.length > 0 ? (
-                <div className="min-w-[1500px]">
-                  <DataTable
-                    columns={columnsEstudiantes}
-                    data={estudiantes}
-                    searchKey="nombres"
-                  />
-                </div>
-              ) : (
-                <p>No hay estudiantes disponibles.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Información del grupo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-white text-2xl">
+            Estudiantes del Grupo: {grupo.nombre} {grupo.codigo}
+          </CardTitle>
+          <p className="text-muted-foreground">Carrera: {grupo.carrera?.nombre || '—'}</p>
+        </CardHeader>
+
+        <CardContent>
+          <div className="p-4 border rounded-xl overflow-x-auto">
+            {loading ? (
+              <p>Cargando estudiantes...</p>
+            ) : estudiantes.length > 0 ? (
+              <div className="min-w-[1500px]">
+                <DataTable
+                  columns={columnsEstudiantes}
+                  data={estudiantes}
+                  searchKey="nombres"
+                />
+              </div>
+            ) : (
+              <p>No hay estudiantes disponibles.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </AppLayout>
   );
 }

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/layouts/app-layout";
-import { Head, useForm } from "@inertiajs/react";
+import { Head, useForm, router } from "@inertiajs/react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import EditorCultura from "./EditorCultura"; // 👈 asegúrate de que esté en el mismo folder
+import EditorCultura from "./EditorCultura";
+import { ArrowLeft } from "lucide-react";
 
 interface Cultura {
   id: number;
@@ -16,7 +17,7 @@ interface Cultura {
   tipo: string;
   fecha: string;
   publicado: boolean;
-  contenido_json: any; // JSON de bloques Editor.js
+  contenido_json: any;
 }
 
 interface EditCulturaProps {
@@ -35,17 +36,16 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
   });
 
   const [contenido, setContenido] = useState<any>(() => {
-  try {
-    if (!cultura.contenido_json) return null;
-    return typeof cultura.contenido_json === 'string'
-      ? JSON.parse(cultura.contenido_json)
-      : cultura.contenido_json;
-  } catch (err) {
-    console.error("Error al parsear contenido_json:", err);
-    return null;
-  }
-});
-
+    try {
+      if (!cultura.contenido_json) return null;
+      return typeof cultura.contenido_json === "string"
+        ? JSON.parse(cultura.contenido_json)
+        : cultura.contenido_json;
+    } catch (err) {
+      console.error("Error al parsear contenido_json:", err);
+      return null;
+    }
+  });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -72,6 +72,18 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
     <AppLayout breadcrumbs={[{ title: "Cultura", href: "/culturas" }, { title: "Editar", href: "#" }]}>
       <Head title="Editar publicación cultural" />
 
+      {/* 🔙 Botón de regreso */}
+      <div className="px-4 pt-4 max-w-4xl mx-auto">
+        <Button
+          variant="ghost"
+          className="text-blue-500 hover:text-blue-700 flex items-center gap-2"
+          onClick={() => router.visit("/culturas")}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver a cultura
+        </Button>
+      </div>
+
       <div className="p-4 max-w-4xl mx-auto">
         <Card>
           <CardHeader>
@@ -81,7 +93,11 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
             <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
               <div>
                 <Label htmlFor="titulo">Título</Label>
-                <Input id="titulo" value={data.titulo} onChange={(e) => setData("titulo", e.target.value)} />
+                <Input
+                  id="titulo"
+                  value={data.titulo}
+                  onChange={(e) => setData("titulo", e.target.value)}
+                />
                 {errors.titulo && <p className="text-sm text-red-500">{errors.titulo}</p>}
               </div>
 
@@ -129,10 +145,12 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
                   type="file"
                   onChange={(e) => {
                     const file = e.target.files?.[0] ?? null;
-                    setData("imagen_banner" as "imagen_banner", file);
+                    setData("imagen_banner", file);
                   }}
                 />
-                {errors.imagen_banner && <p className="text-sm text-red-500">{errors.imagen_banner}</p>}
+                {errors.imagen_banner && (
+                  <p className="text-sm text-red-500">{errors.imagen_banner}</p>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
@@ -144,7 +162,6 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
                 <Label htmlFor="publicado">¿Publicado?</Label>
               </div>
 
-              {/* 🔥 Bloques Editor.js */}
               <div>
                 <Label>Contenido extendido (por bloques)</Label>
                 <EditorCultura data={contenido} onChange={setContenido} />

@@ -1,49 +1,49 @@
-import AppLayout from '@/layouts/app-layout';
-import { Head, usePage, router } from '@inertiajs/react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import ProfileSection from '@/components/component/profile-section';
-import Estado from '@/components/component/estado';
+import AppLayout from '@/layouts/app-layout'
+import { Head, usePage, router } from '@inertiajs/react'
+import { motion } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
+import ProfileSection from '@/components/component/profile-section'
+import Estado from '@/components/component/estado'
 
 interface Asignatura {
-  id: number;
-  nombre: string;
+  id: number
+  nombre: string
 }
 
 interface Tutor {
-  id: number;
-  nombre: string;
-  apellido: string;
-  tipo_documento: string;
-  documento: string;
-  lugar_expedicion: string;
-  sexo: string;
-  grupo_priorizado: string;
-  sede: string;
-  programa_academico: string;
-  correo: string;
-  telefono: string;
-  asignaturas: Asignatura[];
+  id: number
+  nombre: string
+  apellido: string
+  tipo_documento: string
+  documento: string
+  lugar_expedicion: string
+  sexo: string
+  grupo_priorizado: string
+  sede: string
+  programa_academico: string
+  correo: string
+  telefono: string
+  asignaturas: Asignatura[]
 }
 
 export default function TutorProfile() {
-  const { props } = usePage();
-  const tutor = props.tutor as Tutor;
+  const { props } = usePage()
+  const tutor = props.tutor as Tutor
 
   return (
     <AppLayout>
       <Head title={`Perfil del Tutor - ${tutor.nombre} ${tutor.apellido}`} />
 
-      {/* Botón icono regresar */}
+      {/* ✅ Botón volver estilo completo */}
       <div className="mb-4">
         <Button
-          variant="secondary"
-          size="icon"
-          className="size-8"
+          variant="ghost"
+          className="text-blue-500 hover:text-blue-700 flex items-center gap-2"
           onClick={() => router.visit('/tutores')}
         >
           <ArrowLeft className="w-4 h-4" />
+          Volver atras
         </Button>
       </div>
 
@@ -104,5 +104,5 @@ export default function TutorProfile() {
         </div>
       </motion.div>
     </AppLayout>
-  );
+  )
 }

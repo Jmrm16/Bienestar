@@ -15,34 +15,30 @@ import { usePage, router } from "@inertiajs/react";
 import { PageProps as InertiaPageProps } from "@inertiajs/core";
 import { toast } from "sonner";
 
-interface Carrera {
-  id: number;
-  nombre: string;
-}
-
-interface Asignatura {
-  id: number;
-  nombre: string;
-}
-
 interface PageProps extends InertiaPageProps {
-  carreras: Carrera[];
-  asignaturas: Asignatura[];
+  asignatura: {
+    id: number;
+    nombre: string;
+    carrera: {
+      id: number;
+      nombre: string;
+    };
+  };
   errors?: Record<string, string>;
 }
 
 const AgregarGrupo = () => {
-  const { carreras = [], asignaturas = [], errors = {} } = usePage<PageProps>().props;
+  const { asignatura, errors = {} } = usePage<PageProps>().props;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     nombre: "",
     codigo: "",
-    carrera_id: "",
-    asignatura_id: "", // <- Nueva clave
+    carrera_id: asignatura.carrera.id.toString(),
+    asignatura_id: asignatura.id.toString(),
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
   };
@@ -54,11 +50,15 @@ const AgregarGrupo = () => {
       preserveScroll: true,
       onSuccess: () => {
         toast.success("Grupo agregado correctamente");
-        setForm({ nombre: "", codigo: "", carrera_id: "", asignatura_id: "" });
+        setForm({
+          nombre: "",
+          codigo: "",
+          carrera_id: asignatura.carrera.id.toString(),
+          asignatura_id: asignatura.id.toString(),
+        });
         setOpen(false);
       },
-      onError: (errors) => {
-        console.error("Errores:", errors);
+      onError: () => {
         toast.error("Error al agregar el grupo");
       },
     });
@@ -67,7 +67,7 @@ const AgregarGrupo = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Agregar Grupo</Button>
+        <Button className="bg-pink-500 hover:bg-pink-600">Agregar Grupo</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -85,44 +85,6 @@ const AgregarGrupo = () => {
             <Label htmlFor="codigo">Código</Label>
             <Input id="codigo" name="codigo" value={form.codigo} onChange={handleChange} />
             {errors?.codigo && <p className="text-red-500 text-sm mt-1">{errors.codigo}</p>}
-          </div>
-
-          <div>
-            <Label htmlFor="carrera_id">Carrera</Label>
-            <select
-              id="carrera_id"
-              name="carrera_id"
-              value={form.carrera_id}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="">Selecciona una carrera</option>
-              {carreras.map((carrera) => (
-                <option key={carrera.id} value={carrera.id}>
-                  {carrera.nombre}
-                </option>
-              ))}
-            </select>
-            {errors?.carrera_id && <p className="text-red-500 text-sm mt-1">{errors.carrera_id}</p>}
-          </div>
-
-          <div>
-            <Label htmlFor="asignatura_id">Asignatura</Label>
-            <select
-              id="asignatura_id"
-              name="asignatura_id"
-              value={form.asignatura_id}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="">Selecciona una asignatura</option>
-              {asignaturas.map((asignatura) => (
-                <option key={asignatura.id} value={asignatura.id}>
-                  {asignatura.nombre}
-                </option>
-              ))}
-            </select>
-            {errors?.asignatura_id && <p className="text-red-500 text-sm mt-1">{errors.asignatura_id}</p>}
           </div>
 
           <DialogFooter>

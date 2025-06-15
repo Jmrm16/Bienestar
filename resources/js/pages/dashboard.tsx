@@ -1,36 +1,63 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Head, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { MetricCard } from '@/components/component/MetricCard';
+import { Cpu, HardDrive, Layers } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-
+import AsistenciaChart from '@/components/charts/AsistenciaChart';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+  },
 ];
 
+interface DashboardPageProps {
+  totalTutores: number;
+  totalAsignaturas: number;
+  totalGrupos: number;
+  asistenciasPorFecha: { fecha: string; total: number }[];
+  [key: string]: unknown;
+}
+
 export default function Dashboard() {
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                </div>
-                <div className="border-sidebar-border/70 dark:border-sidebar-border relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border md:min-h-min">
-                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                </div>
-            </div>
-        </AppLayout>
-    );
+  const { totalTutores, totalAsignaturas, totalGrupos, asistenciasPorFecha } = usePage<DashboardPageProps>().props;
+
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Dashboard" />
+
+      <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto">
+        {/* Tarjetas de métricas con MetricCard */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <MetricCard
+            title="Tutores"
+            value={totalTutores}
+            icon={Cpu}
+            color="cyan"
+            detail={`${totalTutores} registrados`}
+          />
+          <MetricCard
+            title="Asignaturas"
+            value={totalAsignaturas}
+            icon={HardDrive}
+            color="purple"
+            detail={`${totalAsignaturas} registradas`}
+          />
+          <MetricCard
+            title="Grupos"
+            value={totalGrupos}
+            icon={Layers}
+            color="blue"
+            detail={`${totalGrupos} creados`}
+          />
+        </div>
+
+        {/* Gráfico de asistencias */}
+        <div className="mt-8">
+          <AsistenciaChart data={asistenciasPorFecha} />
+        </div>
+      </div>
+    </AppLayout>
+  );
 }

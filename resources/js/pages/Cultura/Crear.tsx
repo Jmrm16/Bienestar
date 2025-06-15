@@ -28,6 +28,7 @@ const CreateCulturaModal = () => {
     descripcion: "",
     tipo: "noticia",
     fecha: "",
+    publicado: true,
     imagen_banner: null as File | null,
   });
 
@@ -51,6 +52,7 @@ const CreateCulturaModal = () => {
     formData.append("descripcion", form.descripcion);
     formData.append("tipo", form.tipo);
     formData.append("fecha", form.fecha);
+    formData.append("publicado", "1");
     if (form.imagen_banner) {
       formData.append("imagen_banner", form.imagen_banner);
     }
@@ -64,6 +66,7 @@ const CreateCulturaModal = () => {
           descripcion: "",
           tipo: "noticia",
           fecha: "",
+          publicado: true,
           imagen_banner: null,
         });
         setOpen(false);
@@ -113,6 +116,7 @@ const CreateCulturaModal = () => {
               <option value="noticia">Noticia</option>
               <option value="evento">Evento</option>
               <option value="actividad">Actividad</option>
+              <option value="galeria">Galería</option>
             </select>
             {errors.tipo && <p className="text-red-500 text-sm mt-1">{errors.tipo}</p>}
           </div>

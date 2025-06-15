@@ -98,11 +98,72 @@ public function uploadImage(Request $request)
 }
 public function vistaPublica()
 {
-    $culturas = Cultura::where('publicado', true)->latest()->get();
-    return Inertia::render('Cultura_vistas/Cultura', [
-        'culturas' => $culturas,
+    $eventos = Cultura::eventos()
+        ->recientes()
+        ->where('fecha', '>=', now())
+        ->take(3)
+        ->get()
+        ->map(function ($item) {
+            $item->imagen_url = $item->imagen_url ?? $this->extraerPrimeraImagenDelJson($item->contenido_json);
+            return $item;
+        });
+
+    $noticias = Cultura::noticias()
+        ->recientes()
+        ->take(2)
+        ->get()
+        ->map(function ($item) {
+            $item->imagen_url = $item->imagen_url ?? $this->extraerPrimeraImagenDelJson($item->contenido_json);
+            return $item;
+        });
+
+    // Galería: incluye cualquier cultura que tenga imagen, sin filtrar por tipo
+    $galeria = Cultura::where('publicado', true)
+        ->recientes()
+        ->take(12)
+        ->get()
+        ->map(function ($item) {
+            $item->imagen_url = $item->imagen_url ?? $this->extraerPrimeraImagenDelJson($item->contenido_json);
+            return $item;
+        })
+        ->filter(fn ($item) => $item->imagen_url); // Solo las que tienen imagen
+
+    $areasCulturales = [
+        ['icon' => 'literatura', 'title' => "Literatura y Poesía"],
+        ['icon' => 'musica', 'title' => "Música"],
+        ['icon' => 'cine', 'title' => "Cine y Teatro"],
+        ['icon' => 'danza', 'title' => "Danza"],
+        ['icon' => 'fotografia', 'title' => "Fotografía"],
+        ['icon' => 'artes', 'title' => "Artes Visuales"]
+    ];
+
+    return Inertia::render('cultura', [
+        'eventos' => $eventos,
+        'noticias' => $noticias,
+        'areasCulturales' => $areasCulturales,
+        'galeria' => $galeria->values(), // reindexar
     ]);
 }
+
+/**
+ * Extrae la primera imagen del contenido_json (Editor.js)
+ */
+private function extraerPrimeraImagenDelJson($contenido)
+{
+    try {
+        $json = is_string($contenido) ? json_decode($contenido, true) : $contenido;
+        $bloques = $json['blocks'] ?? [];
+        foreach ($bloques as $bloque) {
+            if ($bloque['type'] === 'image' && !empty($bloque['data']['file']['url'])) {
+                return $bloque['data']['file']['url'];
+            }
+        }
+    } catch (\Throwable $e) {
+        // opcional: log error
+    }
+    return null;
+}
+
 // Si decides dejarlo en CulturaController
 public function home()
 {

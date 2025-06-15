@@ -203,10 +203,10 @@ export default function Welcome() {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { icon: "📚", title: "Académicos", link: "/academicos" },
-                { icon: "🏛️", title: "Admisiones", link: "/admisiones" },
-                { icon: "🔬", title: "Investigación", link: "/investigacion" },
-                { icon: "🌎", title: "Internacional", link: "/internacional" }
+                { icon: "📚", title: "Académicos", link: "/" },
+                { icon: "🏛️", title: "Admisiones", link: "/" },
+                { icon: "🔬", title: "Investigación", link: "/" },
+                { icon: "🌎", title: "Internacional", link: "/" }
               ].map((item, index) => (
                 <motion.div
                   key={index}

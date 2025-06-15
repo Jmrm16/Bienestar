@@ -20,7 +20,8 @@ use App\Http\Controllers\AsistenciaImportController;
 // 🔹 Página pública
 Route::get('/', [CulturaController::class, 'home'])->name('home');
 Route::get('/graduacion', fn () => Inertia::render('graduacion'))->name('graduacion');
-Route::get('/cultura', fn () => Inertia::render('cultura'))->name('cultura');
+Route::get('/cultura', [CulturaController::class, 'vistaPublica'])->name('cultura');
+
 
 // Cultura pública
 Route::get('/cultura/{cultura}/item', [CulturaController::class, 'show'])->name('cultura.show');

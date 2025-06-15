@@ -1,37 +1,40 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { usePage, router } from "@inertiajs/react";
+import type { PageProps as InertiaPageProps } from "@inertiajs/core";
+import { toast } from "sonner";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { usePage, router } from "@inertiajs/react";
-import { PageProps as InertiaPageProps } from "@inertiajs/core";
-import { toast } from "sonner";
 
-interface PageProps extends InertiaPageProps {
-  asignatura: {
+interface Asignatura {
+  id: number;
+  nombre: string;
+  carrera: {
     id: number;
     nombre: string;
-    carrera: {
-      id: number;
-      nombre: string;
-    };
   };
-  errors?: Record<string, string>;
+}
+
+interface PageProps extends InertiaPageProps {
+  asignatura: Asignatura;
+  errors?: Partial<Record<keyof FormValues, string>>;
+}
+
+interface FormValues {
+  [key: string]: string;
+  nombre: string;
+  codigo: string;
+  carrera_id: string;
+  asignatura_id: string;
 }
 
 const AgregarGrupo = () => {
   const { asignatura, errors = {} } = usePage<PageProps>().props;
-
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [form, setForm] = useState<FormValues>({
     nombre: "",
     codigo: "",
     carrera_id: asignatura.carrera.id.toString(),
@@ -40,55 +43,103 @@ const AgregarGrupo = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const resetForm = () => {
+    setForm({
+      nombre: "",
+      codigo: "",
+      carrera_id: asignatura.carrera.id.toString(),
+      asignatura_id: asignatura.id.toString(),
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     router.post("/grupost", form, {
       preserveScroll: true,
       onSuccess: () => {
-        toast.success("Grupo agregado correctamente");
-        setForm({
-          nombre: "",
-          codigo: "",
-          carrera_id: asignatura.carrera.id.toString(),
-          asignatura_id: asignatura.id.toString(),
-        });
+        toast.success("✅ Grupo creado exitosamente");
+        resetForm();
         setOpen(false);
       },
-      onError: () => {
-        toast.error("Error al agregar el grupo");
+      onError: (errors) => {
+        if (Object.keys(errors).length > 0) {
+          toast.error("❌ Por favor corrige los errores en el formulario");
+        } else {
+          toast.error("❌ Ocurrió un error al crear el grupo");
+        }
       },
+      onFinish: () => {
+        setIsSubmitting(false);
+      }
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(open: boolean) => {
+        if (!open) resetForm();
+        setOpen(open);
+      }}
+    >
       <DialogTrigger asChild>
-        <Button className="bg-pink-500 hover:bg-pink-600">Agregar Grupo</Button>
+        <Button variant="default" className="bg-primary hover:bg-primary/90">
+          Crear Nuevo Grupo
+        </Button>
       </DialogTrigger>
-      <DialogContent>
+
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-zinc-900 dark:text-white">Agregar nuevo grupo</DialogTitle>
-          <DialogDescription>Llena la información para crear un nuevo grupo.</DialogDescription>
+          <DialogTitle>Crear Nuevo Grupo</DialogTitle>
+          <DialogDescription>
+            Complete los campos requeridos para registrar un nuevo grupo.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="nombre">Nombre</Label>
-            <Input id="nombre" name="nombre" value={form.nombre} onChange={handleChange} />
-            {errors?.nombre && <p className="text-red-500 text-sm mt-1">{errors.nombre}</p>}
+
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="nombre" className="text-right">Nombre</Label>
+            <Input
+              id="nombre"
+              name="nombre"
+              value={form.nombre}
+              onChange={handleChange}
+              className="col-span-3"
+              disabled={isSubmitting}
+            />
+            {errors.nombre && (
+              <p className="col-span-4 col-start-2 text-sm text-destructive">
+                {errors.nombre}
+              </p>
+            )}
           </div>
 
-          <div>
-            <Label htmlFor="codigo">Código</Label>
-            <Input id="codigo" name="codigo" value={form.codigo} onChange={handleChange} />
-            {errors?.codigo && <p className="text-red-500 text-sm mt-1">{errors.codigo}</p>}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="codigo" className="text-right">Código</Label>
+            <Input
+              id="codigo"
+              name="codigo"
+              value={form.codigo}
+              onChange={handleChange}
+              className="col-span-3"
+              disabled={isSubmitting}
+            />
+            {errors.codigo && (
+              <p className="col-span-4 col-start-2 text-sm text-destructive">
+                {errors.codigo}
+              </p>
+            )}
           </div>
 
           <DialogFooter>
-            <Button type="submit">Guardar</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Guardando..." : "Guardar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

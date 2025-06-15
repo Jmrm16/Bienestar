@@ -28,7 +28,12 @@ class AsignaturaController extends Controller
 
 public function show(Asignatura $asignatura)
 {
-    $asignatura->load('carrera', 'grupos.carrera');
+    $asignatura->load([
+    'carrera',
+    'grupos.carrera',
+    'grupos.tutores' // 👈 Precarga los tutores de cada grupo
+]);
+
 
     // ✅ Filtrar tutores que dictan esta asignatura
     $tutores = \App\Models\Tutor::whereHas('asignaturas', function ($query) use ($asignatura) {

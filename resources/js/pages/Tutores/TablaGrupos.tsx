@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -18,9 +17,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { toast } from "sonner";
-import { UserPlus2, Upload, Eye } from "lucide-react";
+import {
+  UserPlus2,
+  Upload,
+  Eye,
+  Trash2,
+  Pencil,
+  UserX2,
+  MoreHorizontal,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -35,7 +42,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ImportarArchivoModal from "../Asistencias/Importar"; // solo el contenido del modal, no incluye trigger
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
+import ImportarArchivoModal from "../Asistencias/Importar";
 
 interface Tutor {
   id: number;
@@ -54,6 +77,8 @@ interface Grupo {
   codigo: string;
   carrera: Carrera;
   tipo?: string;
+  tutores?: Tutor[];
+  asignatura_id?: number;
 }
 
 interface Props {
@@ -63,29 +88,111 @@ interface Props {
   onSeleccionarGrupo?: (grupo: Grupo) => void;
 }
 
-const TablaGrupo = ({ grupos = [], gruposT = [], tutores, onSeleccionarGrupo }: Props) => {
+const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
   const [selectedGrupo, setSelectedGrupo] = useState<Grupo | null>(null);
   const [grupoParaImportar, setGrupoParaImportar] = useState<Grupo | null>(null);
   const [isAsignarOpen, setIsAsignarOpen] = useState(false);
   const [isImportarOpen, setIsImportarOpen] = useState(false);
   const [tutorId, setTutorId] = useState<string>("");
+  const [grupoEdit, setGrupoEdit] = useState<Grupo | null>(null);
+  const [grupoNombre, setGrupoNombre] = useState("");
+  const [grupoCodigo, setGrupoCodigo] = useState("");
+  const [grupoToDelete, setGrupoToDelete] = useState<Grupo | null>(null);
+
+  const { flash = {} } = usePage().props as {
+    flash?: { success?: string; error?: string };
+  };
+
+  useEffect(() => {
+    if (flash.success) toast.success(flash.success);
+    if (flash.error) toast.error(flash.error);
+  }, [flash]);
 
   const handleAsignar = () => {
     if (!selectedGrupo || !tutorId) return;
-    router.post(`/grupost/${selectedGrupo.id}/asignar-tutor`, { tutor_id: tutorId }, {
+
+    router.post(
+      `/grupost/${selectedGrupo.id}/asignar-tutor`,
+      { tutor_id: tutorId },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          toast.success("✅ Tutor asignado correctamente");
+          setIsAsignarOpen(false);
+          setTutorId("");
+          router.reload({ only: ["gruposT", "grupos"] });
+        },
+      }
+    );
+  };
+
+  const handleQuitarTutor = (grupoId: number) => {
+    router.post(`/grupost/${grupoId}/quitar-tutor`, {}, {
+      preserveScroll: true,
       onSuccess: () => {
-        toast.success("✅ Tutor asignado correctamente");
-        setTutorId("");
-        setIsAsignarOpen(false);
+        toast.success("✅ Tutor eliminado del grupo");
+        router.reload({ only: ["gruposT", "grupos"] });
       },
-      onError: () => toast.error("❌ Error al asignar el tutor"),
+      onError: () => {
+        toast.error("❌ No se pudo quitar el tutor");
+      },
     });
   };
 
-  const listaGrupos = [
-    ...grupos.map((g) => ({ ...g, tipo: "Grupo" })),
-    ...gruposT.map((g) => ({ ...g, tipo: "GrupoT" })),
-  ];
+  const handleEliminarGrupo = () => {
+    if (!grupoToDelete) return;
+
+    const ruta = `/grupost/${grupoToDelete.id}`;
+
+    router.delete(ruta, {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success("✅ Grupo eliminado correctamente");
+        setGrupoToDelete(null);
+        router.reload({ only: ["gruposT", "grupos"] });
+      },
+      onError: () => {
+        toast.error("❌ No se pudo eliminar el grupo");
+      },
+    });
+  };
+
+  const handleGuardarEdicion = () => {
+    if (!grupoEdit) return;
+
+    if (
+      grupoNombre === grupoEdit.nombre &&
+      grupoCodigo === grupoEdit.codigo
+    ) {
+      toast.warning("⚠️ No se hicieron cambios");
+      return;
+    }
+
+    const ruta = `/grupost/${grupoEdit.id}`;
+
+    router.put(
+      ruta,
+      {
+        nombre: grupoNombre,
+        codigo: grupoCodigo,
+        carrera_id: grupoEdit.carrera.id,
+        asignatura_id: grupoEdit.asignatura_id,
+      },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          toast.success("✅ Grupo actualizado correctamente");
+          setGrupoEdit(null);
+          router.reload({ only: ["gruposT", "grupos"] });
+        },
+        onError: () => {
+          toast.error("❌ No se pudo editar el grupo");
+        },
+      }
+    );
+  };
+
+  const gruposCombinados = [...grupos.map(g => ({ ...g, tipo: "Grupo" })), ...gruposT.map(g => ({ ...g, tipo: "GrupoT" }))];
 
   return (
     <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
@@ -96,100 +203,113 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores, onSeleccionarGrupo }: 
           </TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[25%]">Nombre</TableHead>
+              <TableHead className="w-[20%]">Nombre</TableHead>
               <TableHead className="w-[15%]">Código</TableHead>
-              <TableHead className="w-[30%]">Carrera</TableHead>
+              <TableHead className="w-[25%]">Carrera</TableHead>
               <TableHead className="w-[10%]">Tipo</TableHead>
-              <TableHead className="w-[20%] text-right">Acciones</TableHead>
+              <TableHead className="w-[20%]">Tutor Asignado</TableHead>
+              <TableHead className="w-[10%] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {listaGrupos.length > 0 ? (
-              listaGrupos.map((grupo) => (
-                <TableRow key={`${grupo.tipo}-${grupo.id}`} className="hover:bg-muted/50 transition-colors">
-                  <TableCell className="font-medium">{grupo.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">{grupo.codigo}</TableCell>
-                  <TableCell>{grupo.carrera.nombre}</TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      grupo.tipo === "Grupo" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"
-                    }`}>
-                      {grupo.tipo}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right space-x-2 flex justify-end">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setGrupoParaImportar(grupo);
-                              setIsImportarOpen(true);
-                            }}
-                          >
-                            <Upload className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Importar archivo</p></TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => router.visit(`/grupos/${grupo.id}/asistencias`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Ver asistencias</p></TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              setSelectedGrupo(grupo);
-                              setIsAsignarOpen(true);
-                            }}
-                          >
-                            <UserPlus2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Asignar tutor</p></TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
+            {gruposCombinados.length ? gruposCombinados.map((grupo) => (
+              <TableRow key={`${grupo.tipo}-${grupo.id}`}>
+                <TableCell>{grupo.nombre}</TableCell>
+                <TableCell>{grupo.codigo}</TableCell>
+                <TableCell>{grupo.carrera.nombre}</TableCell>
+                <TableCell>{grupo.tipo}</TableCell>
+                <TableCell>{grupo.tutores?.[0]?.nombre || 'No asignado'}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => router.visit(`/grupos/${grupo.id}/asistencias`)}>
+                        <Eye className="mr-2 h-4 w-4" /> Ver asistencias
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setGrupoParaImportar(grupo); setIsImportarOpen(true); }}>
+                        <Upload className="mr-2 h-4 w-4" /> Importar archivo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSelectedGrupo(grupo); setIsAsignarOpen(true); }}>
+                        <UserPlus2 className="mr-2 h-4 w-4" /> Asignar tutor
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleQuitarTutor(grupo.id)}>
+                        <UserX2 className="mr-2 h-4 w-4" /> Quitar tutor
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setGrupoEdit(grupo); setGrupoNombre(grupo.nombre); setGrupoCodigo(grupo.codigo); }}>
+                        <Pencil className="mr-2 h-4 w-4" /> Editar grupo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setGrupoToDelete(grupo)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar grupo
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">No hay grupos registrados</TableCell>
+                <TableCell colSpan={6} className="text-center py-8">No hay grupos registrados</TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Modal para Asignar tutor */}
+      {/* Modales */}
+      <Dialog open={!!grupoEdit} onOpenChange={() => setGrupoEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Grupo</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nombre" className="text-right">Nombre</Label>
+              <input value={grupoNombre} onChange={(e) => setGrupoNombre(e.target.value)} className="col-span-3 border rounded px-2 py-1" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="codigo" className="text-right">Código</Label>
+              <input value={grupoCodigo} onChange={(e) => setGrupoCodigo(e.target.value)} className="col-span-3 border rounded px-2 py-1" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleGuardarEdicion}>Guardar cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!grupoToDelete} onOpenChange={() => setGrupoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción eliminará el grupo permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button type="button" onClick={handleEliminarGrupo}>Eliminar</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={isImportarOpen} onOpenChange={setIsImportarOpen}>
+        {grupoParaImportar && (
+          <ImportarArchivoModal
+            grupo={grupoParaImportar}
+            onClose={() => setIsImportarOpen(false)}
+          />
+        )}
+      </Dialog>
+
       <Dialog open={isAsignarOpen} onOpenChange={setIsAsignarOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Asignar Tutor</DialogTitle>
-            <DialogDescription>
-              Selecciona un tutor para el grupo{" "}
-              <span className="font-semibold text-foreground">{selectedGrupo?.nombre}</span>
-            </DialogDescription>
+            <DialogDescription>Selecciona un tutor para el grupo <span className="font-semibold text-foreground">{selectedGrupo?.nombre}</span></DialogDescription>
           </DialogHeader>
-
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="tutor" className="text-right">Tutor</Label>
@@ -198,34 +318,18 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores, onSeleccionarGrupo }: 
                   <SelectValue placeholder="Selecciona un tutor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tutores.map((tutor) => (
-                    <SelectItem key={tutor.id} value={tutor.id.toString()}>
-                      {tutor.nombre} {tutor.apellido}
-                    </SelectItem>
+                  {tutores.filter(t => !selectedGrupo?.tutores?.some(asig => asig.id === t.id)).map(tutor => (
+                    <SelectItem key={tutor.id} value={tutor.id.toString()}>{tutor.nombre} {tutor.apellido}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-
           <DialogFooter>
-            <Button onClick={handleAsignar} disabled={!tutorId}>
-              Asignar tutor
-            </Button>
+            <Button onClick={handleAsignar} disabled={!tutorId}>Asignar tutor</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Modal para importar archivo Excel */}
-<Dialog open={isImportarOpen} onOpenChange={setIsImportarOpen}>
-  {grupoParaImportar && (
-    <ImportarArchivoModal
-      grupo={grupoParaImportar}
-      onClose={() => setIsImportarOpen(false)} // ← cierra el modal
-    />
-  )}
-</Dialog>
-
     </div>
   );
 };

@@ -8,9 +8,6 @@ use Illuminate\Http\Request;
 
 class GrupoTController extends Controller
 {
-    /**
-     * Registrar un nuevo grupo.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -20,75 +17,70 @@ class GrupoTController extends Controller
             'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
-        GrupoT::create([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-            'carrera_id' => $request->carrera_id,
-            'asignatura_id' => $request->asignatura_id,
-        ]);
+        GrupoT::create($request->only('nombre', 'codigo', 'carrera_id', 'asignatura_id'));
 
         return redirect()->back()->with('success', 'Grupo registrado exitosamente.');
     }
 
-    /**
-     * Actualizar un grupo existente.
-     */
-    public function update(Request $request, GrupoT $grupo)
+    public function update(Request $request, $id)
     {
+        $grupo = GrupoT::findOrFail($id);
+
         $request->validate([
             'nombre' => 'required|string|max:255',
             'codigo' => 'required|string|max:255',
             'carrera_id' => 'required|exists:carreras,id',
-            'tutor_id' => 'nullable|exists:tutors,id',
             'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
-        $grupo->update([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-            'carrera_id' => $request->carrera_id,
-            'tutor_id' => $request->tutor_id,
-            'asignatura_id' => $request->asignatura_id,
-        ]);
+        $grupo->update($request->only('nombre', 'codigo', 'carrera_id', 'asignatura_id'));
 
         return redirect()->back()->with('success', 'Grupo actualizado correctamente.');
     }
 
-    /**
-     * Eliminar un grupo.
-     */
-    public function destroy(GrupoT $grupo)
+    public function destroy($id)
     {
+        $grupo = GrupoT::find($id);
+
+        if (!$grupo) {
+            return back()->with('error', '❌ Grupo no encontrado.');
+        }
+
         $grupo->delete();
 
-        return redirect()->back()->with('success', 'Grupo eliminado correctamente.');
+        return back()->with('success', '✅ Grupo eliminado correctamente.');
     }
 
-    /**
-     * Asignar un tutor a un grupo con validación por asignatura.
-     */
     public function asignarTutor(Request $request, $grupoId)
-{
-    $request->validate([
-        'tutor_id' => 'required|exists:tutors,id',
-    ]);
+    {
+        $request->validate([
+            'tutor_id' => 'required|exists:tutors,id',
+        ]);
 
-    $grupo = GrupoT::findOrFail($grupoId);
-    $tutorId = $request->input('tutor_id');
+        $grupo = GrupoT::findOrFail($grupoId);
+        $tutorId = $request->input('tutor_id');
 
-    // Validar si el tutor dicta esta asignatura
-    $tutor = \App\Models\Tutor::findOrFail($tutorId);
-    $asignaturaId = $grupo->asignatura_id;
+        if ($grupo->tutores()->where('tutor_id', $tutorId)->exists()) {
+            return redirect()->back()->with('error', '❌ El tutor ya está asignado a este grupo.');
+        }
 
-    $dictaAsignatura = $tutor->asignaturas()->where('asignatura_id', $asignaturaId)->exists();
+        $tutor = Tutor::findOrFail($tutorId);
 
-    if (!$dictaAsignatura) {
-        return redirect()->back()->with('error', '❌ El tutor seleccionado no dicta esta asignatura.');
+        // Validar si el tutor dicta esa asignatura
+        if (!$tutor->asignaturas()->where('asignatura_id', $grupo->asignatura_id)->exists()) {
+            return redirect()->back()->with('error', '❌ El tutor no dicta esta asignatura.');
+        }
+
+        $grupo->tutores()->attach($tutorId);
+
+        return redirect()->back()->with('success', '✅ Tutor asignado correctamente.');
     }
 
-    $grupo->tutores()->syncWithoutDetaching([$tutorId]);
+    public function quitarTutor(Request $request, $grupoId)
+    {
+        $grupo = GrupoT::findOrFail($grupoId);
+        $grupo->tutores()->detach();
 
-    return redirect()->back()->with('success', '✅ Tutor asignado correctamente.');
-}
-
+        return redirect()->back()->with('success', '👤 Tutor eliminado del grupo.');
+    }
 }

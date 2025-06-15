@@ -13,12 +13,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogTitle } from "@radix-ui/react-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Asignatura {
   id: number;
   nombre: string;
   codigo: string;
+}
+
+interface Carrera {
+  id: number;
+  nombre: string;
 }
 
 const AgregarTutor = () => {
@@ -38,7 +49,10 @@ const AgregarTutor = () => {
     asignaturas: [] as number[],
   });
 
-  const { asignaturas = [] } = usePage().props as { asignaturas?: Asignatura[] };
+  const { asignaturas = [], carreras = [] } = usePage().props as {
+    asignaturas?: Asignatura[];
+    carreras?: Carrera[];
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -98,16 +112,15 @@ const AgregarTutor = () => {
           <div className="overflow-y-auto pr-2">
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="w-full">
+                <div>
                   <Label>Nombre</Label>
                   <Input name="nombre" value={form.nombre} onChange={handleChange} required />
                 </div>
-                <div className="w-full">
+                <div>
                   <Label>Apellido</Label>
                   <Input name="apellido" value={form.apellido} onChange={handleChange} required />
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Tipo de Documento</Label>
                   <Select onValueChange={(value) => handleSelectChange("tipo_documento", value)}>
                     <SelectTrigger className="w-full">
@@ -120,18 +133,15 @@ const AgregarTutor = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Número de Documento</Label>
                   <Input name="documento" value={form.documento} onChange={handleChange} required />
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Lugar de Expedición</Label>
                   <Input name="lugar_expedicion" value={form.lugar_expedicion} onChange={handleChange} required />
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Sexo</Label>
                   <Select onValueChange={(value) => handleSelectChange("sexo", value)}>
                     <SelectTrigger className="w-full">
@@ -143,8 +153,7 @@ const AgregarTutor = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Grupo Priorizado</Label>
                   <Select onValueChange={(value) => handleSelectChange("grupo_priorizado", value)}>
                     <SelectTrigger className="w-full">
@@ -158,21 +167,33 @@ const AgregarTutor = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Sede</Label>
                   <Input name="sede" value={form.sede} onChange={handleChange} required />
                 </div>
-                <div className="w-full">
+                <div>
                   <Label>Programa Académico</Label>
-                  <Input name="programa_academico" value={form.programa_academico} onChange={handleChange} required />
+                  <Select
+                    value={form.programa_academico}
+                    onValueChange={(value) => handleSelectChange("programa_academico", value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona una carrera" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {carreras.map((carrera) => (
+                        <SelectItem key={carrera.id} value={carrera.nombre}>
+                          {carrera.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="w-full">
+                <div>
                   <Label>Correo</Label>
                   <Input name="correo" value={form.correo} onChange={handleChange} required />
                 </div>
-                <div className="w-full">
+                <div>
                   <Label>Teléfono</Label>
                   <Input name="telefono" value={form.telefono} onChange={handleChange} required />
                 </div>
@@ -188,7 +209,9 @@ const AgregarTutor = () => {
                           checked={form.asignaturas.includes(a.id)}
                           onCheckedChange={() => handleAsignaturasChange(a.id)}
                         />
-                        <span className="text-sm">{a.nombre} ({a.codigo})</span>
+                        <span className="text-sm">
+                          {a.nombre} ({a.codigo})
+                        </span>
                       </label>
                     ))}
                   </div>

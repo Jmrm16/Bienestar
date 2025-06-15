@@ -57,6 +57,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // GruposT (si se usan por separado)
     Route::resource('grupost', GrupoTController::class)->except(['create', 'edit']);
     Route::post('/grupost/{grupo}/asignar-tutor', [GrupoTController::class, 'asignarTutor'])->name('grupost.asignar-tutor');
+    Route::post('/grupost/{grupo}/quitar-tutor', [GrupoTController::class, 'quitarTutor']);
+    Route::delete('/grupost/{grupo}', [GrupoTController::class, 'destroy']);
+
+
 
     // 🧾 Cultura (Privado)
     Route::get('/culturas', [CulturaController::class, 'index'])->name('cultura.index');

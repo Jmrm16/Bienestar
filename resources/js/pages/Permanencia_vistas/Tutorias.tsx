@@ -31,6 +31,7 @@ interface Tutor {
   nombre: string;
   apellido: string;
   carrera: string;
+  carrera_id: number; // Asegúrate de que este campo exista en el backend
   calificacion: number;
   imagen?: string;
   asignaturas: Asignatura[];
@@ -52,13 +53,22 @@ export default function Tutorias() {
   const [filtroAsignatura, setFiltroAsignatura] = useState('');
 
   const tutoresFiltrados = tutores.filter((tutor) => {
-    const cumpleCarrera = !filtroCarrera || tutor.carrera === filtroCarrera;
+    // ✅ Cambiado: Ahora compara por carrera_id en lugar de nombre
+    const cumpleCarrera = !filtroCarrera || filtroCarrera === 'todas' || tutor.carrera_id?.toString() === filtroCarrera;
     const cumpleAsignatura =
-      !filtroAsignatura || tutor.asignaturas.some((a) => a.nombre === filtroAsignatura);
+      !filtroAsignatura || filtroAsignatura === 'todas' || tutor.asignaturas.some((a) => a.id.toString() === filtroAsignatura);
     return cumpleCarrera && cumpleAsignatura;
   });
 
   const ranking = [...tutores].sort((a, b) => b.calificacion - a.calificacion).slice(0, 3);
+
+  const handleCarreraChange = (value: string) => {
+    setFiltroCarrera(value === 'todas' ? '' : value);
+  };
+
+  const handleAsignaturaChange = (value: string) => {
+    setFiltroAsignatura(value === 'todas' ? '' : value);
+  };
 
   return (
     <>
@@ -81,28 +91,38 @@ export default function Tutorias() {
         <section className="container mx-auto px-4 pb-12">
           {/* Filtros */}
           <div className="flex flex-col md:flex-row gap-4 justify-center mb-8">
-            <Select onValueChange={setFiltroCarrera}>
+            {/* ✅ Cambiado: SelectItem ahora usa c.id.toString() en lugar de c.nombre */}
+            <Select value={filtroCarrera || 'todas'} onValueChange={handleCarreraChange}>
               <SelectTrigger className="w-64">
                 <SelectValue placeholder="Todas las carreras" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="todas">Todas las carreras</SelectItem>
                 {carreras.map((c) => (
-                  <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
+                  <SelectItem key={c.id} value={c.id.toString()}>{c.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select onValueChange={setFiltroAsignatura}>
+            <Select value={filtroAsignatura || 'todas'} onValueChange={handleAsignaturaChange}>
               <SelectTrigger className="w-64">
                 <SelectValue placeholder="Todas las asignaturas" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="todas">Todas las asignaturas</SelectItem>
                 {asignaturas.map((a) => (
-                  <SelectItem key={a.id} value={a.nombre}>{a.nombre}</SelectItem>
+                  <SelectItem key={a.id} value={a.id.toString()}>{a.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Mensaje cuando no hay resultados */}
+          {tutoresFiltrados.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-lg">No se encontraron tutores con los filtros seleccionados.</p>
+            </div>
+          )}
 
           {/* Listado de tutores */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

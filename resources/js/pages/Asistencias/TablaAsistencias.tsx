@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import {
   Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
@@ -9,7 +9,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { Download, Info, Printer, Search, Filter } from 'lucide-react';
+import { Download, Info, Printer, Search, Filter, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -39,6 +39,7 @@ interface Grupo {
   id: number;
   nombre: string;
   codigo: string;
+  asignatura_id: number;
 }
 
 interface Estadisticas {
@@ -93,6 +94,15 @@ export default function TablaAsistencias() {
   return (
     <AppLayout>
       <Head title="Asistencias" />
+        {/* Botón de regreso */}
+      <div className="mb-4">
+        {grupo && (
+          <Button variant="link" onClick={() => router.visit(`/asignaturas/${grupo.asignatura_id}`)} className="text-blue-500">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver atrás
+          </Button>
+        )}
+      </div>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>

@@ -192,6 +192,11 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
     );
   };
 
+  // Función para verificar si un grupo tiene tutor asignado
+  const tieneTutorAsignado = (grupo: Grupo) => {
+    return grupo.tutores && grupo.tutores.length > 0;
+  };
+
   const gruposCombinados = [...grupos.map(g => ({ ...g, tipo: "Grupo" })), ...gruposT.map(g => ({ ...g, tipo: "GrupoT" }))];
 
   return (
@@ -233,12 +238,18 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
                       <DropdownMenuItem onClick={() => { setGrupoParaImportar(grupo); setIsImportarOpen(true); }}>
                         <Upload className="mr-2 h-4 w-4" /> Importar archivo
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSelectedGrupo(grupo); setIsAsignarOpen(true); }}>
-                        <UserPlus2 className="mr-2 h-4 w-4" /> Asignar tutor
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleQuitarTutor(grupo.id)}>
-                        <UserX2 className="mr-2 h-4 w-4" /> Quitar tutor
-                      </DropdownMenuItem>
+                      {/* Solo mostrar "Asignar tutor" si el grupo NO tiene tutor asignado */}
+                      {!tieneTutorAsignado(grupo) && (
+                        <DropdownMenuItem onClick={() => { setSelectedGrupo(grupo); setIsAsignarOpen(true); }}>
+                          <UserPlus2 className="mr-2 h-4 w-4" /> Asignar tutor
+                        </DropdownMenuItem>
+                      )}
+                      {/* Solo mostrar "Quitar tutor" si el grupo SÍ tiene tutor asignado */}
+                      {tieneTutorAsignado(grupo) && (
+                        <DropdownMenuItem onClick={() => handleQuitarTutor(grupo.id)}>
+                          <UserX2 className="mr-2 h-4 w-4" /> Quitar tutor
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => { setGrupoEdit(grupo); setGrupoNombre(grupo.nombre); setGrupoCodigo(grupo.codigo); }}>
                         <Pencil className="mr-2 h-4 w-4" /> Editar grupo
                       </DropdownMenuItem>

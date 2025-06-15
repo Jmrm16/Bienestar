@@ -22,7 +22,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { router, usePage } from "@inertiajs/react";
 import { toast } from "sonner";
 
@@ -31,6 +37,11 @@ interface Asignatura {
   nombre: string;
   codigo: string;
   docente: string;
+}
+
+interface Carrera {
+  id: number;
+  nombre: string;
 }
 
 interface Tutor {
@@ -43,7 +54,7 @@ interface Tutor {
   sexo: string;
   grupo_priorizado: string;
   sede: string;
-  programa_academico: string;
+  carrera_id: number;
   correo: string;
   telefono: string;
   grupos: number;
@@ -53,9 +64,10 @@ interface Tutor {
 const TablaTutor = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const { tutores, asignaturas } = usePage().props as {
+  const { tutores, asignaturas, carreras } = usePage().props as {
     tutores?: Tutor[];
     asignaturas?: Asignatura[];
+    carreras?: Carrera[];
   };
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [deleteTutor, setDeleteTutor] = useState<Tutor | null>(null);
@@ -68,7 +80,6 @@ const TablaTutor = () => {
 
   const handleCheckboxChange = (asignaturaId: number) => {
     if (!selectedTutor) return;
-
     const isSelected = selectedTutor.asignaturas.some((a) => a.id === asignaturaId);
     const updatedAsignaturas = isSelected
       ? selectedTutor.asignaturas.filter((a) => a.id !== asignaturaId)
@@ -77,27 +88,15 @@ const TablaTutor = () => {
     setSelectedTutor({ ...selectedTutor, asignaturas: updatedAsignaturas });
   };
 
-  const handleFieldChange = (field: keyof Tutor, value: string) => {
+  const handleFieldChange = (field: keyof Tutor, value: string | number) => {
     if (!selectedTutor) return;
     setSelectedTutor({ ...selectedTutor, [field]: value });
   };
 
   const actualizarTutor = () => {
     if (!selectedTutor) return;
-
     const payload = {
-      nombre: selectedTutor.nombre,
-      apellido: selectedTutor.apellido,
-      tipo_documento: selectedTutor.tipo_documento,
-      documento: selectedTutor.documento,
-      lugar_expedicion: selectedTutor.lugar_expedicion,
-      sexo: selectedTutor.sexo,
-      grupo_priorizado: selectedTutor.grupo_priorizado,
-      sede: selectedTutor.sede,
-      programa_academico: selectedTutor.programa_academico,
-      correo: selectedTutor.correo,
-      telefono: selectedTutor.telefono,
-      grupos: selectedTutor.grupos,
+      ...selectedTutor,
       asignaturas: selectedTutor.asignaturas.map((a) => a.id),
     };
 
@@ -221,8 +220,22 @@ const TablaTutor = () => {
                         <Input value={selectedTutor?.sede || ""} onChange={(e) => handleFieldChange("sede", e.target.value)} />
                       </div>
                       <div>
-                        <Label>Programa Académico</Label>
-                        <Input value={selectedTutor?.programa_academico || ""} onChange={(e) => handleFieldChange("programa_academico", e.target.value)} />
+                        <Label>Carrera</Label>
+                        <Select
+                          value={selectedTutor?.carrera_id?.toString()}
+                          onValueChange={(value) => handleFieldChange("carrera_id", parseInt(value))}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecciona una carrera" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {carreras?.map((c) => (
+                              <SelectItem key={c.id} value={c.id.toString()}>
+                                {c.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Correo</Label>

@@ -4,50 +4,65 @@ namespace App\Http\Controllers;
 
 use App\Models\Carrera;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CarreraController extends Controller
 {
-    // Mostrar todas las carreras
+    // GET /carreras
+    public function index()
+    {
+        $carreras = Carrera::query()
+            ->select('id', 'nombre', 'codigo', 'created_at')
+            ->orderBy('nombre')
+            ->get();
 
+        return Inertia::render('Carreras/Index', [
+            'carreras' => $carreras,
+        ]);
+    }
 
-    // Guardar una nueva carrera
+    // POST /carreras
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:255',
+        $data = $request->validate([
+            'nombre' => ['required','string','max:255'],
+            'codigo' => ['nullable','string','max:255','unique:carreras,codigo'],
         ]);
 
-        Carrera::create([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-        ]);
+        Carrera::create($data);
 
-        
+        return back()->with('success', 'Carrera creada correctamente.');
     }
 
-    // Actualizar una carrera existente
+    // GET /carreras/{carrera}
+    public function show(Carrera $carrera)
+    {
+        return Inertia::render('Carreras/Show', [
+            'carrera' => $carrera->only(['id','nombre','codigo','created_at','updated_at']),
+        ]);
+    }
+
+    // PUT/PATCH /carreras/{carrera}
     public function update(Request $request, Carrera $carrera)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:255',
+        $data = $request->validate([
+            'nombre' => ['required','string','max:255'],
+            'codigo' => [
+                'nullable','string','max:255',
+                Rule::unique('carreras','codigo')->ignore($carrera->id),
+            ],
         ]);
 
-        $carrera->update([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-        ]);
+        $carrera->update($data);
 
-        
+        return back()->with('success', 'Carrera actualizada correctamente.');
     }
 
-    // Eliminar una carrera
+    // DELETE /carreras/{carrera}
     public function destroy(Carrera $carrera)
     {
         $carrera->delete();
-
-        return redirect()->back()->with('success', 'Carrera eliminada correctamente.');
+        return back()->with('success', 'Carrera eliminada correctamente.');
     }
 }

@@ -118,24 +118,11 @@ export default function Index({
         </div>
 
         {/* Asignaturas */}
-        <div className="p-6">
-          <p style={{ fontSize: '30px', fontWeight: 'bold' }} className="mb-4">Asignaturas</p>
-          <div className="flex space-x-4 mb-4">
-            <AgregarAsignatura carreras={carreras} />
-          </div>
-          <TablaAsignatura />
-        </div>
 
         {/* Grupos */}
 
         {/* Carreras */}
-        <div className="p-6">
-          <p style={{ fontSize: '30px', fontWeight: 'bold' }} className="mb-4">Carreras</p>
-          <div className="flex space-x-4 mb-4">
-            <AgregarCarrera />
-          </div>
-          <TablaCarreras />
-        </div>
+        
       </div>
     </AppLayout>
   );

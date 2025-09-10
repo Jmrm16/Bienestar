@@ -21,7 +21,8 @@ interface Tutor {
   sexo: string
   grupo_priorizado: string
   sede: string
-  programa_academico: string
+  carrera_id: number
+  carrera?: { id: number; nombre: string } // ⬅️ relación opcional
   correo: string
   telefono: string
   asignaturas: Asignatura[]
@@ -35,7 +36,7 @@ export default function TutorProfile() {
     <AppLayout>
       <Head title={`Perfil del Tutor - ${tutor.nombre} ${tutor.apellido}`} />
 
-      {/* ✅ Botón volver estilo completo */}
+      {/* Botón volver */}
       <div className="mb-4">
         <Button
           variant="ghost"
@@ -43,7 +44,7 @@ export default function TutorProfile() {
           onClick={() => router.visit('/tutores')}
         >
           <ArrowLeft className="w-4 h-4" />
-          Volver atras
+          Volver atrás
         </Button>
       </div>
 
@@ -81,7 +82,10 @@ export default function TutorProfile() {
               <p><span className="font-medium">Sexo:</span> {tutor.sexo}</p>
               <p><span className="font-medium">Grupo priorizado:</span> {tutor.grupo_priorizado}</p>
               <p><span className="font-medium">Sede:</span> {tutor.sede}</p>
-              <p><span className="font-medium">Programa académico:</span> {tutor.programa_academico}</p>
+              {/* Antes: programa_academico — Ahora: Carrera (desde relación o fallback por ID) */}
+              <p>
+                <span className="font-medium">Carrera:</span> {tutor.carrera?.nombre ?? `ID ${tutor.carrera_id}`}
+              </p>
               <p className="md:col-span-2"><span className="font-medium">Correo:</span> {tutor.correo}</p>
               <p className="md:col-span-2"><span className="font-medium">Teléfono:</span> {tutor.telefono}</p>
             </div>

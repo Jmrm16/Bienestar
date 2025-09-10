@@ -18,7 +18,7 @@ class Tutor extends Model
         'sexo',
         'grupo_priorizado',
         'sede',
-        'programa_academico',
+        'carrera_id', // ⬅️ Asegúrate de incluir la FK aquí
         'correo',
         'telefono',
     ];
@@ -32,4 +32,9 @@ class Tutor extends Model
     {
         return $this->belongsToMany(Asignatura::class);
     }
+    public function carrera()
+{
+    return $this->belongsTo(Carrera::class);
+}
+
 }

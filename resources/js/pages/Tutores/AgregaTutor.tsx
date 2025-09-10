@@ -43,7 +43,8 @@ const AgregarTutor = () => {
     sexo: "",
     grupo_priorizado: "",
     sede: "",
-    programa_academico: "",
+    // ⬇️ ahora usamos carrera_id (número o "" al iniciar)
+    carrera_id: "" as number | "" ,
     correo: "",
     telefono: "",
     asignaturas: [] as number[],
@@ -58,8 +59,15 @@ const AgregarTutor = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSelectChange = (field: string, value: string) => {
+  // para strings simples
+  const handleSelectChange = (field: keyof typeof form, value: string) => {
     setForm({ ...form, [field]: value });
+  };
+
+  // para carrera_id (numérico)
+  const handleCarreraChange = (value: string) => {
+    const parsed = Number(value);
+    setForm((prev) => ({ ...prev, carrera_id: Number.isNaN(parsed) ? "" : parsed }));
   };
 
   const handleAsignaturasChange = (id: number) => {
@@ -71,29 +79,56 @@ const AgregarTutor = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.post("/tutores", form, {
+  const resetForm = () => {
+    setForm({
+      nombre: "",
+      apellido: "",
+      tipo_documento: "",
+      documento: "",
+      lugar_expedicion: "",
+      sexo: "",
+      grupo_priorizado: "",
+      sede: "",
+      carrera_id: "",
+      correo: "",
+      telefono: "",
+      asignaturas: [],
+    });
+  };
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    // Validación mínima en cliente: carrera_id requerido
+    if (form.carrera_id === "" || form.carrera_id === undefined) {
+      toast.error("Selecciona una carrera");
+      return;
+    }
+
+    // Enviar exactamente los campos que espera el backend
+    router.post("/tutores", {
+      nombre: form.nombre,
+      apellido: form.apellido,
+      tipo_documento: form.tipo_documento,
+      documento: form.documento,
+      lugar_expedicion: form.lugar_expedicion,
+      sexo: form.sexo,
+      grupo_priorizado: form.grupo_priorizado,
+      sede: form.sede,
+      carrera_id: form.carrera_id, // ⬅️ clave: enviamos carrera_id
+      correo: form.correo,
+      telefono: form.telefono,
+      asignaturas: form.asignaturas,
+    }, {
       onSuccess: () => {
         toast.success("✅ Tutor agregado correctamente");
         setIsOpen(false);
-        setForm({
-          nombre: "",
-          apellido: "",
-          tipo_documento: "",
-          documento: "",
-          lugar_expedicion: "",
-          sexo: "",
-          grupo_priorizado: "",
-          sede: "",
-          programa_academico: "",
-          correo: "",
-          telefono: "",
-          asignaturas: [],
-        });
+        resetForm();
       },
-      onError: () => {
-        toast.error("❌ Hubo un error al agregar el tutor");
+      onError: (errors) => {
+        // Muestra el primer error útil
+        const first = errors && Object.values(errors)[0];
+        toast.error(`❌ Error al agregar el tutor${first ? `: ${first}` : ""}`);
       },
     });
   };
@@ -104,6 +139,7 @@ const AgregarTutor = () => {
         <DialogTrigger asChild>
           <Button>Agregar Tutor</Button>
         </DialogTrigger>
+
         <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Registrar Nuevo Tutor</DialogTitle>
@@ -120,9 +156,13 @@ const AgregarTutor = () => {
                   <Label>Apellido</Label>
                   <Input name="apellido" value={form.apellido} onChange={handleChange} required />
                 </div>
+
                 <div>
                   <Label>Tipo de Documento</Label>
-                  <Select onValueChange={(value) => handleSelectChange("tipo_documento", value)}>
+                  <Select
+                    value={form.tipo_documento}
+                    onValueChange={(value) => handleSelectChange("tipo_documento", value)}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona un tipo" />
                     </SelectTrigger>
@@ -133,17 +173,23 @@ const AgregarTutor = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label>Número de Documento</Label>
                   <Input name="documento" value={form.documento} onChange={handleChange} required />
                 </div>
+
                 <div>
                   <Label>Lugar de Expedición</Label>
                   <Input name="lugar_expedicion" value={form.lugar_expedicion} onChange={handleChange} required />
                 </div>
+
                 <div>
                   <Label>Sexo</Label>
-                  <Select onValueChange={(value) => handleSelectChange("sexo", value)}>
+                  <Select
+                    value={form.sexo}
+                    onValueChange={(value) => handleSelectChange("sexo", value)}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona un sexo" />
                     </SelectTrigger>
@@ -153,9 +199,13 @@ const AgregarTutor = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label>Grupo Priorizado</Label>
-                  <Select onValueChange={(value) => handleSelectChange("grupo_priorizado", value)}>
+                  <Select
+                    value={form.grupo_priorizado}
+                    onValueChange={(value) => handleSelectChange("grupo_priorizado", value)}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona un grupo" />
                     </SelectTrigger>
@@ -167,32 +217,36 @@ const AgregarTutor = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label>Sede</Label>
                   <Input name="sede" value={form.sede} onChange={handleChange} required />
                 </div>
+
                 <div>
-                  <Label>Programa Académico</Label>
+                  <Label>Carrera</Label>
                   <Select
-                    value={form.programa_academico}
-                    onValueChange={(value) => handleSelectChange("programa_academico", value)}
+                    value={form.carrera_id === "" ? "" : String(form.carrera_id)}
+                    onValueChange={handleCarreraChange}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona una carrera" />
                     </SelectTrigger>
                     <SelectContent>
                       {carreras.map((carrera) => (
-                        <SelectItem key={carrera.id} value={carrera.nombre}>
+                        <SelectItem key={carrera.id} value={String(carrera.id)}>
                           {carrera.nombre}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
                   <Label>Correo</Label>
                   <Input name="correo" value={form.correo} onChange={handleChange} required />
                 </div>
+
                 <div>
                   <Label>Teléfono</Label>
                   <Input name="telefono" value={form.telefono} onChange={handleChange} required />
@@ -222,8 +276,13 @@ const AgregarTutor = () => {
 
           <div className="p-4 flex justify-end gap-2 border-t">
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancelar</Button>
-              <Button type="submit" onClick={handleSubmit}>Guardar</Button>
+              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>
+                Cancelar
+              </Button>
+              {/* El botón está fuera del <form>, así que llamamos manualmente a handleSubmit */}
+              <Button type="button" onClick={handleSubmit}>
+                Guardar
+              </Button>
             </DialogFooter>
           </div>
         </DialogContent>

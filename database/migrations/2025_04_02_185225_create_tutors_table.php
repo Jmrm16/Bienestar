@@ -17,7 +17,12 @@ return new class extends Migration {
             $table->string('sexo');
             $table->string('grupo_priorizado');
             $table->string('sede');
-            $table->string('programa_academico');
+            
+            // Aquí sustituimos el programa académico por la FK
+            $table->foreignId('carrera_id')
+                  ->constrained('carreras') // referencia a la tabla carreras
+                  ->onDelete('cascade');   // si se elimina la carrera, se eliminan tutores
+
             $table->string('correo')->unique();
             $table->string('telefono');
             $table->timestamps();

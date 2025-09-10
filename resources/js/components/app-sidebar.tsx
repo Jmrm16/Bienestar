@@ -28,11 +28,28 @@ const mainNavItems: NavItem[] = [
     url: '/dashboard',
     icon: LayoutGrid,
   },
-  {
-    title: 'Tutores',
-    url: '/tutores',
+    {
+    title: 'Tutorias',
     icon: Users,
+    children: [
+      {
+          title: 'Tutores',
+          url: '/tutores',
+          icon: Users,
+      },
+      {
+          title: 'Asignaturas',
+          url: '/asignaturas',
+          icon: Users,
+      },
+      {
+          title: 'Carreras',
+          url: '/carreras',
+          icon: Users,
+      },
+    ],
   },
+
   {
     title: 'Acompañamiento',
     icon: Layers,

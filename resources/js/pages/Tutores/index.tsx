@@ -5,10 +5,10 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
 import AgregarTutor from '@/pages/Tutores/AgregaTutor';
-import AgregarAsignatura from '@/pages/Tutores/AgregarAsignatura';
+import AgregarAsignatura from '@/pages/Asignaturas/AgregarAsignatura';
 import AgregarGrupo from '@/pages/Tutores/AgregarGrupo';
 import TablaTutor from '@/pages/Tutores/TablaTutor';
-import TablaAsignatura from '@/pages/Tutores/TablaAsignatura';
+import TablaAsignatura from '@/pages/Asignaturas/TablaAsignatura';
 import TablaGrupo from '@/pages/Tutores/TablaGrupos';
 import AgregarCarrera from '@/pages/Tutores/AgregarCarrera';
 import TablaCarreras from '@/pages/Tutores/TablaCarreras';

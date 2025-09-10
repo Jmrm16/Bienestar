@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 📚 Asignaturas
     Route::resource('asignaturas', AsignaturaController::class)->except(['create', 'edit']);
     Route::get('/asignaturas/{asignatura}', [AsignaturaController::class, 'show'])->name('asignaturas.show');
+    
 
     // 🎓 Carreras
     Route::resource('carreras', CarreraController::class)->except(['create', 'edit']);

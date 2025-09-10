@@ -39,7 +39,7 @@ export default function ShowAsignatura({ asignatura, tutores }: Props) {
           <Button
             variant="ghost"
             className="text-blue-500 hover:text-blue-700 flex items-center gap-2"
-            onClick={() => router.visit('/tutores')}
+            onClick={() => router.visit('/asignaturas')}
           >
             <ArrowLeft className="w-4 h-4" />
             Volver atras

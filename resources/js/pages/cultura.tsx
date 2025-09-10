@@ -1,19 +1,28 @@
-import { Head, usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
-import HeaderComponent from '@/components/component/header-component';
-import FooterComponent from '@/components/component/footer-component';
-import HeaderpermaComponent from './Cultura_vistas/headerperma';
-import HeroCarousel from './Cultura_vistas/HeroCarousel ';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CalendarDays, Newspaper, Mic2, Music, Film, BookOpen } from 'lucide-react';
+import { Head, Link, usePage } from "@inertiajs/react";
+import { useEffect, useMemo } from "react";
+import HeaderComponent from "@/components/component/header-component";
+import FooterComponent from "@/components/component/footer-component";
+import HeaderpermaComponent from "./Cultura_vistas/headerperma";
+import HeroCarousel from "./Cultura_vistas/HeroCarousel "; // ← FIX: sin espacio al final
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  CalendarDays,
+  Newspaper,
+  Mic2,
+  Music,
+  Film,
+  BookOpen,
+  Camera,
+  Palette,
+} from "lucide-react";
 
 type CulturaItem = {
   id: number;
   titulo: string;
   descripcion?: string;
   tipo: string;
-  fecha: string;
+  fecha: string; // ISO
   categoria?: string;
   imagen_url?: string;
   imagen_banner?: string;
@@ -27,192 +36,374 @@ type CulturaProps = {
   galeria: CulturaItem[];
 };
 
+// Paleta (clara) con acento institucional marrón elegante
+const ACCENT = "#8B4513";      // primary
+const ACCENT_HOVER = "#A0522D"; // hover
+
+const DEFAULT_IMG =
+  "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp";
+
+function formatDate(iso?: string) {
+  if (!iso) return "Sin fecha";
+  try {
+    return new Date(iso).toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "Sin fecha";
+  }
+}
+
+function parseFirstImageFromEditorJS(json: any): string | null {
+  try {
+    const parsed = typeof json === "string" ? JSON.parse(json) : json;
+    const imageBlock = parsed?.blocks?.find((b: any) => b?.type === "image");
+    return imageBlock?.data?.file?.url || null;
+  } catch {
+    return null;
+  }
+}
+
+function safeImage(item: CulturaItem): string {
+  return (
+    item.imagen_url ||
+    (item.contenido_json ? parseFirstImageFromEditorJS(item.contenido_json) : null) ||
+    item.imagen_banner
+      ? `/storage/${item.imagen_banner}`
+      : DEFAULT_IMG
+  );
+}
+
+function badgeTone(tipo?: string) {
+  const t = (tipo || "").toLowerCase();
+  // tonos suaves en claro
+  if (t.includes("evento")) return "bg-emerald-100 text-emerald-800";
+  if (t.includes("noticia")) return "bg-rose-100 text-rose-800";
+  if (t.includes("musica")) return "bg-sky-100 text-sky-800";
+  if (t.includes("cine")) return "bg-indigo-100 text-indigo-800";
+  if (t.includes("literatura")) return "bg-amber-100 text-amber-800";
+  if (t.includes("fotografia")) return "bg-fuchsia-100 text-fuchsia-800";
+  if (t.includes("danza") || t.includes("artes")) return "bg-purple-100 text-purple-800";
+  return "bg-gray-100 text-gray-800";
+}
+
+function areaIcon(name?: string) {
+  const n = (name || "").toLowerCase();
+  if (n.includes("literatura") || n.includes("poesía") || n.includes("poesia")) return <BookOpen size={32} />;
+  if (n.includes("musica") || n.includes("música")) return <Music size={32} />;
+  if (n.includes("cine") || n.includes("audiovisual")) return <Film size={32} />;
+  if (n.includes("danza")) return <Music size={32} />;
+  if (n.includes("fotografia") || n.includes("fotografía")) return <Camera size={32} />;
+  if (n.includes("artes") || n.includes("plásticas") || n.includes("plasticas")) return <Palette size={32} />;
+  if (n.includes("oratoria") || n.includes("teatro")) return <Mic2 size={32} />;
+  return <Mic2 size={32} />; // default
+}
+
 export default function Cultura() {
-  const { eventos = [], noticias = [], areasCulturales = [], galeria = [] } = usePage<CulturaProps>().props;
+  const { eventos = [], noticias = [], areasCulturales = [], galeria = [] } =
+    usePage<CulturaProps>().props;
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  const extraerPrimeraImagen = (contenido_json: any): string | null => {
-    try {
-      const parsed = typeof contenido_json === 'string' ? JSON.parse(contenido_json) : contenido_json;
-      const imageBlock = parsed?.blocks?.find((b: any) => b.type === 'image');
-      return imageBlock?.data?.file?.url || null;
-    } catch {
-      return null;
-    }
-  };
+  // Ordenar eventos/noticias por fecha (descendente)
+  const eventosOrdenados = useMemo(
+    () =>
+      [...eventos].sort(
+        (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      ),
+    [eventos]
+  );
+
+  const noticiasOrdenadas = useMemo(
+    () =>
+      [...noticias].sort(
+        (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      ),
+    [noticias]
+  );
 
   return (
     <>
       <Head title="Cultura Universitaria" />
       <HeaderComponent />
 
-      <main className="flex flex-col items-center bg-[#FDFDFC] text-[#1b1b18]">
-        {/* Hero Section */}
+      <main className="min-h-screen bg-[#FDFDFC] text-[#1b1b18]">
+        {/* HERO */}
         <section className="w-full relative">
           <HeaderpermaComponent />
           <HeroCarousel />
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent h-32 z-10" />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent z-10" />
         </section>
 
-        {/* Bienvenida */}
-        <section className="w-full py-16 bg-[#f8f4e8] text-center">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#8B4513] mb-4">
+        {/* BIENVENIDA */}
+        <section className="w-full py-14 md:py-16" style={{ backgroundColor: "#f8f4e8" }}>
+          <div className="mx-auto max-w-7xl px-4 md:px-6 text-center">
+            <h2
+              className="text-3xl md:text-4xl font-bold mb-3"
+              style={{ color: ACCENT }}
+            >
               Cultura y Arte Universitario
             </h2>
-            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-              Descubre el vibrante mundo cultural de nuestra universidad. Eventos, exposiciones, talleres y más para enriquecer tu experiencia académica.
+            <p className="text-lg text-gray-700 max-w-3xl mx-auto">
+              Descubre el vibrante mundo cultural de nuestra universidad: eventos,
+              exposiciones, talleres y más para enriquecer tu experiencia académica.
             </p>
           </div>
         </section>
 
-        {/* Eventos */}
+        {/* EVENTOS */}
         <section className="w-full py-12 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-bold text-[#8B4513]">Próximos Eventos Culturales</h3>
-              <Button variant="outline" className="border-[#8B4513] text-[#8B4513]">
-                <CalendarDays className="mr-2 h-4 w-4" />
-                Ver Calendario Completo
-              </Button>
+          <div className="mx-auto max-w-7xl px-4 md:px-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+              <h3 className="text-2xl font-bold" style={{ color: ACCENT }}>
+                Próximos Eventos Culturales
+              </h3>
+              <Link href="/cultura/calendario">
+                <Button
+                  variant="outline"
+                  className="border px-4"
+                  style={{ borderColor: ACCENT, color: ACCENT }}
+                >
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Ver calendario completo
+                </Button>
+              </Link>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {eventos.map((evento) => {
-                const imagen = evento.imagen_url || extraerPrimeraImagen(evento.contenido_json);
-                return (
-                  <Card key={evento.id} className="hover:shadow-lg transition-shadow">
-                    <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                      <img
-                        src={imagen || '/placeholder.jpg'}
-                        alt={evento.titulo}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <CardHeader>
-                      <span className="text-sm text-[#8B4513] font-medium">{evento.categoria}</span>
-                      <CardTitle>{evento.titulo}</CardTitle>
-                      <p className="text-sm text-gray-500">
-                        {new Date(evento.fecha).toLocaleDateString('es-CO', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </p>
+
+            {eventosOrdenados.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+                Aún no hay eventos programados.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {eventosOrdenados.map((evento) => {
+                  const img = safeImage(evento);
+                  return (
+                    <Card
+                      key={evento.id}
+                      className="hover:shadow-lg transition-shadow border border-gray-100"
+                    >
+                      <Link href={`/cultura/${evento.id}/item`} aria-label={`Ver ${evento.titulo}`}>
+                        <div className="h-48 bg-gray-100 rounded-t-lg overflow-hidden">
+                          <img
+                            src={img}
+                            alt={evento.titulo}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </Link>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span
+                            className={`text-xs font-medium rounded-full px-2.5 py-1 ${badgeTone(
+                              evento.categoria || evento.tipo
+                            )}`}
+                            title={evento.categoria || evento.tipo}
+                          >
+                            {evento.categoria || evento.tipo}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatDate(evento.fecha)}
+                          </span>
+                        </div>
+                        <CardTitle className="mt-2 leading-snug line-clamp-2">
+                          <Link
+                            href={`/cultura/${evento.id}/item`}
+                            className="hover:underline underline-offset-4"
+                            style={{ color: ACCENT }}
+                          >
+                            {evento.titulo}
+                          </Link>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-700 line-clamp-3">
+                          {evento.descripcion || "Conoce más detalles del evento."}
+                        </p>
+                        <Link
+                          href={`/cultura/${evento.id}/item`}
+                          className="text-sm inline-flex items-center mt-3 font-semibold"
+                          style={{ color: ACCENT }}
+                        >
+                          Más información
+                          <svg
+                            className="w-4 h-4 ml-1"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* NOTICIAS */}
+        <section className="w-full py-12" style={{ backgroundColor: "#f5f5f0" }}>
+          <div className="mx-auto max-w-7xl px-4 md:px-6">
+            <h3 className="text-2xl font-bold mb-8" style={{ color: ACCENT }}>
+              Noticias Culturales
+            </h3>
+
+            {noticiasOrdenadas.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+                No hay noticias culturales disponibles por ahora.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-8">
+                {noticiasOrdenadas.map((noticia) => (
+                  <Card
+                    key={noticia.id}
+                    className="hover:shadow-md transition-shadow border border-gray-100"
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Newspaper className="h-5 w-5" style={{ color: ACCENT }} />
+                        <span className="text-sm text-gray-500">
+                          {formatDate(noticia.fecha)}
+                        </span>
+                      </div>
+                      <CardTitle className="leading-snug line-clamp-2">
+                        <Link
+                          href={`/cultura/${noticia.id}/item`}
+                          className="hover:underline underline-offset-4"
+                          style={{ color: ACCENT }}
+                        >
+                          {noticia.titulo}
+                        </Link>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-gray-700">{evento.descripcion}</p>
-                      <a
-                        href={`/cultura/${evento.id}/item`}
-                        className="text-[#8B4513] text-sm underline mt-4 inline-block hover:text-[#A0522D]"
-                      >
-                        Más información →
-                      </a>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Noticias */}
-        <section className="w-full py-12 bg-[#f5f5f0]">
-          <div className="container mx-auto px-4">
-            <h3 className="text-2xl font-bold text-[#8B4513] mb-8">Noticias Culturales</h3>
-            <div className="grid md:grid-cols-2 gap-8">
-              {noticias.map((noticia) => (
-                <Card key={noticia.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Newspaper className="h-5 w-5 text-[#8B4513]" />
-                      <span className="text-sm text-gray-500">
-                        {new Date(noticia.fecha).toLocaleDateString('es-CO', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                    <CardTitle>{noticia.titulo}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700 mb-4">{noticia.descripcion}</p>
-                      <a
+                      <p className="text-gray-700 mb-4 line-clamp-3">
+                        {noticia.descripcion || "Lee la nota completa."}
+                      </p>
+                      <Link
                         href={`/cultura/${noticia.id}/item`}
-                        className="text-[#8B4513] text-sm underline hover:text-[#A0522D]"
+                        className="text-sm font-semibold"
+                        style={{ color: ACCENT }}
                       >
                         Leer más →
-                      </a>
-
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Áreas Culturales */}
+        {/* ÁREAS CULTURALES */}
         <section className="w-full py-12 bg-white">
-          <div className="container mx-auto px-4">
-            <h3 className="text-2xl font-bold text-[#8B4513] text-center mb-10">Áreas Culturales</h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {areasCulturales.map((area, index) => (
-                <Card key={index} className="text-center p-6 hover:border-[#8B4513] transition-colors">
-                  <div className="text-[#8B4513] mx-auto mb-4">
-                    {area.icon === 'literatura' && <Mic2 size={32} />}
-                    {area.icon === 'musica' && <Music size={32} />}
-                    {area.icon === 'cine' && <Film size={32} />}
-                    {area.icon === 'danza' && <Music size={32} />}
-                    {area.icon === 'fotografia' && <Film size={32} />}
-                    {area.icon === 'artes' && <BookOpen size={32} />}
-                  </div>
-                  <CardHeader>
-                    <CardTitle>{area.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-700">Conoce más sobre esta disciplina cultural.</p>
-                    <Button variant="link" className="text-[#8B4513] p-0 mt-2">
-                      Conoce más
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
+          <div className="mx-auto max-w-7xl px-4 md:px-6">
+            <h3
+              className="text-2xl font-bold text-center mb-10"
+              style={{ color: ACCENT }}
+            >
+              Áreas Culturales
+            </h3>
 
-        {/* Galería */}
-        <section className="w-full py-12 bg-[#f8f4e8]">
-          <div className="container mx-auto px-4 text-center">
-            <h3 className="text-2xl font-bold text-[#8B4513] mb-8">Galería Cultural</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {galeria.map((item) => {
-                const imagen = item.imagen_url || extraerPrimeraImagen(item.contenido_json);
-                return (
-                  <a
-                    key={item.id}
-                    href={`/cultura/${item.id}/item`}
-                    className="aspect-square bg-gray-200 rounded-lg overflow-hidden hover:scale-105 transition-transform block"
+            {areasCulturales.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+                Aún no hay áreas culturales configuradas.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {areasCulturales.map((area, idx) => (
+                  <Card
+                    key={idx}
+                    className="text-center p-6 hover:shadow-md transition-shadow border border-gray-100 hover:border-gray-200"
                   >
-                    <img
-                      src={imagen || '/placeholder.jpg'}
-                      alt={item.titulo}
-                      className="w-full h-full object-cover"
-                    />
-                  </a>
-                );
-              })}
-            </div>
-            <Button variant="outline" className="mt-8 border-[#8B4513] text-[#8B4513]">
-              Ver galería completa
-            </Button>
+                    <div className="mx-auto mb-4" style={{ color: ACCENT }}>
+                      {areaIcon(area.icon)}
+                    </div>
+                    <CardHeader className="pt-0">
+                      <CardTitle>{area.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700">
+                        Conoce más sobre esta disciplina cultural.
+                      </p>
+                      <Link href={`/cultura/area/${encodeURIComponent(area.title)}`}>
+                        <Button
+                          variant="link"
+                          className="p-0 mt-2 font-semibold"
+                          style={{ color: ACCENT }}
+                        >
+                          Conoce más
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
+        {/* GALERÍA */}
+        <section className="w-full py-12" style={{ backgroundColor: "#f8f4e8" }}>
+          <div className="mx-auto max-w-7xl px-4 md:px-6 text-center">
+            <h3 className="text-2xl font-bold mb-8" style={{ color: ACCENT }}>
+              Galería Cultural
+            </h3>
 
+            {galeria.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+                Aún no hay elementos en la galería.
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {galeria.map((item) => {
+                    const img = safeImage(item);
+                    return (
+                      <Link
+                        key={item.id}
+                        href={`/cultura/${item.id}/item`}
+                        className="block aspect-square bg-gray-100 rounded-lg overflow-hidden hover:scale-[1.02] transition-transform"
+                        aria-label={`Ver ${item.titulo}`}
+                      >
+                        <img
+                          src={img}
+                          alt={item.titulo}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                <Link href="/cultura/galeria">
+                  <Button
+                    variant="outline"
+                    className="mt-8"
+                    style={{ borderColor: ACCENT, color: ACCENT }}
+                  >
+                    Ver galería completa
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </section>
       </main>
 
       <FooterComponent />

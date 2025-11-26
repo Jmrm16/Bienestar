@@ -61,6 +61,12 @@ interface Tutor {
   asignaturas: Asignatura[];
 }
 
+/* CSRF helper: toma el token del <meta> y lo mandamos en el body */
+function csrfToken(): string {
+  const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+  return el?.content ?? "";
+}
+
 /* ===== Componente ===== */
 const TablaTutor = () => {
   const { tutores = [], asignaturas = [], carreras = [] } = usePage().props as {
@@ -101,6 +107,8 @@ const TablaTutor = () => {
     if (!selectedTutor) return;
 
     const payload = {
+      _token: csrfToken(),
+      _method: "put", // ← spoofing para hosting
       nombre: selectedTutor.nombre,
       apellido: selectedTutor.apellido,
       tipo_documento: selectedTutor.tipo_documento,
@@ -109,13 +117,14 @@ const TablaTutor = () => {
       sexo: selectedTutor.sexo,
       grupo_priorizado: selectedTutor.grupo_priorizado,
       sede: selectedTutor.sede,
-      carrera_id: selectedTutor.carrera_id, // <- aseguramos enviar el id
+      carrera_id: selectedTutor.carrera_id,
       correo: selectedTutor.correo,
       telefono: selectedTutor.telefono,
       asignaturas: selectedTutor.asignaturas.map((a) => a.id),
     };
 
-    router.patch(`/tutores/${selectedTutor.id}`, payload, {
+    router.post(`/tutores/${selectedTutor.id}`, payload, {
+      forceFormData: true, // ← multipart/form-data (evita preflight)
       onSuccess: () => {
         toast.success("Tutor actualizado correctamente");
         setIsEditOpen(false);
@@ -131,14 +140,19 @@ const TablaTutor = () => {
   const eliminarTutor = () => {
     if (!deleteTutor) return;
 
-    router.delete(`/tutores/${deleteTutor.id}`, {
-      onSuccess: () => {
-        toast.success("Tutor eliminado correctamente");
-        setIsDeleteOpen(false);
-        setDeleteTutor(null);
-      },
-      onError: () => toast.error("Error al eliminar el tutor"),
-    });
+    router.post(
+      `/tutores/${deleteTutor.id}`,
+      { _method: "delete", _token: csrfToken() },
+      {
+        forceFormData: true,
+        onSuccess: () => {
+          toast.success("Tutor eliminado correctamente");
+          setIsDeleteOpen(false);
+          setDeleteTutor(null);
+        },
+        onError: () => toast.error("Error al eliminar el tutor"),
+      }
+    );
   };
 
   return (
@@ -166,10 +180,7 @@ const TablaTutor = () => {
 
               <TableCell className="text-right space-x-2">
                 {/* Ver perfil */}
-                <Button
-                  variant="ghost"
-                  onClick={() => router.get(`/tutores/${tutor.id}/perfil`)}
-                >
+                <Button variant="ghost" onClick={() => router.get(`/tutores/${tutor.id}/perfil`)}>
                   <Eye />
                 </Button>
 
@@ -238,9 +249,7 @@ const TablaTutor = () => {
                         <Label>Lugar de Expedición</Label>
                         <Input
                           value={selectedTutor?.lugar_expedicion || ""}
-                          onChange={(e) =>
-                            handleFieldChange("lugar_expedicion", e.target.value)
-                          }
+                          onChange={(e) => handleFieldChange("lugar_expedicion", e.target.value)}
                         />
                       </div>
 
@@ -264,9 +273,7 @@ const TablaTutor = () => {
                         <Label>Grupo Priorizado</Label>
                         <Select
                           value={selectedTutor?.grupo_priorizado || ""}
-                          onValueChange={(value) =>
-                            handleFieldChange("grupo_priorizado", value)
-                          }
+                          onValueChange={(value) => handleFieldChange("grupo_priorizado", value)}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Selecciona un grupo" />
@@ -291,14 +298,8 @@ const TablaTutor = () => {
                       <div>
                         <Label>Carrera</Label>
                         <Select
-                          value={
-                            selectedTutor?.carrera_id
-                              ? selectedTutor.carrera_id.toString()
-                              : ""
-                          }
-                          onValueChange={(value) =>
-                            handleFieldChange("carrera_id", parseInt(value))
-                          }
+                          value={selectedTutor?.carrera_id ? selectedTutor.carrera_id.toString() : ""}
+                          onValueChange={(value) => handleFieldChange("carrera_id", parseInt(value))}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Selecciona una carrera" />
@@ -336,16 +337,12 @@ const TablaTutor = () => {
                         {asignaturas.map((asig) => (
                           <div key={asig.id} className="flex items-center space-x-2">
                             <Checkbox
-                              checked={
-                                !!selectedTutor?.asignaturas.some((a) => a.id === asig.id)
-                              }
+                              checked={!!selectedTutor?.asignaturas.some((a) => a.id === asig.id)}
                               onCheckedChange={() => handleCheckboxChange(asig.id)}
                             />
                             <div className="flex flex-col text-sm">
                               <span className="font-medium">{asig.nombre}</span>
-                              <span className="text-muted-foreground text-xs">
-                                {asig.codigo}
-                              </span>
+                              <span className="text-muted-foreground text-xs">{asig.codigo}</span>
                             </div>
                           </div>
                         ))}

@@ -7,6 +7,7 @@ use App\Models\Asignatura;
 use App\Models\Carrera;
 use App\Models\GrupoT;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 class TutorController extends Controller
@@ -16,12 +17,10 @@ class TutorController extends Controller
      */
     public function index()
     {
-        // Incluimos 'carrera' para mostrar/usar la relación
         $tutores = Tutor::with(['asignaturas', 'carrera'])->get();
         $asignaturas = Asignatura::all();
         $totalTutores = Tutor::count();
         $carreras = Carrera::all();
-
         $grupos = GrupoT::with('carrera')->orderBy('nombre')->get();
 
         return Inertia::render('Tutores/index', [
@@ -49,6 +48,7 @@ class TutorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'codigo'            => 'required|string|max:50|unique:tutors,codigo',
             'nombre'            => 'required|string|max:255',
             'apellido'          => 'required|string|max:255',
             'tipo_documento'    => 'required|string|max:50',
@@ -57,25 +57,29 @@ class TutorController extends Controller
             'sexo'              => 'required|string|max:10',
             'grupo_priorizado'  => 'required|string|max:255',
             'sede'              => 'required|string|max:255',
-            'carrera_id'        => 'required|exists:carreras,id', // ⬅️ ahora es el id
+            'carrera_id'        => 'required|exists:carreras,id',
             'correo'            => 'required|email|unique:tutors,correo',
             'telefono'          => 'required|string|max:20',
             'asignaturas'       => 'required|array',
             'asignaturas.*'     => 'exists:asignaturas,id',
+            'activo'            => 'nullable|boolean',
         ]);
 
         $tutor = Tutor::create([
+            'codigo'           => $request->codigo,
             'nombre'           => $request->nombre,
             'apellido'         => $request->apellido,
             'tipo_documento'   => $request->tipo_documento,
             'documento'        => $request->documento,
+            'cedula_hash'      => Hash::make($request->documento), // para login del portal
             'lugar_expedicion' => $request->lugar_expedicion,
             'sexo'             => $request->sexo,
             'grupo_priorizado' => $request->grupo_priorizado,
             'sede'             => $request->sede,
-            'carrera_id'       => $request->carrera_id, // ⬅️ guardamos el id
+            'carrera_id'       => $request->carrera_id,
             'correo'           => $request->correo,
             'telefono'         => $request->telefono,
+            'activo'           => $request->boolean('activo', true),
         ]);
 
         $tutor->asignaturas()->sync($request->asignaturas);
@@ -91,6 +95,7 @@ class TutorController extends Controller
         $tutor = Tutor::findOrFail($id);
 
         $request->validate([
+            'codigo'            => 'required|string|max:50|unique:tutors,codigo,' . $tutor->id,
             'nombre'            => 'required|string|max:255',
             'apellido'          => 'required|string|max:255',
             'tipo_documento'    => 'required|string|max:50',
@@ -99,14 +104,17 @@ class TutorController extends Controller
             'sexo'              => 'required|string|max:10',
             'grupo_priorizado'  => 'required|string|max:255',
             'sede'              => 'required|string|max:255',
-            'carrera_id'        => 'required|exists:carreras,id', // ⬅️ validamos id
+            'carrera_id'        => 'required|exists:carreras,id',
             'correo'            => 'required|email|unique:tutors,correo,' . $tutor->id,
             'telefono'          => 'required|string|max:20',
             'asignaturas'       => 'required|array',
             'asignaturas.*'     => 'exists:asignaturas,id',
+            'activo'            => 'nullable|boolean',
+            'reset_password'    => 'nullable|boolean', // para re-generar hash desde documento
         ]);
 
-        $tutor->update([
+        $payload = [
+            'codigo'           => $request->codigo,
             'nombre'           => $request->nombre,
             'apellido'         => $request->apellido,
             'tipo_documento'   => $request->tipo_documento,
@@ -115,11 +123,17 @@ class TutorController extends Controller
             'sexo'             => $request->sexo,
             'grupo_priorizado' => $request->grupo_priorizado,
             'sede'             => $request->sede,
-            'carrera_id'       => $request->carrera_id, // ⬅️ guardamos el id
+            'carrera_id'       => $request->carrera_id,
             'correo'           => $request->correo,
             'telefono'         => $request->telefono,
-        ]);
+            'activo'           => $request->boolean('activo', $tutor->activo),
+        ];
 
+        if ($request->documento !== $tutor->documento || $request->boolean('reset_password')) {
+            $payload['cedula_hash'] = Hash::make($request->documento);
+        }
+
+        $tutor->update($payload);
         $tutor->asignaturas()->sync($request->asignaturas);
 
         return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');

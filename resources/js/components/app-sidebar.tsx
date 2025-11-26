@@ -47,6 +47,12 @@ const mainNavItems: NavItem[] = [
           url: '/carreras',
           icon: Users,
       },
+       {
+          title: 'Informes',
+          url: '/reportes/periodos',
+          icon: Users,
+      },
+
     ],
   },
 

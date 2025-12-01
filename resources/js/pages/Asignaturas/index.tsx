@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Head } from '@inertiajs/react';
 
 import AppLayout from '@/layouts/app-layout';
@@ -7,15 +7,21 @@ import { type BreadcrumbItem } from '@/types';
 import AgregarAsignatura from '@/pages/Asignaturas/AgregarAsignatura';
 import TablaAsignatura from '@/pages/Asignaturas/TablaAsignatura';
 import { MetricCard } from '@/components/component/MetricCard';
-import { Cpu, HardDrive } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 
 // Tipos
+interface Carrera {
+  id: number;
+  nombre: string;
+}
+
 interface Asignatura {
   id: number;
   nombre: string;
-  codigo: string;
-  docente: string;
+  carrera_id: number;
+  carrera?: Carrera;
 }
+
 interface Tutor {
   id: number;
   nombre: string;
@@ -23,14 +29,16 @@ interface Tutor {
   grupos: number;
   asignaturas: Asignatura[];
 }
-type Carrera = { id: number; nombre: string };
-type Grupo = { id: number; nombre: string; codigo: string; carrera: Carrera };
 
-// 👉 paginator genérico
+interface Grupo {
+  id: number;
+  nombre: string;
+  carrera: Carrera;
+}
+
 type Paginator<T> = {
   data: T[];
   total?: number;
-  // ...otros campos si los usas (per_page, current_page, links, etc.)
 };
 
 type Props = {
@@ -42,51 +50,56 @@ type Props = {
 };
 
 // Migas de pan
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Asignaturas', href: '/asignaturas' }];
+const breadcrumbs: BreadcrumbItem[] = [
+  { title: 'Asignaturas', href: '/asignaturas' }
+];
 
-// 👉 util para normalizar a lista
+// Normalizadores
 function toList<T>(maybe: T[] | Paginator<T> | undefined): T[] {
   if (!maybe) return [];
   return Array.isArray(maybe) ? maybe : (maybe.data ?? []);
 }
-// 👉 util para contar
+
 function toCount<T>(maybe: T[] | Paginator<T> | undefined): number {
   if (!maybe) return 0;
-  return Array.isArray(maybe) ? maybe.length : (maybe.total ?? (maybe.data?.length ?? 0));
+  return Array.isArray(maybe) ? maybe.length : (maybe.total ?? maybe.data.length);
 }
 
 export default function Index(props: Props) {
-  // Normaliza datos (evita undefined y soporta paginator/array)
-  const tutoresList = toList(props.tutores);
   const asignaturasList = toList(props.asignaturas);
-
-  const totalTutores = toCount(props.tutores);
   const totalAsignaturas = toCount(props.asignaturas);
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Asignaturas" />
+
       <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
-        {/* Métricas principales */}
+
+        {/* MÉTRICAS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
-   
           <MetricCard
             title="Asignaturas"
             value={totalAsignaturas}
             icon={HardDrive}
             color="purple"
-            detail={`${asignaturasList.length} en esta página`}
+            detail={`${asignaturasList.length} registradas`}
           />
         </div>
 
-        {/* Asignaturas */}
+        {/* LISTA */}
         <div className="p-6">
-          <p className="mb-4" style={{ fontSize: '30px', fontWeight: 'bold' }}>Asignaturas</p>
+          <p className="mb-4 text-3xl font-bold">Asignaturas</p>
+
           <div className="flex space-x-4 mb-4">
+            {/* Pasamos carreras correctamente */}
             <AgregarAsignatura carreras={props.carreras ?? []} />
           </div>
-          <TablaAsignatura />
-          {/* Si vas a paginar, aquí puedes renderizar paginación usando props.asignaturas?.links */}
+
+          {/* 🔥 PROPS CORREGIDOS AQUÍ 🔥 */}
+          <TablaAsignatura
+            asignaturas={asignaturasList}
+            carreras={props.carreras ?? []}
+          />
         </div>
       </div>
     </AppLayout>

@@ -9,11 +9,11 @@ return new class extends Migration {
         Schema::create('asignaturas', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
-            $table->string('codigo')->unique();
-            $table->string('docente');
 
-            // Aquí se define correctamente la relación con carreras
-            $table->foreignId('carrera_id')->constrained()->onDelete('cascade');
+            // Relación con carreras
+            $table->foreignId('carrera_id')
+                  ->constrained('carreras')
+                  ->onDelete('cascade');
 
             $table->timestamps();
         });

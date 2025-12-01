@@ -21,23 +21,44 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { router, usePage, Link } from "@inertiajs/react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { router, Link } from "@inertiajs/react";
 import { toast } from "sonner";
+
+// Tipos
+interface Carrera {
+  id: number;
+  nombre: string;
+}
 
 interface Asignatura {
   id: number;
   nombre: string;
-  codigo: string;
-  docente: string;
+  carrera_id: number;
+  carrera?: Carrera;
 }
 
-const TablaAsignatura = () => {
+export default function TablaAsignatura({
+  asignaturas,
+  carreras,
+}: {
+  asignaturas: Asignatura[];
+  carreras: Carrera[];
+}) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const { asignaturas } = usePage().props as { asignaturas?: Asignatura[] };
 
-  const [selectedAsignatura, setSelectedAsignatura] = useState<Asignatura | null>(null);
-  const [deleteAsignatura, setDeleteAsignatura] = useState<Asignatura | null>(null);
+  const [selectedAsignatura, setSelectedAsignatura] =
+    useState<Asignatura | null>(null);
+
+  const [deleteAsignatura, setDeleteAsignatura] =
+    useState<Asignatura | null>(null);
 
   const eliminarAsignatura = () => {
     if (!deleteAsignatura) return;
@@ -56,8 +77,7 @@ const TablaAsignatura = () => {
 
     const payload = {
       nombre: selectedAsignatura.nombre,
-      codigo: selectedAsignatura.codigo,
-      docente: selectedAsignatura.docente,
+      carrera_id: selectedAsignatura.carrera_id,
     };
 
     router.patch(`/asignaturas/${selectedAsignatura.id}`, payload, {
@@ -73,22 +93,28 @@ const TablaAsignatura = () => {
     <div className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
       <Table>
         <TableCaption>Lista de asignaturas.</TableCaption>
+
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Código</TableHead>
-            <TableHead>Docente</TableHead>
+            <TableHead>Carrera</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
-          {asignaturas?.map((asignatura) => (
+          {asignaturas.map((asignatura) => (
             <TableRow key={asignatura.id}>
               <TableCell>{asignatura.nombre}</TableCell>
-              <TableCell>{asignatura.codigo}</TableCell>
-              <TableCell>{asignatura.docente}</TableCell>
+
+              <TableCell>
+                {asignatura.carrera?.nombre ??
+                  carreras.find((c) => c.id === asignatura.carrera_id)?.nombre ??
+                  "Sin carrera"}
+              </TableCell>
+
               <TableCell className="text-right space-x-2">
-                {/* ✅ Link al show */}
+                {/* Ver Detalles */}
                 <Link href={`/asignaturas/${asignatura.id}`}>
                   <Button variant="ghost">
                     <Eye />
@@ -108,34 +134,60 @@ const TablaAsignatura = () => {
                       <PencilLine />
                     </Button>
                   </DialogTrigger>
+
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Editar Asignatura</DialogTitle>
                     </DialogHeader>
+
                     <div className="space-y-4">
-                      <Label>Nombre</Label>
-                      <Input
-                        value={selectedAsignatura?.nombre || ""}
-                        onChange={(e) =>
-                          setSelectedAsignatura({ ...selectedAsignatura!, nombre: e.target.value })
-                        }
-                      />
-                      <Label>Código</Label>
-                      <Input
-                        value={selectedAsignatura?.codigo || ""}
-                        onChange={(e) =>
-                          setSelectedAsignatura({ ...selectedAsignatura!, codigo: e.target.value })
-                        }
-                      />
-                      <Label>Docente</Label>
-                      <Input
-                        value={selectedAsignatura?.docente || ""}
-                        onChange={(e) =>
-                          setSelectedAsignatura({ ...selectedAsignatura!, docente: e.target.value })
-                        }
-                      />
+                      {/* Nombre */}
+                      <div>
+                        <Label>Nombre</Label>
+                        <Input
+                          value={selectedAsignatura?.nombre || ""}
+                          onChange={(e) =>
+                            setSelectedAsignatura({
+                              ...selectedAsignatura!,
+                              nombre: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      {/* Carrera */}
+                      <div>
+                        <Label>Carrera</Label>
+                        <Select
+                          value={
+                            selectedAsignatura?.carrera_id
+                              ? String(selectedAsignatura.carrera_id)
+                              : ""
+                          }
+                          onValueChange={(v) =>
+                            setSelectedAsignatura({
+                              ...selectedAsignatura!,
+                              carrera_id: parseInt(v),
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccione una carrera" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {carreras.map((c) => (
+                              <SelectItem key={c.id} value={String(c.id)}>
+                                {c.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <DialogFooter>
-                        <Button onClick={actualizarAsignatura}>Guardar Cambios</Button>
+                        <Button onClick={actualizarAsignatura}>
+                          Guardar Cambios
+                        </Button>
                       </DialogFooter>
                     </div>
                   </DialogContent>
@@ -154,19 +206,25 @@ const TablaAsignatura = () => {
                       <Delete />
                     </Button>
                   </DialogTrigger>
+
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Eliminar Asignatura</DialogTitle>
                       <DialogDescription>
-                        ¿Estás seguro de que deseas eliminar{" "}
+                        ¿Está seguro de eliminar{" "}
                         <strong>{deleteAsignatura?.nombre}</strong>?
                       </DialogDescription>
                     </DialogHeader>
+
                     <DialogFooter>
                       <Button variant="destructive" onClick={eliminarAsignatura}>
                         Eliminar
                       </Button>
-                      <Button variant="ghost" onClick={() => setIsDeleteOpen(false)}>
+
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsDeleteOpen(false)}
+                      >
                         Cancelar
                       </Button>
                     </DialogFooter>
@@ -179,6 +237,4 @@ const TablaAsignatura = () => {
       </Table>
     </div>
   );
-};
-
-export default TablaAsignatura;
+}

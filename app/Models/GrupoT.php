@@ -11,7 +11,7 @@ class GrupoT extends Model
 
     protected $table = 'grupo_t';
 
-    protected $fillable = ['nombre', 'codigo', 'carrera_id', 'asignatura_id'];
+    protected $fillable = ['nombre', 'codigo','docente', 'carrera_id', 'asignatura_id'];
 
     public function carrera()
     {

@@ -13,11 +13,18 @@ class GrupoTController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'codigo' => 'required|string|max:255',
+            'docente' => 'required|string|max:255', // 👈 NUEVO
             'carrera_id' => 'required|exists:carreras,id',
             'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
-        GrupoT::create($request->only('nombre', 'codigo', 'carrera_id', 'asignatura_id'));
+        GrupoT::create([
+            'nombre' => $request->nombre,
+            'codigo' => $request->codigo,
+            'docente' => $request->docente,        // 👈 NUEVO
+            'carrera_id' => $request->carrera_id,
+            'asignatura_id' => $request->asignatura_id,
+        ]);
 
         return redirect()->back()->with('success', 'Grupo registrado exitosamente.');
     }
@@ -29,11 +36,18 @@ class GrupoTController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'codigo' => 'required|string|max:255',
+            'docente' => 'required|string|max:255', // 👈 NUEVO
             'carrera_id' => 'required|exists:carreras,id',
             'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
-        $grupo->update($request->only('nombre', 'codigo', 'carrera_id', 'asignatura_id'));
+        $grupo->update([
+            'nombre' => $request->nombre,
+            'codigo' => $request->codigo,
+            'docente' => $request->docente,        // 👈 NUEVO
+            'carrera_id' => $request->carrera_id,
+            'asignatura_id' => $request->asignatura_id,
+        ]);
 
         return redirect()->back()->with('success', 'Grupo actualizado correctamente.');
     }
@@ -66,7 +80,6 @@ class GrupoTController extends Controller
 
         $tutor = Tutor::findOrFail($tutorId);
 
-        // Validar si el tutor dicta esa asignatura
         if (!$tutor->asignaturas()->where('asignatura_id', $grupo->asignatura_id)->exists()) {
             return redirect()->back()->with('error', '❌ El tutor no dicta esta asignatura.');
         }

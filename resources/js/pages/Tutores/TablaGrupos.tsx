@@ -75,6 +75,7 @@ interface Grupo {
   id: number;
   nombre: string;
   codigo: string;
+  docente?: string;
   carrera: Carrera;
   tipo?: string;
   tutores?: Tutor[];
@@ -97,6 +98,7 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
   const [grupoEdit, setGrupoEdit] = useState<Grupo | null>(null);
   const [grupoNombre, setGrupoNombre] = useState("");
   const [grupoCodigo, setGrupoCodigo] = useState("");
+  const [grupoDocente, setGrupoDocente] = useState("");
   const [grupoToDelete, setGrupoToDelete] = useState<Grupo | null>(null);
 
   const { flash = {} } = usePage().props as {
@@ -158,39 +160,43 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
   };
 
   const handleGuardarEdicion = () => {
-    if (!grupoEdit) return;
+  if (!grupoEdit) return;
 
-    if (
-      grupoNombre === grupoEdit.nombre &&
-      grupoCodigo === grupoEdit.codigo
-    ) {
-      toast.warning("⚠️ No se hicieron cambios");
-      return;
-    }
+  const sinCambios =
+    grupoNombre === grupoEdit.nombre &&
+    grupoCodigo === grupoEdit.codigo &&
+    grupoDocente === (grupoEdit.docente ?? "");
 
-    const ruta = `/grupost/${grupoEdit.id}`;
+  if (sinCambios) {
+    toast.warning("⚠️ No se hicieron cambios");
+    return;
+  }
 
-    router.put(
-      ruta,
-      {
-        nombre: grupoNombre,
-        codigo: grupoCodigo,
-        carrera_id: grupoEdit.carrera.id,
-        asignatura_id: grupoEdit.asignatura_id,
+  const ruta = `/grupost/${grupoEdit.id}`;
+
+  router.put(
+    ruta,
+    {
+      nombre: grupoNombre,
+      codigo: grupoCodigo,
+      docente: grupoDocente, // 👈 NUEVO
+      carrera_id: grupoEdit.carrera.id,
+      asignatura_id: grupoEdit.asignatura_id,
+    },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        toast.success("✅ Grupo actualizado correctamente");
+        setGrupoEdit(null);
+        router.reload({ only: ["gruposT", "grupos"] });
       },
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          toast.success("✅ Grupo actualizado correctamente");
-          setGrupoEdit(null);
-          router.reload({ only: ["gruposT", "grupos"] });
-        },
-        onError: () => {
-          toast.error("❌ No se pudo editar el grupo");
-        },
-      }
-    );
-  };
+      onError: () => {
+        toast.error("❌ No se pudo editar el grupo");
+      },
+    }
+  );
+};
+
 
   // Función para verificar si un grupo tiene tutor asignado
   const tieneTutorAsignado = (grupo: Grupo) => {
@@ -210,6 +216,7 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
             <TableRow>
               <TableHead className="w-[20%]">Nombre</TableHead>
               <TableHead className="w-[15%]">Código</TableHead>
+              <TableHead className="w-[18%]">Docente</TableHead> {/* 👈 NUEVO */}
               <TableHead className="w-[25%]">Carrera</TableHead>
               <TableHead className="w-[10%]">Tipo</TableHead>
               <TableHead className="w-[20%]">Tutor Asignado</TableHead>
@@ -221,6 +228,7 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
               <TableRow key={`${grupo.tipo}-${grupo.id}`}>
                 <TableCell>{grupo.nombre}</TableCell>
                 <TableCell>{grupo.codigo}</TableCell>
+                <TableCell>{grupo.docente ?? "Sin docente"}</TableCell>
                 <TableCell>{grupo.carrera.nombre}</TableCell>
                 <TableCell>{grupo.tipo}</TableCell>
                 <TableCell>{grupo.tutores?.[0]?.nombre || 'No asignado'}</TableCell>
@@ -250,7 +258,7 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
                           <UserX2 className="mr-2 h-4 w-4" /> Quitar tutor
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={() => { setGrupoEdit(grupo); setGrupoNombre(grupo.nombre); setGrupoCodigo(grupo.codigo); }}>
+                      <DropdownMenuItem onClick={() => { setGrupoEdit(grupo); setGrupoNombre(grupo.nombre); setGrupoCodigo(grupo.codigo); setGrupoDocente(grupo.docente ?? ""); }}>
                         <Pencil className="mr-2 h-4 w-4" /> Editar grupo
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setGrupoToDelete(grupo)}>
@@ -283,6 +291,16 @@ const TablaGrupo = ({ grupos = [], gruposT = [], tutores }: Props) => {
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="codigo" className="text-right">Código</Label>
               <input value={grupoCodigo} onChange={(e) => setGrupoCodigo(e.target.value)} className="col-span-3 border rounded px-2 py-1" />
+            </div> 
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="docente" className="text-right">Docente</Label>
+              <input
+              id="docente"
+              value={grupoDocente}
+              onChange={(e) => setGrupoDocente(e.target.value)}
+              className="col-span-3 border rounded px-2 py-1"
+              placeholder="Nombre del docente"
+              />
             </div>
           </div>
           <DialogFooter>

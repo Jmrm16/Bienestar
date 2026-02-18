@@ -49,6 +49,7 @@ class TutorController extends Controller
     {
         $request->validate([
             'codigo'            => 'required|string|max:50|unique:tutors,codigo',
+            'tipo_resolucion'   => 'required|in:R1,R2', // ✅ NUEVO
             'nombre'            => 'required|string|max:255',
             'apellido'          => 'required|string|max:255',
             'tipo_documento'    => 'required|string|max:50',
@@ -67,11 +68,12 @@ class TutorController extends Controller
 
         $tutor = Tutor::create([
             'codigo'           => $request->codigo,
+            'tipo_resolucion'  => $request->tipo_resolucion, // ✅ NUEVO
             'nombre'           => $request->nombre,
             'apellido'         => $request->apellido,
             'tipo_documento'   => $request->tipo_documento,
             'documento'        => $request->documento,
-            'cedula_hash'      => Hash::make($request->documento), // para login del portal
+            'cedula_hash'      => Hash::make($request->documento),
             'lugar_expedicion' => $request->lugar_expedicion,
             'sexo'             => $request->sexo,
             'grupo_priorizado' => $request->grupo_priorizado,
@@ -96,6 +98,7 @@ class TutorController extends Controller
 
         $request->validate([
             'codigo'            => 'required|string|max:50|unique:tutors,codigo,' . $tutor->id,
+            'tipo_resolucion'   => 'required|in:R1,R2', // ✅ NUEVO
             'nombre'            => 'required|string|max:255',
             'apellido'          => 'required|string|max:255',
             'tipo_documento'    => 'required|string|max:50',
@@ -110,11 +113,12 @@ class TutorController extends Controller
             'asignaturas'       => 'required|array',
             'asignaturas.*'     => 'exists:asignaturas,id',
             'activo'            => 'nullable|boolean',
-            'reset_password'    => 'nullable|boolean', // para re-generar hash desde documento
+            'reset_password'    => 'nullable|boolean',
         ]);
 
         $payload = [
             'codigo'           => $request->codigo,
+            'tipo_resolucion'  => $request->tipo_resolucion, // ✅ NUEVO
             'nombre'           => $request->nombre,
             'apellido'         => $request->apellido,
             'tipo_documento'   => $request->tipo_documento,

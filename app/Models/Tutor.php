@@ -10,8 +10,8 @@ class Tutor extends Model
     use HasFactory;
 
     protected $fillable = [
-        'codigo',            // para login del portal
-        'cedula_hash',       // hash del documento
+        'codigo',
+        'cedula_hash',
         'nombre',
         'apellido',
         'tipo_documento',
@@ -20,28 +20,59 @@ class Tutor extends Model
         'sexo',
         'grupo_priorizado',
         'sede',
-        'carrera_id',        // FK a carreras
+        'carrera_id',
         'correo',
         'telefono',
         'activo',
-        'ultimo_ingreso_at', // actualizado por el portal
+        'ultimo_ingreso_at',
     ];
 
     protected $hidden = ['cedula_hash'];
 
     /**
-     * Relación con grupos (corrigiendo belongsToMany):
-     * Ajusta el nombre de la tabla pivote y las FKs si tu esquema usa otros nombres.
+     * 🔹 Relación Tutor ↔ Grupos (pivot)
+     * (NO SE TOCA, ESTÁ PERFECTA)
      */
     public function grupos()
     {
-        // Asumiendo pivote 'grupo_tutor' con columnas 'tutor_id' y 'grupo_t_id'
-        return $this->belongsToMany(GrupoT::class, 'grupo_tutor', 'tutor_id', 'grupo_t_id');
+        return $this->belongsToMany(
+            GrupoT::class,
+            'periodo_grupo_tutor',
+            'tutor_id',
+            'grupo_t_id'
+        )
+        ->withPivot(['period_id', 'rol'])
+        ->withTimestamps();
+    }
+
+    /**
+     * 🔥 NUEVO
+     * Asignaciones reales del tutor
+     * (periodo_grupo_tutor como MODELO)
+     */
+    public function assignments()
+    {
+        return $this->hasMany(TutorAssignment::class, 'tutor_id');
+    }
+
+    /**
+     * 🔥 NUEVO
+     * Reportes del tutor (a través de asignaciones)
+     */
+    public function reports()
+    {
+        return $this->hasManyThrough(
+            TutorReport::class,     // modelo final
+            TutorAssignment::class, // modelo intermedio
+            'tutor_id',             // FK en assignments
+            'assignment_id',        // FK en tutor_reports
+            'id',
+            'id'
+        );
     }
 
     public function asignaturas()
     {
-        // Por convención usará 'asignatura_tutor' (ajusta si tu pivote se llama diferente)
         return $this->belongsToMany(Asignatura::class);
     }
 

@@ -9,7 +9,11 @@ class Asignatura extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'codigo', 'docente', 'carrera_id'];
+    // 🔥 Fillable corregido
+    protected $fillable = [
+        'nombre',
+        'carrera_id',
+    ];
 
     public function carrera()
     {

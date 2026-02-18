@@ -109,11 +109,8 @@ export default function Index({
         </div>
 
         {/* Tutores */}
-        <div className="p-6">
-          <p style={{ fontSize: '30px', fontWeight: 'bold' }} className="mb-4">Tutores</p>
-          <div className="flex space-x-4 mb-4">
-            <AgregarTutor />
-          </div>
+        <div className="p-6">      
+        
           <TablaTutor />
         </div>
 

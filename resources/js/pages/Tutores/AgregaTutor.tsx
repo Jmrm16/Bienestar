@@ -34,14 +34,18 @@ interface Carrera {
 
 // Helper: tomar el CSRF del meta (lo mandaremos en el body)
 function csrfToken(): string {
-  const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+  const el = document.querySelector(
+    'meta[name="csrf-token"]'
+  ) as HTMLMetaElement | null;
   return el?.content ?? "";
 }
 
 const AgregarTutor = () => {
   const [isOpen, setIsOpen] = useState(false);
+
   const [form, setForm] = useState({
     codigo: "",
+    tipo_resolucion: "" as "" | "R1" | "R2", // ✅ NUEVO
     nombre: "",
     apellido: "",
     tipo_documento: "",
@@ -87,6 +91,7 @@ const AgregarTutor = () => {
   const resetForm = () => {
     setForm({
       codigo: "",
+      tipo_resolucion: "", // ✅ NUEVO
       nombre: "",
       apellido: "",
       tipo_documento: "",
@@ -114,15 +119,20 @@ const AgregarTutor = () => {
       toast.error("El código del tutor es obligatorio");
       return;
     }
+    // ✅ opcional: obligar a escoger R1/R2
+    if (!form.tipo_resolucion) {
+      toast.error("Selecciona el tipo de resolución (R1 o R2)");
+      return;
+    }
 
-    // Importante para InfinityFree:
-    //  - Enviar POST con CSRF en el cuerpo
-    //  - forceFormData: true  => multipart/form-data (no hace preflight)
     router.post(
       "/tutores",
       {
         _token: csrfToken(),
+
         codigo: form.codigo,
+        tipo_resolucion: form.tipo_resolucion, // ✅ NUEVO
+
         nombre: form.nombre,
         apellido: form.apellido,
         tipo_documento: form.tipo_documento,
@@ -169,7 +179,34 @@ const AgregarTutor = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Código del Tutor</Label>
-                  <Input name="codigo" value={form.codigo} onChange={handleChange} required />
+                  <Input
+                    name="codigo"
+                    value={form.codigo}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* ✅ NUEVO: Tipo Resolución (R1 / R2) */}
+                <div>
+                  <Label>Tipo de Resolución</Label>
+                  <Select
+                    value={form.tipo_resolucion}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        tipo_resolucion: value as "R1" | "R2" | "",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona (R1 / R2)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="R1">R1</SelectItem>
+                      <SelectItem value="R2">R2</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -216,7 +253,10 @@ const AgregarTutor = () => {
 
                 <div>
                   <Label>Sexo</Label>
-                  <Select value={form.sexo} onValueChange={(value) => handleSelectChange("sexo", value)}>
+                  <Select
+                    value={form.sexo}
+                    onValueChange={(value) => handleSelectChange("sexo", value)}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona un sexo" />
                     </SelectTrigger>

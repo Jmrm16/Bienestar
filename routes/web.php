@@ -17,6 +17,8 @@ use App\Http\Controllers\TutoriasController;
 use App\Http\Controllers\CulturaController;
 use App\Http\Controllers\AsistenciaImportController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Admin\NotasImportController;
+use App\Http\Controllers\Reports\PeriodInsightsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,9 +42,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Estudiantes
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
     Route::resource('estudiantes', EstudianteController::class)->except(['create', 'edit']);
     Route::get('/estudiantes/grupos/{grupo}', [EstudianteController::class, 'showGrupo'])
@@ -51,60 +53,54 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('estudiantes.cargar-excel');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Tutores
-    |----------------------------------------------------------------------
-    | En el frontend usa:
-    |   router.post(route('tutores.update', id),  { ...data, _method:'put' })
-    |   router.post(route('tutores.destroy', id), { _method:'delete' })
+    |--------------------------------------------------------------------------
     */
     Route::resource('tutores', TutorController::class)->except(['create', 'edit']);
     Route::get('/tutores/{tutor}/perfil', [TutorController::class, 'perfil'])->name('tutores.perfil');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Asignaturas
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
+    | ⚠️ IMPORTANTE: NO repetir asignaturas.show porque ya viene con resource.
     */
     Route::resource('asignaturas', AsignaturaController::class)->except(['create', 'edit']);
-    // Si tu controlador ya implementa show, el resource lo crea. Esta línea es opcional.
-    Route::get('/asignaturas/{asignatura}', [AsignaturaController::class, 'show'])
-        ->name('asignaturas.show');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Carreras
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
     Route::resource('carreras', CarreraController::class)->except(['create', 'edit']);
 
     /*
-    |----------------------------------------------------------------------
-    | Grupos
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
+    | Grupos (simples)
+    |--------------------------------------------------------------------------
     */
     Route::resource('grupos', GrupoController::class)->except(['create', 'edit']);
     Route::post('/grupos/{grupo}/asignar-tutor', [GrupoController::class, 'asignarTutor'])
         ->name('grupos.asignar-tutor');
 
     /*
-    |----------------------------------------------------------------------
-    | GruposT
-    |----------------------------------------------------------------------
-    | IMPORTANTE: no duplicamos el DELETE; ya lo da Route::resource('grupost', ...).
-    | En el frontend usa POST + _method:
-    |   router.post(route('grupost.destroy', id), { _method:'delete' })
+    |--------------------------------------------------------------------------
+    | GruposT (con periodo y tutores por periodo)
+    |--------------------------------------------------------------------------
     */
     Route::resource('grupost', GrupoTController::class)->except(['create', 'edit']);
+
     Route::post('/grupost/{grupo}/asignar-tutor', [GrupoTController::class, 'asignarTutor'])
         ->name('grupost.asignar-tutor');
+
     Route::post('/grupost/{grupo}/quitar-tutor', [GrupoTController::class, 'quitarTutor'])
         ->name('grupost.quitar-tutor');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Cultura (privado)
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
     Route::get('/culturas', [CulturaController::class, 'index'])->name('cultura.index');
     Route::get('/culturas/create', [CulturaController::class, 'create'])->name('cultura.create');
@@ -116,50 +112,69 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/cultura/publica', [CulturaController::class, 'vistaPublica']);
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Acompañamientos
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
     Route::resource('acompañamientos', AcompanamientoCarreraController::class)->except(['create', 'edit']);
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Asistencias
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
     Route::get('/asistencias/importar', [AsistenciaImportController::class, 'index'])
         ->name('asistencias.importar.form');
+
     Route::post('/asistencias/importar', [AsistenciaImportController::class, 'import'])
         ->name('asistencias.importar');
+
     Route::get('/grupos/{id}/asistencias', [AsistenciaImportController::class, 'verAsistenciasPorGrupo'])
         ->name('asistencias.ver');
+
     Route::get('/grupost/{grupo}/asistencias/importar', [AsistenciaImportController::class, 'importarPorGrupoVista'])
         ->name('grupost.asistencias.importar');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reportes de periodos y entregas
+    |--------------------------------------------------------------------------
+    */
     Route::prefix('reportes')->name('reports.')->group(function () {
-    // Periodos
-    Route::get('/periodos', [ReportController::class, 'periodsIndex'])->name('periods.index');
-    Route::post('/periodos', [ReportController::class, 'periodsStore'])->name('periods.store');
-    Route::put('/periodos/{period}', [ReportController::class, 'periodsUpdate'])->name('periods.update');
-    Route::delete('/periodos/{period}', [ReportController::class, 'periodsDestroy'])->name('periods.destroy');
 
-    // Ventanas/Entregas por periodo
-    Route::get('/periodos/{period}/entregas', [ReportController::class, 'windowsIndex'])->name('windows.index');
-    Route::post('/periodos/{period}/entregas', [ReportController::class, 'windowsStore'])->name('windows.store');
-    Route::put('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsUpdate'])->name('windows.update');
-    Route::delete('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsDestroy'])->name('windows.destroy');
+        Route::get('/periodos', [ReportController::class, 'periodsIndex'])->name('periods.index');
+        Route::post('/periodos', [ReportController::class, 'periodsStore'])->name('periods.store');
+        Route::put('/periodos/{period}', [ReportController::class, 'periodsUpdate'])->name('periods.update');
+        Route::delete('/periodos/{period}', [ReportController::class, 'periodsDestroy'])->name('periods.destroy');
 
-    // Asignación masiva
-    Route::post('/periodos/{period}/entregas/{window}/assign-all', [ReportController::class, 'windowsAssignAll'])
-        ->name('windows.assign_all');
-});
+        Route::get('/periodos/{period}/entregas', [ReportController::class, 'windowsIndex'])->name('windows.index');
+        Route::post('/periodos/{period}/entregas', [ReportController::class, 'windowsStore'])->name('windows.store');
+        Route::put('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsUpdate'])->name('windows.update');
+        Route::delete('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsDestroy'])->name('windows.destroy');
 
-    
+        Route::post('/periodos/{period}/entregas/{window}/assign-all', [ReportController::class, 'windowsAssignAll'])
+            ->name('windows.assign_all');
+
+        Route::get('periodos/{period}/insights', [PeriodInsightsController::class, 'show'])
+  ->name('periods.insights');   
+    });
+       /*
+    |--------------------------------------------------------------------------
+    | Notas
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/notas', [NotasImportController::class, 'index'])->name('notas.index');
+        Route::post('/notas/importar', [NotasImportController::class, 'store'])
+        ->name('notas.importar');
+
+
+
+
 });
 
 /*
 |--------------------------------------------------------------------------
-| Otros archivos de rutas
+| Otros archivos
 |--------------------------------------------------------------------------
 */
 require __DIR__ . '/settings.php';

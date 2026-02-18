@@ -4,67 +4,95 @@ namespace App\Http\Controllers;
 
 use App\Models\GrupoT;
 use App\Models\Tutor;
+use App\Models\ReportPeriod;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class GrupoTController extends Controller
 {
+    /**
+     * Crear un nuevo grupo
+     */
     public function store(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:255',
-            'docente' => 'required|string|max:255', // 👈 NUEVO
-            'carrera_id' => 'required|exists:carreras,id',
+            'nombre'        => 'required|string|max:255',
+            'codigo'        => 'required|string|max:255',
+            'docente'       => 'required|string|max:255',
+            'carrera_id'    => 'required|exists:carreras,id',
             'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
+        // 🔥 Validar período activo Y vigente por fecha
+        $today = Carbon::today();
+
+        $period = ReportPeriod::where('is_active', true)
+            ->whereDate('starts_at', '<=', $today)
+            ->whereDate('ends_at', '>=', $today)
+            ->first();
+
+        if (!$period) {
+            return back()->withErrors([
+                'periodo' => '❌ No existe un período activo y vigente para crear grupos.'
+            ]);
+        }
+
         GrupoT::create([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-            'docente' => $request->docente,        // 👈 NUEVO
-            'carrera_id' => $request->carrera_id,
+            'nombre'        => $request->nombre,
+            'codigo'        => $request->codigo,
+            'docente'       => $request->docente,
+            'carrera_id'    => $request->carrera_id,
             'asignatura_id' => $request->asignatura_id,
+            'period_id'     => $period->id,
         ]);
 
-        return redirect()->back()->with('success', 'Grupo registrado exitosamente.');
+        return back()->with('success', '✅ Grupo creado exitosamente.');
     }
 
+    /**
+     * Actualizar un grupo
+     */
     public function update(Request $request, $id)
     {
         $grupo = GrupoT::findOrFail($id);
 
         $request->validate([
-            'nombre' => 'required|string|max:255',
-            'codigo' => 'required|string|max:255',
-            'docente' => 'required|string|max:255', // 👈 NUEVO
-            'carrera_id' => 'required|exists:carreras,id',
+            'nombre'        => 'required|string|max:255',
+            'codigo'        => 'required|string|max:255',
+            'docente'       => 'required|string|max:255',
+            'carrera_id'    => 'required|exists:carreras,id',
             'asignatura_id' => 'required|exists:asignaturas,id',
         ]);
 
+        // 🔒 Bloquear edición si el período ya venció
+        $today = Carbon::today();
+
+        $periodVigente = ReportPeriod::where('id', $grupo->period_id)
+            ->where('is_active', true)
+            ->whereDate('starts_at', '<=', $today)
+            ->whereDate('ends_at', '>=', $today)
+            ->exists();
+
+        if (!$periodVigente) {
+            return back()->withErrors([
+                'periodo' => '❌ No se puede editar un grupo de un período vencido.'
+            ]);
+        }
+
         $grupo->update([
-            'nombre' => $request->nombre,
-            'codigo' => $request->codigo,
-            'docente' => $request->docente,        // 👈 NUEVO
-            'carrera_id' => $request->carrera_id,
+            'nombre'        => $request->nombre,
+            'codigo'        => $request->codigo,
+            'docente'       => $request->docente,
+            'carrera_id'    => $request->carrera_id,
             'asignatura_id' => $request->asignatura_id,
         ]);
 
-        return redirect()->back()->with('success', 'Grupo actualizado correctamente.');
+        return back()->with('success', '✅ Grupo actualizado correctamente.');
     }
 
-    public function destroy($id)
-    {
-        $grupo = GrupoT::find($id);
-
-        if (!$grupo) {
-            return back()->with('error', '❌ Grupo no encontrado.');
-        }
-
-        $grupo->delete();
-
-        return back()->with('success', '✅ Grupo eliminado correctamente.');
-    }
-
+    /**
+     * Asignar tutor a un grupo
+     */
     public function asignarTutor(Request $request, $grupoId)
     {
         $request->validate([
@@ -72,28 +100,92 @@ class GrupoTController extends Controller
         ]);
 
         $grupo = GrupoT::findOrFail($grupoId);
-        $tutorId = $request->input('tutor_id');
 
-        if ($grupo->tutores()->where('tutor_id', $tutorId)->exists()) {
-            return redirect()->back()->with('error', '❌ El tutor ya está asignado a este grupo.');
+        // 🔒 Validar que el período del grupo esté vigente
+        $today = Carbon::today();
+
+        $periodVigente = ReportPeriod::where('id', $grupo->period_id)
+            ->where('is_active', true)
+            ->whereDate('starts_at', '<=', $today)
+            ->whereDate('ends_at', '>=', $today)
+            ->exists();
+
+        if (!$periodVigente) {
+            return back()->withErrors([
+                'periodo' => '❌ No se pueden asignar tutores en períodos vencidos.'
+            ]);
         }
 
-        $tutor = Tutor::findOrFail($tutorId);
+        $tutor = Tutor::findOrFail($request->tutor_id);
 
-        if (!$tutor->asignaturas()->where('asignatura_id', $grupo->asignatura_id)->exists()) {
-            return redirect()->back()->with('error', '❌ El tutor no dicta esta asignatura.');
+        // 🔥 Validar asignatura correspondiente
+        if (
+            !$tutor->asignaturas()
+                ->where('asignatura_id', $grupo->asignatura_id)
+                ->exists()
+        ) {
+            return back()->withErrors([
+                'tutor' => '❌ El tutor no dicta esta asignatura.'
+            ]);
         }
 
-        $grupo->tutores()->attach($tutorId);
+        // 🔥 Rol del tutor
+        $rol = $grupo->tutores()->count() === 0 ? 'principal' : 'secundario';
 
-        return redirect()->back()->with('success', '✅ Tutor asignado correctamente.');
+        $grupo->tutores()->attach($tutor->id, [
+            'period_id' => $grupo->period_id,
+            'rol'       => $rol,
+        ]);
+
+        return back()->with('success', "✅ Tutor asignado correctamente como {$rol}.");
     }
 
+    /**
+     * Quitar tutor del grupo
+     */
     public function quitarTutor(Request $request, $grupoId)
     {
-        $grupo = GrupoT::findOrFail($grupoId);
-        $grupo->tutores()->detach();
+        $request->validate([
+            'tutor_id' => 'required|exists:tutors,id',
+        ]);
 
-        return redirect()->back()->with('success', '👤 Tutor eliminado del grupo.');
+        $grupo = GrupoT::findOrFail($grupoId);
+
+        $grupo->tutores()->detach($request->tutor_id);
+
+        return back()->with('success', '✅ Tutor eliminado correctamente.');
+    }
+
+    /**
+     * Eliminar grupo
+     */
+    public function destroy($id)
+    {
+        $grupo = GrupoT::find($id);
+
+        if (!$grupo) {
+            return back()->withErrors([
+                'grupo' => '❌ Grupo no encontrado.'
+            ]);
+        }
+
+        // 🔒 Evitar eliminar grupos de períodos vencidos
+        $today = Carbon::today();
+
+        $periodVigente = ReportPeriod::where('id', $grupo->period_id)
+            ->where('is_active', true)
+            ->whereDate('starts_at', '<=', $today)
+            ->whereDate('ends_at', '>=', $today)
+            ->exists();
+
+        if (!$periodVigente) {
+            return back()->withErrors([
+                'periodo' => '❌ No se puede eliminar un grupo de un período vencido.'
+            ]);
+        }
+
+        $grupo->delete();
+
+        return back()->with('success', '✅ Grupo eliminado correctamente.');
     }
 }

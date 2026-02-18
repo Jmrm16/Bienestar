@@ -6,32 +6,53 @@ use App\Http\Controllers\Controller;
 use App\Models\ReportPeriod;
 use App\Models\Tutor;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
+
+// ✅ si ya lo tienes / lo vas a crear
+use App\Models\AsistenciaOcasional;
 
 class TutorDashboardController extends Controller
 {
     public function index()
     {
-        // 1) ID del tutor autenticado con el guard 'tutor'
+        /* -------------------------------------------------------
+         | 1) Tutor autenticado
+         ------------------------------------------------------- */
         $authTutorId = Auth::guard('tutor')->id();
         abort_unless($authTutorId, 403, 'Tutor no autenticado');
 
-        // 2) Traer tutor con las relaciones que espera el frontend
+        /* -------------------------------------------------------
+         | 2) Tutor con relaciones base
+         ------------------------------------------------------- */
         $tutor = Tutor::query()
             ->with([
                 'carrera:id,nombre',
-                'asignaturas:id,nombre', // agrega 'codigo' si lo usas
+                'asignaturas:id,nombre',
             ])
             ->select([
-                'id','codigo','nombre','apellido','tipo_documento','documento',
-                'lugar_expedicion','sexo','grupo_priorizado','sede',
-                'carrera_id','correo','telefono','activo','ultimo_ingreso_at',
-                // si tienes la columna en DB, se usará; si no, simplemente quedará null
+                'id',
+                'codigo',
+                'nombre',
+                'apellido',
+                'tipo_documento',
+                'documento',
+                'lugar_expedicion',
+                'sexo',
+                'grupo_priorizado',
+                'sede',
+                'carrera_id',
+                'correo',
+                'telefono',
+                'activo',
+                'ultimo_ingreso_at',
                 'tipo_resolucion',
             ])
             ->findOrFail($authTutorId);
 
-        // 3) Payload limpio para la vista
+        /* -------------------------------------------------------
+         | 3) Payload limpio del tutor
+         ------------------------------------------------------- */
         $payloadTutor = [
             'id'               => $tutor->id,
             'codigo'           => $tutor->codigo,
@@ -48,40 +69,68 @@ class TutorDashboardController extends Controller
             'activo'           => (bool) $tutor->activo,
             'ultimo_ingreso_at'=> $tutor->ultimo_ingreso_at,
             'carrera_id'       => $tutor->carrera_id,
-            'carrera'          => $tutor->carrera ? [
-                'id'     => $tutor->carrera->id,
-                'nombre' => $tutor->carrera->nombre,
-            ] : null,
-            'asignaturas'      => $tutor->asignaturas->map(fn($a) => [
-                'id'     => $a->id,
-                'nombre' => $a->nombre,
-            ])->values(),
-            // si no existe la columna en DB, forzamos R1 por defecto
+            'carrera'          => $tutor->carrera
+                ? [
+                    'id'     => $tutor->carrera->id,
+                    'nombre' => $tutor->carrera->nombre,
+                ]
+                : null,
+            'asignaturas'      => $tutor->asignaturas
+                ->map(fn ($a) => [
+                    'id'     => $a->id,
+                    'nombre' => $a->nombre,
+                ])
+                ->values(),
             'tipo_resolucion'  => $tutor->tipo_resolucion ?? 'R1',
         ];
 
-        // 4) Periodos activos + ventanas publicadas para su tipo (R1/R2) + mi estado de reporte
+        /* -------------------------------------------------------
+         | 4) Tipo de resolución
+         ------------------------------------------------------- */
         $tutorType = $payloadTutor['tipo_resolucion'] ?? 'R1';
+
+        /* -------------------------------------------------------
+         | 5) PERÍODOS + VENTANAS vigentes
+         ------------------------------------------------------- */
+        $today = Carbon::today();
 
         $periods = ReportPeriod::query()
             ->where('is_active', true)
-            ->with(['windows' => function ($q) use ($tutorType, $tutor) {
-                $q->where('is_published', true)
-                  ->where('tutor_type', $tutorType)
-                  ->orderBy('open_at')
-                  ->with(['tutorReports' => function ($qr) use ($tutor) {
-                      $qr->where('tutor_id', $tutor->id)
-                         ->select(['id','tutor_id','window_id','status','submitted_at']);
-                  }]);
-            }])
+            ->whereDate('starts_at', '<=', $today)
+            ->whereDate('ends_at', '>=', $today)
+            ->with([
+                'windows' => function ($q) use ($tutorType, $tutor, $today) {
+                    $q->where('is_published', true)
+                      ->where('tutor_type', $tutorType)
+                      ->whereDate('open_at', '<=', $today)
+                      ->whereDate('close_at', '>=', $today)
+                      ->orderBy('open_at')
+                      ->with([
+                          'tutorReports' => function ($qr) use ($tutor) {
+                              $qr->where('tutor_id', $tutor->id)
+                                 ->select([
+                                     'id',
+                                     'tutor_id',
+                                     'window_id',
+                                     'status',
+                                     'submitted_at',
+                                 ]);
+                          },
+                      ]);
+                },
+            ])
             ->orderByDesc('id')
             ->get();
 
-        // 5) Aplanar ventanas con mi estado (si existe)
+        /* -------------------------------------------------------
+         | 6) Aplanar ventanas asignadas
+         ------------------------------------------------------- */
         $windowsAssigned = [];
+
         foreach ($periods as $p) {
             foreach ($p->windows as $w) {
                 $myReport = optional($w->tutorReports->first());
+
                 $windowsAssigned[] = [
                     'id'           => $w->id,
                     'name'         => $w->name,
@@ -91,34 +140,120 @@ class TutorDashboardController extends Controller
                     'due_at'       => $w->due_at,
                     'close_at'     => $w->close_at,
                     'tutor_type'   => $w->tutor_type,
-                    'is_published' => (bool)$w->is_published,
+                    'is_published' => (bool) $w->is_published,
                     'period'       => [
                         'id'   => $p->id,
                         'code' => $p->code,
                         'name' => $p->name,
                     ],
-                    'report' => $myReport ? [
-                        'id'           => $myReport->id,
-                        'status'       => $myReport->status, // pending|submitted|approved|rejected
-                        'submitted_at' => $myReport->submitted_at,
-                    ] : null,
+                    'report'       => $myReport->id
+                        ? [
+                            'id'           => $myReport->id,
+                            'status'       => $myReport->status,
+                            'submitted_at' => $myReport->submitted_at,
+                        ]
+                        : null,
                 ];
             }
         }
 
-        // 6) KPIs opcionales
+        /* -------------------------------------------------------
+         | 7) Estadísticas
+         ------------------------------------------------------- */
         $stats = [
             'total_windows' => count($windowsAssigned),
-            'pending'       => collect($windowsAssigned)->where(fn($w) => ($w['report']['status'] ?? 'pending') === 'pending')->count(),
-            'submitted'     => collect($windowsAssigned)->where(fn($w) => ($w['report']['status'] ?? null) === 'submitted')->count(),
+            'pending' => collect($windowsAssigned)
+                ->where(fn ($w) => ($w['report']['status'] ?? 'pending') === 'pending')
+                ->count(),
+            'submitted' => collect($windowsAssigned)
+                ->where(fn ($w) => ($w['report']['status'] ?? null) === 'submitted')
+                ->count(),
         ];
 
-        // 7) Render
+        /* -------------------------------------------------------
+         | 8) GRUPOS asignados vigentes
+         ------------------------------------------------------- */
+        $gruposAsignados = $tutor->grupos()
+            ->whereHas('periodo', function ($q) use ($today) {
+                $q->where('is_active', true)
+                  ->whereDate('starts_at', '<=', $today)
+                  ->whereDate('ends_at', '>=', $today);
+            })
+            ->with([
+                'carrera:id,nombre',
+                'asignatura:id,nombre',
+                'periodo:id,code,starts_at,ends_at,is_active',
+            ])
+            ->get()
+            ->map(function ($g) {
+                return [
+                    'id'         => $g->id,
+                    'nombre'     => $g->nombre,
+                    'codigo'     => $g->codigo,
+                    'docente'    => $g->docente,
+                    'periodo'    => [
+                        'code'       => $g->periodo->code,
+                        'starts_at'  => $g->periodo->starts_at,
+                        'ends_at'    => $g->periodo->ends_at,
+                    ],
+                    'carrera'    => $g->carrera?->only('nombre'),
+                    'asignatura' => $g->asignatura?->only('nombre'),
+                    'rol'        => $g->pivot->rol,
+                ];
+            })
+            ->values();
+
+        /* -------------------------------------------------------
+         | ✅ 9) ASISTENCIAS OCASIONALES (para mostrar en "Mis grupos")
+         |    - Las agrupamos por Asignatura + Grupo_texto
+         |    - Usamos el periodo vigente (si hay)
+         ------------------------------------------------------- */
+        $activePeriodId = collect($windowsAssigned)->first()['period']['id'] ?? null;
+        $activeWindowId = collect($windowsAssigned)->first()['id'] ?? null;
+
+        $ocasionales = collect();
+
+        if ($activePeriodId) {
+            $ocasionales = AsistenciaOcasional::query()
+                ->where('period_id', $activePeriodId)
+                ->where('tutor_id', $tutor->id)
+                // opcional: si quieres que el home muestre solo las del corte activo
+                // ->when($activeWindowId, fn($q) => $q->where('report_window_id', $activeWindowId))
+                ->selectRaw("
+                    COALESCE(asignatura_texto,'Sin asignatura') as asignatura,
+                    COALESCE(grupo_texto,'Sin grupo') as grupo,
+                    COUNT(DISTINCT identificacion) as estudiantes,
+                    COUNT(*) as asistencias
+                ")
+                ->groupBy('asignatura', 'grupo')
+                ->orderByDesc('estudiantes')
+                ->get()
+                ->map(fn ($r) => [
+                    'id' => sha1($r->asignatura.'|'.$r->grupo),
+                    'asignatura' => (string) $r->asignatura,
+                    'grupo' => (string) $r->grupo,
+                    'estudiantes' => (int) $r->estudiantes,
+                    'asistencias' => (int) $r->asistencias,
+                ])
+                ->values();
+        }
+
+        /* -------------------------------------------------------
+         | 10) Render Inertia
+         ------------------------------------------------------- */
         return Inertia::render('Tutores/home', [
             'tutor'           => $payloadTutor,
-            'periods'         => $periods->map->only(['id','code','name','starts_at','ends_at']),
+            'periods'         => $periods->map->only([
+                'id',
+                'code',
+                'name',
+                'starts_at',
+                'ends_at',
+            ]),
             'windowsAssigned' => $windowsAssigned,
             'stats'           => $stats,
+            'grupos'          => $gruposAsignados,
+            'ocasionales'     => $ocasionales, // ✅ NUEVO
         ]);
     }
 }

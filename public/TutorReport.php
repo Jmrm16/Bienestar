@@ -14,7 +14,7 @@ class TutorReport extends Model
     protected $fillable = [
         'tutor_id',
         'window_id',
-        'period_id',  
+        'assignment_id', // 🔥🔥🔥 CLAVE (FALTABA)
         'status',
         'submitted_at',
         'file_path',
@@ -43,7 +43,13 @@ class TutorReport extends Model
     }
 
     // 🔥 Relación con la asignación tutor–grupo–periodo
-  
+    public function assignment()
+    {
+        return $this->belongsTo(
+            \Illuminate\Database\Eloquent\Model::class,
+            'assignment_id'
+        );
+    }
 
     public function files()
     {

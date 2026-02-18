@@ -7,11 +7,13 @@ use App\Models\Carrera;
 use App\Models\Tutor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Carbon\Carbon;
+
 
 class AsignaturaController extends Controller
 {
     /**
-     * Listado de asignaturas.
+     * Mostrar listado de asignaturas.
      */
     public function index()
     {
@@ -48,26 +50,38 @@ class AsignaturaController extends Controller
     }
 
     /**
-     * Ver detalle de una asignatura.
+     * Mostrar una asignatura con sus grupos y tutores.
      */
-    public function show(Asignatura $asignatura)
-    {
-        $asignatura->load([
-            'carrera',
-            'grupos.carrera',
-            'grupos.tutores',
-        ]);
 
-        // Tutores que dictan esta asignatura
-        $tutores = Tutor::whereHas('asignaturas', function ($q) use ($asignatura) {
-            $q->where('asignatura_id', $asignatura->id);
-        })->get();
 
-        return Inertia::render('Asignaturas/ShowAsignatura', [
-            'asignatura' => $asignatura,
-            'tutores'    => $tutores,
-        ]);
-    }
+public function show(Asignatura $asignatura)
+{
+    $hoy = Carbon::today();
+
+    $asignatura->load([
+        'carrera',
+
+        'grupos' => function ($q) use ($hoy) {
+            $q->whereHas('periodo', function ($p) use ($hoy) {
+                $p->where('is_active', true)
+                  ->whereDate('ends_at', '>=', $hoy); // 🔥 período vigente
+            })
+            ->with(['carrera', 'tutores', 'periodo'])
+            ->orderBy('nombre');
+        },
+    ]);
+
+    $tutores = Tutor::whereHas('asignaturas', function ($q) use ($asignatura) {
+        $q->where('asignatura_id', $asignatura->id);
+    })->get();
+
+    return Inertia::render('Asignaturas/ShowAsignatura', [
+        'asignatura' => $asignatura,
+        'tutores'    => $tutores,
+    ]);
+}
+
+
 
     /**
      * Actualizar una asignatura.

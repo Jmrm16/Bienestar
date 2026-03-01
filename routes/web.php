@@ -155,8 +155,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/periodos/{period}/entregas/{window}/assign-all', [ReportController::class, 'windowsAssignAll'])
             ->name('windows.assign_all');
 
-        Route::get('periodos/{period}/insights', [PeriodInsightsController::class, 'show'])
-  ->name('periods.insights');   
+ 
     });
        /*
     |--------------------------------------------------------------------------

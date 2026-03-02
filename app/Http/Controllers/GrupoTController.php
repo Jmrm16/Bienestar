@@ -37,6 +37,19 @@ class GrupoTController extends Controller
             ]);
         }
 
+        // ✅ Validar duplicado por (codigo + carrera + asignatura + periodo)
+        $exists = GrupoT::where('codigo', $request->codigo)
+            ->where('carrera_id', $request->carrera_id)
+            ->where('asignatura_id', $request->asignatura_id)
+            ->where('period_id', $period->id)
+            ->exists();
+
+        if ($exists) {
+            return back()->withErrors([
+                'codigo' => '❌ Ya existe un grupo con este código para la misma carrera, asignatura y período.'
+            ]);
+        }
+
         GrupoT::create([
             'nombre'        => $request->nombre,
             'codigo'        => $request->codigo,
@@ -76,6 +89,20 @@ class GrupoTController extends Controller
         if (!$periodVigente) {
             return back()->withErrors([
                 'periodo' => '❌ No se puede editar un grupo de un período vencido.'
+            ]);
+        }
+
+        // ✅ Validar duplicado por (codigo + carrera + asignatura + periodo) ignorando el mismo grupo
+        $exists = GrupoT::where('codigo', $request->codigo)
+            ->where('carrera_id', $request->carrera_id)
+            ->where('asignatura_id', $request->asignatura_id)
+            ->where('period_id', $grupo->period_id)
+            ->where('id', '!=', $grupo->id)
+            ->exists();
+
+        if ($exists) {
+            return back()->withErrors([
+                'codigo' => '❌ Ya existe otro grupo con este código para la misma carrera, asignatura y período.'
             ]);
         }
 

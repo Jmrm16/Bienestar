@@ -12,7 +12,15 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
-
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Chart\Chart;
+use PhpOffice\PhpSpreadsheet\Chart\DataSeries;
+use PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues;
+use PhpOffice\PhpSpreadsheet\Chart\Legend;
+use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
+use PhpOffice\PhpSpreadsheet\Chart\Title;
 class ReportController extends Controller
 {
     /* =====================================================
@@ -575,4 +583,320 @@ public function windowsIndex(ReportPeriod $period)
 
         return back()->with('success', 'Asignaciones creadas correctamente.');
     }
+    public function exportChartsExcel(ReportPeriod $period)
+{
+    // 🔁 Reusar la lógica de windowsIndex pero solo para armar charts_by_window
+    $windows = $period->windows()
+        ->orderBy('open_at')
+        ->get(['id','period_id','name','tutor_type','open_at','due_at','close_at','instructions','is_published']);
+
+    $windowIds = $windows->pluck('id')->values();
+
+    // Si no hay ventanas, exporta un excel vacío con mensaje
+    if ($windowIds->isEmpty()) {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Resumen');
+        $sheet->setCellValue('A1', 'No hay ventanas para este período.');
+        $writer = new Xlsx($spreadsheet);
+
+        $filename = "Reporte_Charts_{$period->code}_SIN_VENTANAS.xlsx";
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename);
+    }
+
+    // ✅ Usa la misma función interna de tu windowsIndex (idéntica lógica)
+    $approvalMin = 3.0;
+
+    $buildChartsForWindow = function (int $wid) use ($period, $approvalMin) {
+
+        $baseA = DB::table('asistencias as a')
+            ->where('a.period_id', $period->id)
+            ->where('a.report_window_id', $wid);
+
+        $notaExpr = "COALESCE(n.final, n.definitiva)";
+
+        $baseStudentMateria = (clone $baseA)
+            ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+            ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+            ->selectRaw("
+                TRIM(a.identificacion) as identificacion,
+                COALESCE(NULLIF(TRIM(a.programa_academico), ''), 'Sin programa') as programa_key,
+                a.tutor_id as tutor_id,
+                LOWER(TRIM(COALESCE(s.nombre, ''))) as materia_key
+            ");
+
+        $withNotasBase = DB::query()
+            ->fromSub($baseStudentMateria, 'x')
+            ->leftJoin('notas as n', function ($j) use ($period) {
+                $j->on(DB::raw('TRIM(n.identificacion)'), '=', DB::raw('x.identificacion'))
+                    ->on(DB::raw('LOWER(TRIM(n.materia))'), '=', DB::raw('x.materia_key'))
+                    ->where('n.period_id', $period->id);
+            });
+
+        $studentPrograma = (clone $withNotasBase)
+            ->selectRaw("x.programa_key as label, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
+            ->groupBy('label', 'identificacion');
+
+        $aprobExprP  = "SUM(CASE WHEN p.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
+        $reprobExprP = "SUM(CASE WHEN p.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
+
+        $porPrograma = DB::query()
+            ->fromSub($studentPrograma, 'p')
+            ->selectRaw("p.label as label, $aprobExprP as APROBADO, $reprobExprP as REPROBADO")
+            ->groupBy('label')
+            ->orderByRaw("($aprobExprP + $reprobExprP) DESC")
+            ->get()
+            ->map(fn($r) => [
+                'label' => (string)$r->label,
+                'APROBADO' => (int)$r->APROBADO,
+                'REPROBADO' => (int)$r->REPROBADO,
+                'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
+            ])
+            ->values()
+            ->all();
+
+        $studentTutor = (clone $withNotasBase)
+            ->selectRaw("x.tutor_id as tutor_id, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
+            ->groupBy('tutor_id', 'identificacion');
+
+        $aprobExprT  = "SUM(CASE WHEN tt.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
+        $reprobExprT = "SUM(CASE WHEN tt.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
+
+        $porTutor = DB::query()
+            ->fromSub($studentTutor, 'tt')
+            ->leftJoin('tutors as t', 't.id', '=', 'tt.tutor_id')
+            ->selectRaw("
+                COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', tt.tutor_id)) as label,
+                $aprobExprT as APROBADO,
+                $reprobExprT as REPROBADO
+            ")
+            ->groupBy('label')
+            ->orderByRaw("($aprobExprT + $reprobExprT) DESC")
+            ->get()
+            ->map(fn($r) => [
+                'label' => (string)$r->label,
+                'APROBADO' => (int)$r->APROBADO,
+                'REPROBADO' => (int)$r->REPROBADO,
+                'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
+            ])
+            ->values()
+            ->all();
+
+        $totalAprobado = array_sum(array_map(fn($x)=>$x['APROBADO'], $porPrograma));
+        $totalReprobado = array_sum(array_map(fn($x)=>$x['REPROBADO'], $porPrograma));
+
+        return [
+            'porPrograma' => $porPrograma,
+            'porTutor' => $porTutor,
+            'totalAprobado' => (int)$totalAprobado,
+            'totalReprobado' => (int)$totalReprobado,
+        ];
+    };
+
+    // ----------- construir charts_by_window -----------
+    $chartsByWindow = [];
+    foreach ($windowIds as $wid) {
+        $chartsByWindow[(string)$wid] = $buildChartsForWindow((int)$wid);
+    }
+
+    // ----------- EXCEL -----------
+    $spreadsheet = new Spreadsheet();
+    $spreadsheet->getProperties()
+        ->setCreator('Sistema Bienestar')
+        ->setTitle('Reporte de Charts')
+        ->setDescription('Export de tablas y gráficos por ventana');
+
+    // Hoja Resumen
+    $resumen = $spreadsheet->getActiveSheet();
+    $resumen->setTitle('Resumen');
+
+    $resumen->fromArray([
+        ['Ventana ID', 'Ventana', 'Aprobados', 'Reprobados'],
+    ], null, 'A1');
+
+    $row = 2;
+    foreach ($windows as $w) {
+        $ch = $chartsByWindow[(string)$w->id] ?? null;
+        $resumen->setCellValue("A{$row}", (int)$w->id);
+        $resumen->setCellValue("B{$row}", (string)$w->name);
+        $resumen->setCellValue("C{$row}", (int)($ch['totalAprobado'] ?? 0));
+        $resumen->setCellValue("D{$row}", (int)($ch['totalReprobado'] ?? 0));
+        $row++;
+    }
+
+    // Crear una hoja por ventana con tablas + gráficos
+    foreach ($windows as $w) {
+        $wid = (string)$w->id;
+        $ch = $chartsByWindow[$wid] ?? ['porPrograma'=>[], 'porTutor'=>[]];
+
+        $sheet = new Worksheet($spreadsheet, $this->safeSheetName($w->name));
+        $spreadsheet->addSheet($sheet);
+
+        $sheet->setCellValue('A1', "Ventana: {$w->name}");
+        $sheet->setCellValue('A2', "Tutor type: {$w->tutor_type}");
+
+        // ---------- Por Programa ----------
+        $sheet->setCellValue('A4', 'Por Programa');
+        $sheet->fromArray([['Programa', 'APROBADO', 'REPROBADO']], null, 'A5');
+
+        $startRow = 6;
+        foreach (($ch['porPrograma'] ?? []) as $i => $r) {
+            $rr = $startRow + $i;
+            $sheet->setCellValue("A{$rr}", $r['label']);
+            $sheet->setCellValue("B{$rr}", (int)$r['APROBADO']);
+            $sheet->setCellValue("C{$rr}", (int)$r['REPROBADO']);
+        }
+
+        $endRow = max($startRow, $startRow + count($ch['porPrograma'] ?? []) - 1);
+
+        // Chart Programa
+        if ($endRow >= $startRow) {
+            $this->addBarChart(
+                $sheet,
+                'Programa Aprobado/Reprobado',
+                "A5:A{$endRow}",
+                ["B5:B{$endRow}", "C5:C{$endRow}"],
+                ['APROBADO', 'REPROBADO'],
+                'E5',
+                'N20'
+            );
+        }
+
+        // ---------- Por Tutor ----------
+        $baseTutorRow = $endRow + 4;
+        $sheet->setCellValue("A{$baseTutorRow}", 'Por Tutor');
+        $sheet->fromArray([['Tutor', 'APROBADO', 'REPROBADO']], null, "A" . ($baseTutorRow + 1));
+
+        $tStart = $baseTutorRow + 2;
+        foreach (($ch['porTutor'] ?? []) as $i => $r) {
+            $rr = $tStart + $i;
+            $sheet->setCellValue("A{$rr}", $r['label']);
+            $sheet->setCellValue("B{$rr}", (int)$r['APROBADO']);
+            $sheet->setCellValue("C{$rr}", (int)$r['REPROBADO']);
+        }
+
+        $tEnd = max($tStart, $tStart + count($ch['porTutor'] ?? []) - 1);
+
+        if ($tEnd >= $tStart) {
+            $this->addBarChart(
+                $sheet,
+                'Tutor Aprobado/Reprobado',
+                "A" . ($baseTutorRow + 1) . ":A{$tEnd}",
+                ["B" . ($baseTutorRow + 1) . ":B{$tEnd}", "C" . ($baseTutorRow + 1) . ":C{$tEnd}"],
+                ['APROBADO', 'REPROBADO'],
+                'E' . ($baseTutorRow + 1),
+                'N' . ($baseTutorRow + 16)
+            );
+        }
+
+        // Ajustes visuales básicos
+        foreach (['A','B','C','D','E','F','G','H','I','J','K','L','M','N'] as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+    }
+
+    // Elimina la hoja “Worksheet” por defecto si quedó vacía extra
+    // (En este caso usamos "Resumen" como activa; ok)
+
+    $writer = new Xlsx($spreadsheet);
+
+    // Importante: para que se exporten gráficos en PhpSpreadsheet
+    $writer->setIncludeCharts(true);
+
+    $filename = "Reporte_Charts_{$period->code}.xlsx";
+
+    return response()->streamDownload(function () use ($writer) {
+        $writer->save('php://output');
+    }, $filename);
+}
+
+/**
+ * Helper: nombre de hoja seguro (Excel limita 31 caracteres y no permite ciertos símbolos)
+ */
+private function safeSheetName(string $name): string
+{
+    $name = trim($name);
+    $name = preg_replace('/[\\\\\\/\\?\\*\\[\\]:]/', '-', $name);
+    if ($name === '') $name = 'Ventana';
+    return mb_substr($name, 0, 31);
+}
+
+/**
+ * Helper: insertar gráfico de barras
+ */
+private function addBarChart(
+    \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet,
+    string $title,
+    string $categoriesRange,
+    array $valuesRanges,
+    array $seriesNames,
+    string $topLeftCell,
+    string $bottomRightCell
+): void {
+    // ✅ IMPORTANTE: si la hoja tiene espacios, se debe referenciar así:  'Nombre Hoja'!A1:B2
+    $sheetTitle = $sheet->getTitle();
+    $sheetTitle = str_replace("'", "''", $sheetTitle); // escapar comillas simples
+    $sheetRef = "'" . $sheetTitle . "'!";
+
+    // Categorías
+    $categories = new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues(
+        'String',
+        $sheetRef . $categoriesRange,
+        null,
+        1000
+    );
+
+    // Series
+    $dataSeriesValues = [];
+    $dataSeriesLabels = [];
+
+    foreach ($valuesRanges as $i => $rng) {
+        // Labels en array (ok), no como fórmula
+        $dataSeriesLabels[] = new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues(
+            'String',
+            null,
+            null,
+            1,
+            [$seriesNames[$i] ?? ('Serie ' . ($i + 1))]
+        );
+
+        $dataSeriesValues[] = new \PhpOffice\PhpSpreadsheet\Chart\DataSeriesValues(
+            'Number',
+            $sheetRef . $rng,
+            null,
+            1000
+        );
+    }
+
+    $series = new \PhpOffice\PhpSpreadsheet\Chart\DataSeries(
+        \PhpOffice\PhpSpreadsheet\Chart\DataSeries::TYPE_BARCHART,
+        \PhpOffice\PhpSpreadsheet\Chart\DataSeries::GROUPING_CLUSTERED,
+        range(0, count($dataSeriesValues) - 1),
+        $dataSeriesLabels,
+        [$categories],
+        $dataSeriesValues
+    );
+    $series->setPlotDirection(\PhpOffice\PhpSpreadsheet\Chart\DataSeries::DIRECTION_COL);
+
+    $plotArea = new \PhpOffice\PhpSpreadsheet\Chart\PlotArea(null, [$series]);
+    $legend = new \PhpOffice\PhpSpreadsheet\Chart\Legend(
+        \PhpOffice\PhpSpreadsheet\Chart\Legend::POSITION_RIGHT,
+        null,
+        false
+    );
+
+    $chart = new \PhpOffice\PhpSpreadsheet\Chart\Chart(
+        'chart_' . md5($title . $topLeftCell),
+        new \PhpOffice\PhpSpreadsheet\Chart\Title($title),
+        $legend,
+        $plotArea
+    );
+
+    $chart->setTopLeftPosition($topLeftCell);
+    $chart->setBottomRightPosition($bottomRightCell);
+
+    $sheet->addChart($chart);
+}
 }

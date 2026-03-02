@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator";
 
 const FooterComponent = () => {
   const currentYear = new Date().getFullYear();
-
   const footerLinks = [
     {
       title: "Navigation",
@@ -25,9 +24,7 @@ const FooterComponent = () => {
         { name: "Cookie Policy", href: "/cookies" },
       ],
     },
-
   ];
-
   const socialLinks = [
     { icon: <FaFacebook className="h-5 w-5" />, href: "#" },
     { icon: <FaTwitter className="h-5 w-5" />, href: "#" },
@@ -35,7 +32,6 @@ const FooterComponent = () => {
     { icon: <FaLinkedin className="h-5 w-5" />, href: "#" },
     { icon: <FaGithub className="h-5 w-5" />, href: "#" },
   ];
-
   return (
     <motion.footer
       initial={{ opacity: 0 }}
@@ -55,14 +51,13 @@ const FooterComponent = () => {
               <Input
                 type="email"
                 placeholder="Your email address"
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary"
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-400focus:ring-2 focus:ring-primary"
               />
               <Button variant="default" className="whitespace-nowrap">
                 Subscribe
               </Button>
             </div>
           </div>
-
           {/* Footer Links */}
           {footerLinks.map((section, index) => (
             <div key={index}>
@@ -82,15 +77,12 @@ const FooterComponent = () => {
             </div>
           ))}
         </div>
-
         <Separator className="my-8 bg-gray-700" />
-
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           {/* Copyright */}
           <div className="text-sm">
             © {currentYear} Your Company. All rights reserved.
           </div>
-
           {/* Social Links */}
           <div className="flex space-x-4">
             {socialLinks.map((social, index) => (
@@ -106,7 +98,6 @@ const FooterComponent = () => {
               </motion.a>
             ))}
           </div>
-
           {/* Legal Links */}
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <a href="/privacy" className="hover:text-primary transition-colors">
@@ -124,6 +115,4 @@ const FooterComponent = () => {
     </motion.footer>
   );
 };
-
 export default FooterComponent;
-

@@ -32,7 +32,7 @@ export default function ConfirmPassword() {
             <form onSubmit={submit}>
                 <div className="space-y-6">
                     <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">Contraseña</Label>
                         <Input
                             id="password"
                             type="password"
@@ -50,7 +50,7 @@ export default function ConfirmPassword() {
                     <div className="flex items-center">
                         <Button className="w-full" disabled={processing}>
                             {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                            Confirm password
+                            Confirmar constraseña
                         </Button>
                     </div>
                 </div>

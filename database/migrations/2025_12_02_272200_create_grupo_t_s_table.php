@@ -30,7 +30,7 @@ return new class extends Migration {
             $table->string('nombre');
 
             // Código único del grupo
-            $table->string('codigo')->unique();
+            $table->string('codigo');
 
             // Docente a cargo (si lo deseas mantener)
             $table->string('docente')->nullable();

@@ -19,6 +19,12 @@ use App\Http\Controllers\AsistenciaImportController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\NotasImportController;
 use App\Http\Controllers\Reports\PeriodInsightsController;
+use App\Http\Controllers\SaludController;
+use App\Http\Controllers\DeporteController;
+use App\Http\Controllers\DesarrolloController;
+use App\Http\Controllers\PromocionController;
+use Illuminate\Routing\Router;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -154,6 +160,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/periodos/{period}/entregas/{window}/assign-all', [ReportController::class, 'windowsAssignAll'])
             ->name('windows.assign_all');
+        
+Route::get('/periodos/{period}/export-charts', [ReportController::class, 'exportChartsExcel'])
+    ->name('period.export_charts');
 
  
     });
@@ -165,6 +174,51 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notas', [NotasImportController::class, 'index'])->name('notas.index');
         Route::post('/notas/importar', [NotasImportController::class, 'store'])
         ->name('notas.importar');
+    
+     /*
+    |--------------------------------------------------------------------------
+    | Salud
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/salud', [SaludController::class, 'index'])->name('salud.index');
+    Route::get('/salud/{area}', [SaludController::class, 'area'])->name('salud.area');
+    Route::post('/salud/{area}/pacientes', [SaludController::class, 'patientsStore'])->name('salud.pacientes.store');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deportes
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/deportes', [DeporteController::class, 'index'])->name('deportes.index');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Desarrollo Humano
+    |--------------------------------------------------------------------------
+    */ 
+    Route::get('/desarrollo-humano', [DesarrolloController::class, 'index'])->name('desarrollo.index');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Promoción Socioeconómica
+    |--------------------------------------------------------------------------
+    */ 
+    Route::get('/promocion-socioeconomica', [PromocionController::class, 'index'])->name('promocion.index');
+
+
+
+
+    
+
+
+
+
+
+
+
 
 
 

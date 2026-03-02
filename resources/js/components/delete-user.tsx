@@ -41,18 +41,17 @@ export default function DeleteUser() {
 
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button variant="destructive">Delete account</Button>
+                        <Button variant="destructive">Eliminar cuenta</Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogTitle>Are you sure you want to delete your account?</DialogTitle>
+                        <DialogTitle>¿Estás seguro de que quieres eliminar tu cuenta?</DialogTitle>
                         <DialogDescription>
-                            Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password
-                            to confirm you would like to permanently delete your account.
+                            Esta acción es irreversible. Por favor, ingresa tu contraseña para confirmar que deseas eliminar tu cuenta.
                         </DialogDescription>
                         <form className="space-y-6" onSubmit={deleteUser}>
                             <div className="grid gap-2">
                                 <Label htmlFor="password" className="sr-only">
-                                    Password
+                                    Contraseña
                                 </Label>
 
                                 <Input

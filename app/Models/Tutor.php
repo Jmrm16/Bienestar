@@ -50,10 +50,7 @@ class Tutor extends Model
      * Asignaciones reales del tutor
      * (periodo_grupo_tutor como MODELO)
      */
-    public function assignments()
-    {
-        return $this->hasMany(TutorAssignment::class, 'tutor_id');
-    }
+   
 
     /**
      * 🔥 NUEVO
@@ -63,7 +60,7 @@ class Tutor extends Model
     {
         return $this->hasManyThrough(
             TutorReport::class,     // modelo final
-            TutorAssignment::class, // modelo intermedio
+         
             'tutor_id',             // FK en assignments
             'assignment_id',        // FK en tutor_reports
             'id',

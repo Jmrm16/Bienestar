@@ -22,6 +22,10 @@ import {
   Layers,
   Flower,
   ChevronDown,
+  Stethoscope ,
+  Volleyball,
+  PersonStanding,
+  Receipt
 } from 'lucide-react';
 import AppLogo from './app-logo';
 import { useState, useEffect, useMemo } from 'react';
@@ -29,7 +33,7 @@ import clsx from 'clsx';
 
 const mainNavItems: NavItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Panel de control',
     url: '/dashboard',
     icon: LayoutGrid,
   },
@@ -80,6 +84,31 @@ const mainNavItems: NavItem[] = [
     url: '/culturas',
     icon: Flower,
   },
+    {
+    title: 'Salud',
+    url : '/salud',
+    icon: Stethoscope 
+
+   
+  },
+
+  {
+    title: 'Deporte',
+    url  : '/deportes',
+    icon: Volleyball
+
+  },
+  
+  {
+    title: 'Desarrollo Humano',
+    url : '/desarrollo-humano',
+    icon: PersonStanding
+  },
+  {
+    title: 'Promoción Socioeconómica',
+    url : '/promocion-socioeconomica',
+    icon: Receipt
+  }
 ];
 
 const footerNavItems: NavItem[] = [];

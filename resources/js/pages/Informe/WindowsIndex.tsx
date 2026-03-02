@@ -6,7 +6,7 @@ import { type BreadcrumbItem } from "@/types";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import ReportCharts from "@/components/charts/ReportCharts";
-import { Plus, Send, CheckCircle2, Globe, ClipboardList } from "lucide-react";
+import { Plus, Send, CheckCircle2, Globe, ClipboardList, Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -459,33 +459,36 @@ export default function WindowsIndex({
             ✅ CHARTS POR CORTE
         ========================== */}
         <div className="mt-6 space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Gráficos por corte</h2>
-              <p className="text-sm text-muted-foreground">
-                Selecciona un corte para ver sus métricas (no se mezclan).
-              </p>
-            </div>
+<div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end sm:gap-3">
+  <div className="w-full sm:w-[320px]">
+    <Label className="text-xs text-muted-foreground">Corte</Label>
+    <Select
+      value={String(selectedWindowId)}
+      onValueChange={(v) => setSelectedWindowId(Number(v))}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleccione un corte" />
+      </SelectTrigger>
+      <SelectContent>
+        {windows.map((w) => (
+          <SelectItem key={w.id} value={String(w.id)}>
+            {w.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 
-            <div className="w-full sm:w-[320px]">
-              <Label className="text-xs text-muted-foreground">Corte</Label>
-              <Select
-                value={String(selectedWindowId)}
-                onValueChange={(v) => setSelectedWindowId(Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione un corte" />
-                </SelectTrigger>
-                <SelectContent>
-                  {windows.map((w) => (
-                    <SelectItem key={w.id} value={String(w.id)}>
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+  {/* ✅ Botón exportar Excel (charts de TODO el periodo) */}
+<Button
+  variant="outline"
+  className="gap-2"
+  onClick={() => window.open(route("reports.period.export_charts", period.id), "_blank")}
+>
+  <Download className="h-4 w-4" />
+  Exportar Excel (Charts)
+</Button>
+</div>
 
           <ReportCharts
             data={selectedCharts}

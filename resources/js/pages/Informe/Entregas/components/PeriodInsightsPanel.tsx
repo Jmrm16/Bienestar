@@ -188,8 +188,11 @@ export default function ReportTreeTable({ insights }: { insights: Insights | nul
   }
 
   return (
+    
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+      
       <Card>
+
         <CardHeader className="pb-2">
           <CardTitle className="text-base">
             Carreras → Asignaturas → Tutores (por informe)

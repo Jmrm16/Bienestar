@@ -56,6 +56,10 @@ class TutorReportController extends Controller
      * - Mismo periodo + mismo tutor + mismo grupo_id + mismo estudiante + misma fecha => NO insertar
      * - NO importa el report_window_id para comparar
      *
+     * ✅ MEJORA DESTINO (NORMAL):
+     * - El grupo se resuelve por (CODIGO_GRUPO + ASIGNATURA) del Excel, no solo por código.
+     * - Si no existe esa combinación para el tutor en el periodo => NO se sube esa fila.
+     *
      * REGLA anti-duplicado (OCASIONALES):
      * - Se guarda en asistencias_ocasionales con unique_key hash (period+tutor+ident+fecha+asignatura_texto+grupo_texto)
      */
@@ -73,11 +77,18 @@ class TutorReportController extends Controller
         $period = $window->period;
         abort_unless($period && $period->is_active, 403);
 
-        // 🔑 Grupos del tutor indexados por código (E1, E2, etc) para hoja NORMAL
+        // ✅ Grupos del tutor en el periodo, con asignatura cargada
         $gruposTutor = $tutor->grupos()
             ->wherePivot('period_id', $period->id)
-            ->get()
-            ->keyBy(fn ($g) => strtoupper(trim((string) $g->codigo)));
+            ->with('asignatura:id,nombre')
+            ->get();
+
+        // ✅ Mapa por (CODIGO|ASIGNATURA_NORMALIZADA) => GrupoT
+        $gruposPorCodigoAsignatura = $gruposTutor->keyBy(function ($g) {
+            $codigo = strtoupper(trim((string) $g->codigo));
+            $asig = $this->norm((string) (optional($g->asignatura)->nombre ?? ''));
+            return $codigo . '|' . $asig;
+        });
 
         $archivo = $request->file('archivo');
 
@@ -212,10 +223,11 @@ class TutorReportController extends Controller
         $hoja1 = $sheetNormal->toArray(null, true, true, true);
         $p1 = $parseSheet($hoja1);
 
-        // Para NORMAL sí exigimos GRUPO
+        // ✅ Para NORMAL exigimos GRUPO + ASIGNATURA
         abort_unless($p1['colGrupo'], 422, 'No se detectó columna GRUPO en la hoja 1.');
+        abort_unless($p1['colAsignatura'], 422, 'No se detectó columna ASIGNATURA en la hoja 1.');
 
-        // Anti-duplicado normal (entre ventanas)
+        // Anti-duplicado normal (entre ventanas): solo grupos del tutor en el periodo
         $grupoIds = $gruposTutor->pluck('id')->values();
 
         $existentesSet = Asistencia::where('period_id', $period->id)
@@ -241,10 +253,20 @@ class TutorReportController extends Controller
 
             $identificacionNorm = $this->normId($identificacionRaw);
 
+            // ✅ Resolver destino por (GRUPO + ASIGNATURA)
             $codigoGrupo = strtoupper(trim((string) ($fila[$p1['colGrupo']] ?? '')));
-            if (!$codigoGrupo || !$gruposTutor->has($codigoGrupo)) continue;
+            $asignaturaExcel = $this->norm((string) ($fila[$p1['colAsignatura']] ?? ''));
 
-            $grupo = $gruposTutor[$codigoGrupo];
+            if ($codigoGrupo === '' || $asignaturaExcel === '') continue;
+
+            $keyGrupo = $codigoGrupo . '|' . $asignaturaExcel;
+
+            if (!isset($gruposPorCodigoAsignatura[$keyGrupo])) {
+                // No pertenece al tutor o no coincide la asignatura con el grupo
+                continue;
+            }
+
+            $grupo = $gruposPorCodigoAsignatura[$keyGrupo];
 
             $codigo = trim((string) ($fila[$p1['colCodigo']] ?? ''));
             $programa = trim((string) ($fila[$p1['colPrograma']] ?? ''));
@@ -480,6 +502,88 @@ class TutorReportController extends Controller
         ]);
     }
 
+    /**
+     * ✅ Ver asistencias OCASIONALES (por ventana) + notas (si aplican)
+     */
+    public function asistenciasOcasionales(ReportWindow $window)
+    {
+        $tutorAuth = Auth::guard('tutor')->user();
+        abort_unless($tutorAuth, 403);
+
+        $tutor = Tutor::findOrFail($tutorAuth->id);
+
+        abort_unless($window->is_published, 403);
+
+        $period = $window->period;
+        abort_unless($period, 403);
+
+        $ocasionales = AsistenciaOcasional::where('period_id', $period->id)
+            ->where('report_window_id', $window->id)
+            ->where('tutor_id', $tutor->id)
+            ->orderBy('apellidos_del_estudiante')
+            ->orderBy('nombres_del_estudiante')
+            ->orderBy('asignatura_texto')
+            ->orderBy('grupo_texto')
+            ->orderBy('fecha')
+            ->get();
+
+        $notas = \App\Models\Nota::where('period_id', $period->id)
+            ->get()
+            ->keyBy(fn ($n) => trim($n->identificacion) . '|' . mb_strtolower(trim($n->materia)));
+
+        $resultado = $ocasionales
+            ->groupBy(function ($a) {
+                $ident = trim((string) $a->identificacion);
+                $asig  = mb_strtolower(trim((string) ($a->asignatura_texto ?? '')));
+                $grp   = mb_strtolower(trim((string) ($a->grupo_texto ?? '')));
+                return $ident . '|' . $asig . '|' . $grp;
+            })
+            ->map(function ($items) use ($notas) {
+                $first = $items->first();
+
+                $ident = trim((string) $first->identificacion);
+                $materiaKey = mb_strtolower(trim((string) ($first->asignatura_texto ?? '')));
+                $notaKey = $ident . '|' . $materiaKey;
+                $nota = $notas->get($notaKey);
+
+                $fechas = $items->pluck('fecha')
+                    ->map(fn ($f) => (string) $f)
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => $first->id,
+                    'estudiante' => trim($first->nombres_del_estudiante . ' ' . $first->apellidos_del_estudiante),
+                    'codigo' => $first->codigo_estudiantil,
+                    'programa' => $first->programa_academico,
+                    'sexo' => $first->sexo,
+                    'grupo_priorizado' => $first->grupo_priorizado ?: '—',
+
+                    'asignatura_texto' => $first->asignatura_texto,
+                    'grupo_texto' => $first->grupo_texto,
+
+                    'total_asistencias' => (int) $items->count(),
+                    'fecha' => implode(', ', $fechas),
+                    'fechas' => $fechas,
+
+                    'nota_1' => $nota?->nota_1,
+                    'nota_2' => $nota?->nota_2,
+                    'nota_3' => $nota?->nota_3,
+                    'definitiva' => $nota?->definitiva,
+                    'final' => $nota?->final,
+                ];
+            })
+            ->values();
+
+        return Inertia::render('Tutores/AsistenciasOcasionales', [
+            'window' => [
+                'id' => $window->id,
+                'name' => $window->name,
+            ],
+            'asistencias' => $resultado,
+        ]);
+    }
+
     /* =========================================================
        HELPERS
     ========================================================= */
@@ -595,92 +699,4 @@ class TutorReportController extends Controller
 
         return count($vals) ? implode(', ', array_values(array_unique($vals))) : null;
     }
-
-    /**
- * ✅ Ver asistencias OCASIONALES (por ventana) + notas (si aplican)
- */
-public function asistenciasOcasionales(ReportWindow $window)
-{
-    $tutorAuth = Auth::guard('tutor')->user();
-    abort_unless($tutorAuth, 403);
-
-    $tutor = Tutor::findOrFail($tutorAuth->id);
-
-    abort_unless($window->is_published, 403);
-
-    $period = $window->period;
-    abort_unless($period, 403);
-
-    // Traer ocasionales del tutor (en esta ventana)
-    $ocasionales = AsistenciaOcasional::where('period_id', $period->id)
-        ->where('report_window_id', $window->id)
-        ->where('tutor_id', $tutor->id)
-        ->orderBy('apellidos_del_estudiante')
-        ->orderBy('nombres_del_estudiante')
-        ->orderBy('asignatura_texto')
-        ->orderBy('grupo_texto')
-        ->orderBy('fecha')
-        ->get();
-
-    // Notas por (identificacion|materia)
-    $notas = \App\Models\Nota::where('period_id', $period->id)
-        ->get()
-        ->keyBy(fn ($n) => trim($n->identificacion) . '|' . mb_strtolower(trim($n->materia)));
-
-    // Agrupar por estudiante + asignatura_texto + grupo_texto
-    $resultado = $ocasionales
-        ->groupBy(function ($a) {
-            $ident = trim((string) $a->identificacion);
-            $asig  = mb_strtolower(trim((string) ($a->asignatura_texto ?? '')));
-            $grp   = mb_strtolower(trim((string) ($a->grupo_texto ?? '')));
-            return $ident . '|' . $asig . '|' . $grp;
-        })
-        ->map(function ($items) use ($notas) {
-            $first = $items->first();
-
-            $ident = trim((string) $first->identificacion);
-            $materiaKey = mb_strtolower(trim((string) ($first->asignatura_texto ?? '')));
-            $notaKey = $ident . '|' . $materiaKey;
-            $nota = $notas->get($notaKey);
-
-            $fechas = $items->pluck('fecha')
-                ->map(fn ($f) => (string) $f)
-                ->values()
-                ->all();
-
-            return [
-                'id' => $first->id,
-                'estudiante' => trim($first->nombres_del_estudiante . ' ' . $first->apellidos_del_estudiante),
-                'codigo' => $first->codigo_estudiantil,
-                'programa' => $first->programa_academico,
-                'sexo' => $first->sexo,
-                'grupo_priorizado' => $first->grupo_priorizado ?: '—',
-
-                // ✅ extra para ocasionales
-                'asignatura_texto' => $first->asignatura_texto,
-                'grupo_texto' => $first->grupo_texto,
-
-                'total_asistencias' => (int) $items->count(),
-                'fecha' => implode(', ', $fechas),
-                'fechas' => $fechas,
-
-                // notas si existen
-                'nota_1' => $nota?->nota_1,
-                'nota_2' => $nota?->nota_2,
-                'nota_3' => $nota?->nota_3,
-                'definitiva' => $nota?->definitiva,
-                'final' => $nota?->final,
-            ];
-        })
-        ->values();
-
-    return Inertia::render('Tutores/AsistenciasOcasionales', [
-        'window' => [
-            'id' => $window->id,
-            'name' => $window->name,
-        ],
-        'asistencias' => $resultado,
-    ]);
-}
-
 }

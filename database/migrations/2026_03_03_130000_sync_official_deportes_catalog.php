@@ -2,11 +2,16 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('deportes')) {
+            return;
+        }
+
         $records = $this->officialRecords(now());
         $slugs = array_column($records, 'slug');
 
@@ -35,6 +40,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!Schema::hasTable('deportes')) {
+            return;
+        }
+
         DB::table('deportes')->delete();
         DB::table('deportes')->insert($this->sampleRecords(now()));
     }

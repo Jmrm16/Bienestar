@@ -14,6 +14,7 @@ class Deporte extends Model
     protected $fillable = [
         'slug',
         'title',
+        'card_subtitle',
         'description',
         'location',
         'schedule',

@@ -168,6 +168,7 @@ class DeporteController extends Controller
         return [
             'key' => $area->slug,
             'title' => $area->title,
+            'card_subtitle' => $area->card_subtitle,
             'description' => $area->description,
             'location' => $area->location,
             'schedule' => $area->schedule,

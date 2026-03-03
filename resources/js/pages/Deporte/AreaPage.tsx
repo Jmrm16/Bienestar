@@ -136,7 +136,9 @@ export default function AreaPage({
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.9fr]">
           <Card className={`rounded-3xl border ${style.softCard}`}>
             <CardHeader>
-              <CardTitle>Informacion general</CardTitle>
+              <CardTitle className="text-foreground dark:text-slate-50">
+                Informacion general
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -147,12 +149,12 @@ export default function AreaPage({
                     </div>
                     <div>
                       <div className="text-sm font-medium">Horario</div>
-                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                      <div className={`text-xs uppercase tracking-[0.18em] ${style.subcopy}`}>
                         Programacion
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className={`text-sm ${style.subcopy}`}>
                     {area.schedule}
                   </p>
                 </div>
@@ -163,12 +165,12 @@ export default function AreaPage({
                     </div>
                     <div>
                       <div className="text-sm font-medium">Lugar</div>
-                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                      <div className={`text-xs uppercase tracking-[0.18em] ${style.subcopy}`}>
                         Escenario
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className={`text-sm ${style.subcopy}`}>
                     {area.location}
                   </p>
                 </div>
@@ -180,13 +182,15 @@ export default function AreaPage({
                     <ClipboardList className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-semibold">Descripcion</h2>
-                    <p className="text-sm text-muted-foreground">
+                    <h2 className={`text-base font-semibold ${style.copy}`}>
+                      Descripcion
+                    </h2>
+                    <p className={`text-sm ${style.subcopy}`}>
                       Resumen de la oferta deportiva
                     </p>
                   </div>
                 </div>
-                <div className={`rounded-3xl border p-5 text-sm leading-7 text-muted-foreground ${style.emphasisPanel}`}>
+                <div className={`rounded-3xl border p-5 text-sm leading-7 ${style.subcopy} ${style.emphasisPanel}`}>
                   {area.description}
                 </div>
               </div>
@@ -197,12 +201,12 @@ export default function AreaPage({
                     <Activity className="h-4 w-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-semibold">
+                    <h2 className={`text-base font-semibold ${style.copy}`}>
                       {area.kind === "servicio"
                         ? "Practicas o implementos disponibles"
                         : "Lineas de trabajo"}
                     </h2>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={`text-sm ${style.subcopy}`}>
                       Componentes principales de esta oferta
                     </p>
                   </div>
@@ -212,14 +216,14 @@ export default function AreaPage({
                     {area.services.map((service) => (
                       <div
                         key={service}
-                        className={`rounded-3xl border p-4 text-sm text-muted-foreground shadow-sm ${style.softCard}`}
+                        className={`rounded-3xl border p-4 text-sm shadow-sm ${style.chip}`}
                       >
                         {service}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+                  <div className={`rounded-2xl border border-dashed p-4 text-sm ${style.subcopy}`}>
                     Sin lineas adicionales registradas por ahora.
                   </div>
                 )}
@@ -229,7 +233,9 @@ export default function AreaPage({
 
           <Card className={`rounded-3xl border ${style.softCard}`}>
             <CardHeader>
-              <CardTitle>Requisitos y control</CardTitle>
+              <CardTitle className="text-foreground dark:text-slate-50">
+                Requisitos y control
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
@@ -241,7 +247,7 @@ export default function AreaPage({
                     <div className={`mt-0.5 rounded-full p-1.5 ${style.softIcon}`}>
                       <CheckCircle2 className="h-4 w-4" />
                     </div>
-                    <p className="text-sm text-muted-foreground">{requirement}</p>
+                    <p className={`text-sm ${style.subcopy}`}>{requirement}</p>
                   </div>
                 ))}
               </div>
@@ -253,22 +259,22 @@ export default function AreaPage({
                   </div>
                   <div>
                     <div className="text-sm font-medium">Gestion operativa</div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    <div className={`text-xs uppercase tracking-[0.18em] ${style.subcopy}`}>
                       Seguimiento
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className={`text-sm ${style.subcopy}`}>
                   Usa la seccion de participantes para llevar registros,
                   mantener el control de la disciplina y exportar informes en
                   CSV cuando lo necesites.
                 </p>
                 <div className="mt-4 grid gap-3">
-                  <div className={`flex items-center gap-3 rounded-2xl border p-3 text-sm text-muted-foreground ${style.softCard}`}>
+                  <div className={`flex items-center gap-3 rounded-2xl border p-3 text-sm ${style.copy} ${style.softCard}`}>
                     <ClipboardList className={`h-4 w-4 ${style.action}`} />
                     Registro y actualizacion de participantes
                   </div>
-                  <div className={`flex items-center gap-3 rounded-2xl border p-3 text-sm text-muted-foreground ${style.softCard}`}>
+                  <div className={`flex items-center gap-3 rounded-2xl border p-3 text-sm ${style.copy} ${style.softCard}`}>
                     <FileSpreadsheet className={`h-4 w-4 ${style.action}`} />
                     Exportacion de informes por disciplina
                   </div>

@@ -8,40 +8,38 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('estudiantes')) {
+            return;
+        }
+
         Schema::create('estudiantes', function (Blueprint $table) {
             $table->id();
 
-            // ✅ Relación con periodo
-            $table->foreignId('period_id')
-                ->constrained('report_periods')
-                ->cascadeOnDelete();
+            // `report_periods` se crea despues en el historial actual.
+            $table->unsignedBigInteger('period_id');
 
-            // ✅ Datos del Excel
-            $table->string('identificacion', 50);          // IDENTIFICACION
-            $table->string('nombres', 150)->nullable();    // (si separas)
-            $table->string('apellidos', 150)->nullable();  // (si separas)
+            $table->string('identificacion', 50);
+            $table->string('nombres', 150)->nullable();
+            $table->string('apellidos', 150)->nullable();
 
-            $table->string('sexo', 20)->nullable();                 // SEXO
-            $table->string('grupos_prioritarios', 255)->nullable(); // GRUPOS PRIORITARIOS
-            $table->string('estamento', 100)->nullable();           // ESTAMENTO
-            $table->string('dependencia', 150)->nullable();         // DEPENDENCIA (repitencia sí, acompañamiento puede no)
-            $table->string('programa_academico', 150)->nullable();  // PROGRAMA ACADEMICO
+            $table->string('sexo', 20)->nullable();
+            $table->string('grupos_prioritarios', 255)->nullable();
+            $table->string('estamento', 100)->nullable();
+            $table->string('dependencia', 150)->nullable();
+            $table->string('programa_academico', 150)->nullable();
 
-            // ✅ clave para separar registros repetidos
-            $table->string('servicio', 150)->nullable();            // hoja o columna SERVICIO
-            $table->string('actividad', 200)->nullable();           // ACTIVIDAD (puede ser larga)
-            $table->string('responsable', 150)->nullable();         // RESPONSABLE
-            $table->string('trimestre', 50)->nullable();            // TRIMESTRE
+            $table->string('servicio', 150)->nullable();
+            $table->string('actividad', 200)->nullable();
+            $table->string('responsable', 150)->nullable();
+            $table->string('trimestre', 50)->nullable();
 
             $table->timestamps();
 
-            // ✅ Evita duplicados EXACTOS del mismo estudiante en el mismo servicio/actividad/trimestre
             $table->unique(
                 ['period_id', 'identificacion', 'servicio', 'actividad', 'trimestre'],
                 'uniq_est_period_serv_act_trim'
             );
 
-            // ✅ índices para búsquedas y reportes
             $table->index(['period_id']);
             $table->index(['identificacion']);
             $table->index(['period_id', 'servicio']);

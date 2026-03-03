@@ -8,6 +8,7 @@ import { MetricCard } from "@/components/component/MetricCard";
 import {
   Download,
   Plus,
+  RotateCcw,
   Search,
   UserCheck,
   Users,
@@ -17,7 +18,9 @@ import { getAreaStyle } from "./area-styles";
 import { ParticipantDialog } from "./ParticipantDialog";
 import type { ParticipantFormValues } from "./ParticipantForm";
 import {
+  getParticipantEstamentoBadgeClass,
   getParticipantStateBadgeClass,
+  PARTICIPANT_ESTAMENTOS,
   PARTICIPANT_STATES,
 } from "./participant-badges";
 import { ParticipantsTable } from "./ParticipantsTable";
@@ -50,31 +53,79 @@ export function ParticipantsSection({
 }) {
   const [q, setQ] = useState("");
   const [stateFilter, setStateFilter] = useState<string>("Todos");
+  const [estamentoFilter, setEstamentoFilter] = useState<string>("Todos");
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<SportParticipant | null>(null);
   const style = getAreaStyle(sportKey);
   const Icon = style.icon;
+  const hasActiveFilters =
+    q.trim().length > 0 ||
+    stateFilter !== "Todos" ||
+    estamentoFilter !== "Todos";
+
+  const searchedParticipants = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return participants.filter((participant) => {
+      if (!term) return true;
+
+      const fullName = `${participant.nombres} ${participant.apellidos}`.toLowerCase();
+
+      return (
+        participant.documento.toLowerCase().includes(term) ||
+        fullName.includes(term) ||
+        participant.estamento.toLowerCase().includes(term) ||
+        participant.estado.toLowerCase().includes(term) ||
+        (participant.carrera_nombre ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [participants, q]);
+
+  const stateScopedParticipants = useMemo(() => {
+    return searchedParticipants.filter((participant) =>
+      estamentoFilter === "Todos"
+        ? true
+        : participant.estamento === estamentoFilter
+    );
+  }, [searchedParticipants, estamentoFilter]);
+
+  const estamentoScopedParticipants = useMemo(() => {
+    return searchedParticipants.filter((participant) =>
+      stateFilter === "Todos" ? true : participant.estado === stateFilter
+    );
+  }, [searchedParticipants, stateFilter]);
+
+  const stateCounts = useMemo(() => {
+    return PARTICIPANT_STATES.reduce<Record<string, number>>((acc, state) => {
+      acc[state] = stateScopedParticipants.filter(
+        (participant) => participant.estado === state
+      ).length;
+      return acc;
+    }, {});
+  }, [stateScopedParticipants]);
+
+  const estamentoCounts = useMemo(() => {
+    return PARTICIPANT_ESTAMENTOS.reduce<Record<string, number>>(
+      (acc, estamento) => {
+        acc[estamento] = estamentoScopedParticipants.filter(
+          (participant) => participant.estamento === estamento
+        ).length;
+        return acc;
+      },
+      {}
+    );
+  }, [estamentoScopedParticipants]);
 
   const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return participants
-      .filter((participant) => {
-        if (!term) return true;
-
-        const fullName = `${participant.nombres} ${participant.apellidos}`.toLowerCase();
-
-        return (
-          participant.documento.toLowerCase().includes(term) ||
-          fullName.includes(term) ||
-          participant.estamento.toLowerCase().includes(term) ||
-          participant.estado.toLowerCase().includes(term) ||
-          (participant.carrera_nombre ?? "").toLowerCase().includes(term)
-        );
-      })
+    return searchedParticipants
       .filter((participant) =>
         stateFilter === "Todos" ? true : participant.estado === stateFilter
+      )
+      .filter((participant) =>
+        estamentoFilter === "Todos"
+          ? true
+          : participant.estamento === estamentoFilter
       );
-  }, [participants, q, stateFilter]);
+  }, [searchedParticipants, stateFilter, estamentoFilter]);
 
   const createParticipant = (values: ParticipantFormValues) => {
     router.post(
@@ -125,6 +176,12 @@ export function ParticipantsSection({
     });
   };
 
+  const clearFilters = () => {
+    setQ("");
+    setStateFilter("Todos");
+    setEstamentoFilter("Todos");
+  };
+
   return (
     <Card className={`rounded-3xl border ${style.softCard}`}>
       <CardContent className="space-y-6 p-5">
@@ -135,13 +192,15 @@ export function ParticipantsSection({
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">Participantes</h2>
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <h2 className={`text-lg font-semibold tracking-tight ${style.copy}`}>
+                  Participantes
+                </h2>
+                <p className={`text-xs uppercase tracking-[0.18em] ${style.subcopy}`}>
                   Gestion por disciplina
                 </p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className={`text-sm ${style.subcopy}`}>
               Registra, actualiza y consulta las personas vinculadas a esta
               disciplina para control e informes.
             </p>
@@ -168,7 +227,7 @@ export function ParticipantsSection({
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-sm font-medium">Control e informes</div>
-              <p className="text-sm text-muted-foreground">
+              <p className={`text-sm ${style.subcopy}`}>
                 Usa esta seccion para consolidar los registros de {sportTitle.toLowerCase()} y exportar reportes cuando lo necesites.
               </p>
             </div>
@@ -208,9 +267,23 @@ export function ParticipantsSection({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por documento, nombre, estamento, estado o carrera..."
-            className={`pl-9 ${style.emphasisPanel}`}
+            className={`pl-9 ${style.emphasisPanel} ${style.copy} placeholder:text-slate-500 dark:placeholder:text-slate-400`}
           />
         </div>
+
+        {hasActiveFilters ? (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className={style.badge}
+              onClick={clearFilters}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Limpiar filtros
+            </Button>
+          </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -219,7 +292,7 @@ export function ParticipantsSection({
             className={stateFilter === "Todos" ? style.badge : undefined}
             onClick={() => setStateFilter("Todos")}
           >
-            Todos
+            {`Todos (${stateScopedParticipants.length})`}
           </Button>
           {PARTICIPANT_STATES.map((state) => (
             <button
@@ -231,10 +304,42 @@ export function ParticipantsSection({
               <Badge
                 variant="outline"
                 className={`${getParticipantStateBadgeClass(state)} ${
-                  stateFilter === state ? "ring-2 ring-offset-2" : ""
+                  stateFilter === state
+                    ? "ring-2 ring-offset-2 ring-offset-background dark:ring-offset-slate-950"
+                    : ""
                 }`}
               >
-                {state}
+                {`${state} (${stateCounts[state] ?? 0})`}
+              </Badge>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className={estamentoFilter === "Todos" ? style.badge : undefined}
+            onClick={() => setEstamentoFilter("Todos")}
+          >
+            {`Todos los estamentos (${estamentoScopedParticipants.length})`}
+          </Button>
+          {PARTICIPANT_ESTAMENTOS.map((estamento) => (
+            <button
+              key={estamento}
+              type="button"
+              onClick={() => setEstamentoFilter(estamento)}
+              className="inline-flex"
+            >
+              <Badge
+                variant="outline"
+                className={`${getParticipantEstamentoBadgeClass(estamento)} ${
+                  estamentoFilter === estamento
+                    ? "ring-2 ring-offset-2 ring-offset-background dark:ring-offset-slate-950"
+                    : ""
+                }`}
+              >
+                {`${estamento} (${estamentoCounts[estamento] ?? 0})`}
               </Badge>
             </button>
           ))}

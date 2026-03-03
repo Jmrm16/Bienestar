@@ -10,6 +10,7 @@ import { getAreaStyle } from "./components/area-styles";
 type SportArea = {
   key: string;
   title: string;
+  card_subtitle?: string | null;
   description: string;
   href: string;
   location: string;
@@ -93,7 +94,7 @@ export default function DeporteIndex({
 
         <div className="space-y-3">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-50">
               Panorama del area
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -135,7 +136,7 @@ export default function DeporteIndex({
 
         <div className="space-y-3">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-50">
               Oferta por disciplina
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -173,19 +174,24 @@ export default function DeporteIndex({
                 </div>
 
                 <div className="relative mt-5">
-                  <h2 className="text-lg font-semibold tracking-tight">
+                  {area.card_subtitle ? (
+                    <div className={`mb-2 text-[11px] font-medium uppercase tracking-[0.22em] ${style.action}`}>
+                      {area.card_subtitle}
+                    </div>
+                  ) : null}
+                  <h2 className={`text-lg font-semibold tracking-tight ${style.copy}`}>
                     {area.title}
                   </h2>
-                  <p className="mt-2 line-clamp-2 min-h-[3rem] text-sm text-muted-foreground">
+                  <p className={`mt-2 line-clamp-2 min-h-[3rem] text-sm ${style.subcopy}`}>
                     {area.description}
                   </p>
                 </div>
 
                 <div className={`mt-4 rounded-3xl border p-4 ${style.focusPanel}`}>
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  <div className={`text-[11px] uppercase tracking-[0.22em] ${style.subcopy}`}>
                     Enfoque
                   </div>
-                  <div className="mt-1 text-sm font-medium leading-6 text-foreground">
+                  <div className={`mt-1 text-sm font-medium leading-6 ${style.copy}`}>
                     {area.focus}
                   </div>
                 </div>
@@ -195,7 +201,7 @@ export default function DeporteIndex({
                     {area.services.slice(0, 2).map((item) => (
                       <span
                         key={item}
-                        className="rounded-full border bg-background/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur"
+                        className={`rounded-full border px-2.5 py-1 text-xs backdrop-blur ${style.chip}`}
                       >
                         {item}
                       </span>

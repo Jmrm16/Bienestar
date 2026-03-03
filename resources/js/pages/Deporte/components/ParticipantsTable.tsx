@@ -30,22 +30,22 @@ export function ParticipantsTable({
   return (
     <div className={`overflow-hidden rounded-3xl border ${style.softCard}`}>
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Documento</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Estamento</TableHead>
-            <TableHead>Carrera</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Ingreso</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+        <TableHeader className={style.focusPanel}>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className={style.copy}>Documento</TableHead>
+            <TableHead className={style.copy}>Nombre</TableHead>
+            <TableHead className={style.copy}>Estamento</TableHead>
+            <TableHead className={style.copy}>Carrera</TableHead>
+            <TableHead className={style.copy}>Estado</TableHead>
+            <TableHead className={style.copy}>Ingreso</TableHead>
+            <TableHead className={`text-right ${style.copy}`}>Acciones</TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={7} className={`py-8 text-center ${style.subcopy}`}>
                 No hay participantes registrados para esta disciplina.
               </TableCell>
             </TableRow>

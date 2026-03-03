@@ -6,22 +6,45 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-public function up(): void
-{
-    Schema::table('culturas', function (Blueprint $table) {
-        $table->string('categoria')->nullable();
-        $table->string('lugar')->nullable();
-        $table->string('hora')->nullable();
-    });
-}
+    public function up(): void
+    {
+        if (!Schema::hasTable('culturas')) {
+            return;
+        }
 
-public function down(): void
-{
-    Schema::table('culturas', function (Blueprint $table) {
-        $table->dropColumn(['categoria', 'lugar', 'hora']);
-    });
-}
+        Schema::table('culturas', function (Blueprint $table) {
+            if (!Schema::hasColumn('culturas', 'categoria')) {
+                $table->string('categoria')->nullable();
+            }
+
+            if (!Schema::hasColumn('culturas', 'lugar')) {
+                $table->string('lugar')->nullable();
+            }
+
+            if (!Schema::hasColumn('culturas', 'hora')) {
+                $table->string('hora')->nullable();
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        if (!Schema::hasTable('culturas')) {
+            return;
+        }
+
+        Schema::table('culturas', function (Blueprint $table) {
+            $columns = [];
+
+            foreach (['categoria', 'lugar', 'hora'] as $column) {
+                if (Schema::hasColumn('culturas', $column)) {
+                    $columns[] = $column;
+                }
+            }
+
+            if ($columns !== []) {
+                $table->dropColumn($columns);
+            }
+        });
+    }
 };

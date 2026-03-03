@@ -162,35 +162,23 @@ export default function DeporteIndex({
 
                 <div className="mt-4">
                   <h2 className="text-lg font-semibold">{area.title}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 line-clamp-3 min-h-[4.5rem] text-sm text-muted-foreground">
                     {area.description}
                   </p>
                 </div>
 
-                <div className="mt-5 grid gap-2 text-sm text-muted-foreground">
-                  <div className="flex items-center justify-between gap-4">
-                    <span>Enfoque</span>
-                    <span className="text-right font-medium text-foreground">
-                      {area.focus}
-                    </span>
+                <div className="mt-4 rounded-2xl bg-muted/40 p-3">
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                    Enfoque
                   </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span>Programacion</span>
-                    <span className="text-right font-medium text-foreground">
-                      {area.schedule}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span>Ubicacion</span>
-                    <span className="text-right font-medium text-foreground">
-                      {area.location}
-                    </span>
+                  <div className="mt-1 text-sm font-medium text-foreground">
+                    {area.focus}
                   </div>
                 </div>
 
                 {area.services.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {area.services.slice(0, 3).map((item) => (
+                    {area.services.slice(0, 2).map((item) => (
                       <span
                         key={item}
                         className="rounded-full border px-2 py-1 text-xs text-muted-foreground"

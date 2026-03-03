@@ -20,115 +20,170 @@ class NotasImportController extends Controller
         ]);
     }
 
-public function store(Request $request)
-{
-    ini_set('memory_limit', '2048M');
-    set_time_limit(0);
+    public function store(Request $request)
+    {
+        ini_set('memory_limit', '2048M');
+        set_time_limit(0);
 
-    $request->validate([
-        'archivo' => 'required|file|mimes:xlsx,xls',
-    ]);
-
-    /* =========================
-       PERIODO ACTIVO
-    ========================= */
-    $period = ReportPeriod::where('is_active', true)->first();
-    if (!$period) {
-        return back()->withErrors([
-            'archivo' => 'No hay un período académico activo.'
+        $request->validate([
+            'archivo' => 'required|file|mimes:xlsx,xls',
         ]);
-    }
 
-    $spreadsheet = IOFactory::load($request->file('archivo'));
-    $sheet = $this->detectarHojaConDatos($spreadsheet);
+        /* =========================
+           PERIODO ACTIVO
+        ========================= */
+        $period = ReportPeriod::where('is_active', true)->first();
+        if (!$period) {
+            return back()->withErrors([
+                'archivo' => 'No hay un período académico activo.'
+            ]);
+        }
 
-    if (!$sheet) {
-        return back()->withErrors([
-            'archivo' => 'No se encontró una hoja válida con Identificación.'
-        ]);
-    }
+        $spreadsheet = IOFactory::load($request->file('archivo'));
+        $sheet = $this->detectarHojaConDatos($spreadsheet);
 
-    $userId = Auth::id();
-    $importadas = 0;
-    $batch = [];
+        if (!$sheet) {
+            return back()->withErrors([
+                'archivo' => 'No se encontró una hoja válida con Identificación.'
+            ]);
+        }
 
-    DB::beginTransaction();
+        $existingKeys = Nota::query()
+            ->where('period_id', $period->id)
+            ->get(['identificacion', 'ide_materia', 'materia', 'grupo'])
+            ->mapWithKeys(function (Nota $nota) {
+                $key = $this->buildNotaUniqueKey([
+                    'identificacion' => $nota->identificacion,
+                    'ide_materia' => $nota->ide_materia,
+                    'materia' => $nota->materia,
+                    'grupo' => $nota->grupo,
+                ]);
 
-    try {
-        foreach ($sheet->getRowIterator() as $rowIndex => $row) {
+                return $key ? [$key => true] : [];
+            })
+            ->all();
 
-            // ⛔ Saltar encabezados
-            if ($rowIndex < 2) continue;
+        $userId = Auth::id();
+        $importadas = 0;
+        $duplicadas = 0;
+        $invalidas = 0;
+        $batch = [];
+        $seenKeys = $existingKeys;
 
-            $cells = [];
-            foreach ($row->getCellIterator() as $cell) {
-                $cells[$cell->getColumn()] = $cell->getValue();
+        DB::beginTransaction();
+
+        try {
+            foreach ($sheet->getRowIterator() as $rowIndex => $row) {
+
+                // ⛔ Saltar encabezados
+                if ($rowIndex < 2) {
+                    continue;
+                }
+
+                $cells = [];
+                foreach ($row->getCellIterator() as $cell) {
+                    $cells[$cell->getColumn()] = $cell->getValue();
+                }
+
+                $payload = [
+                    'codigo'              => $cells['A'] ?? null,
+                    'apellidos'           => trim((string) ($cells['B'] ?? '')),
+                    'nombres'             => trim((string) ($cells['C'] ?? '')),
+                    'tipo_identificacion' => trim((string) ($cells['D'] ?? '')),
+                    'identificacion'      => $this->normalizeIdentificacion($cells['E'] ?? null),
+
+                    'ide_programa' => $cells['F'] ?? null,
+                    'programa'     => $this->nullableTrim($cells['G'] ?? null),
+                    'semestre'     => $this->nullableTrim($cells['H'] ?? null),
+
+                    'ide_materia' => $this->nullableTrim($cells['I'] ?? null),
+                    'materia'     => $this->nullableTrim($cells['J'] ?? null),
+                    'grupo'       => $this->nullableTrim($cells['K'] ?? null),
+
+                    'nota_1'       => is_numeric($cells['L'] ?? null) ? $cells['L'] : null,
+                    'nota_2'       => is_numeric($cells['M'] ?? null) ? $cells['M'] : null,
+                    'nota_3'       => is_numeric($cells['N'] ?? null) ? $cells['N'] : null,
+                    'definitiva'   => is_numeric($cells['O'] ?? null) ? $cells['O'] : null,
+                    'habilitacion' => is_numeric($cells['P'] ?? null) ? $cells['P'] : null,
+                    'final'        => is_numeric($cells['Q'] ?? null) ? $cells['Q'] : null,
+
+                    'anio'      => (int) ($cells['R'] ?? now()->year),
+                    'periodo'   => trim((string) ($cells['S'] ?? '')),
+                    'period_id' => $period->id,
+
+                    'created_by' => $userId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                if (($payload['identificacion'] ?? '') === '') {
+                    $invalidas++;
+                    continue;
+                }
+
+                $rowKey = $this->buildNotaUniqueKey($payload);
+                if (!$rowKey) {
+                    $invalidas++;
+                    continue;
+                }
+
+                if (isset($seenKeys[$rowKey])) {
+                    $duplicadas++;
+                    continue;
+                }
+
+                $batch[] = $payload;
+                $seenKeys[$rowKey] = true;
+
+                // 🔥 Insertar por bloques grandes
+                if (count($batch) === 1000) {
+                    Nota::insert($batch);
+                    $importadas += count($batch);
+                    $batch = [];
+                }
             }
 
-            // ⛔ Fila sin identificación
-            if (empty($cells['E'])) continue;
-
-            $batch[] = [
-                'codigo'              => $cells['A'] ?? null,
-                'apellidos'           => trim($cells['B'] ?? ''),
-                'nombres'             => trim($cells['C'] ?? ''),
-                'tipo_identificacion' => trim($cells['D'] ?? ''),
-                'identificacion'      => trim((string) $cells['E']),
-
-                'ide_programa' => $cells['F'] ?? null,
-                'programa'     => $cells['G'] ?? null,
-                'semestre'     => $cells['H'] ?? null,
-
-                'ide_materia' => trim($cells['I'] ?? ''),
-                'materia'     => trim($cells['J'] ?? ''),
-                'grupo'       => $cells['K'] ?? null,
-
-                'nota_1'       => is_numeric($cells['L'] ?? null) ? $cells['L'] : null,
-                'nota_2'       => is_numeric($cells['M'] ?? null) ? $cells['M'] : null,
-                'nota_3'       => is_numeric($cells['N'] ?? null) ? $cells['N'] : null,
-                'definitiva'   => is_numeric($cells['O'] ?? null) ? $cells['O'] : null,
-                'habilitacion' => is_numeric($cells['P'] ?? null) ? $cells['P'] : null,
-                'final'        => is_numeric($cells['Q'] ?? null) ? $cells['Q'] : null,
-
-                'anio'      => (int) ($cells['R'] ?? now()->year),
-                'periodo'   => trim($cells['S'] ?? ''),
-                'period_id' => $period->id,
-
-                'created_by' => $userId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            // 🔥 Insertar por bloques grandes
-            if (count($batch) === 1000) {
+            // Último bloque
+            if (!empty($batch)) {
                 Nota::insert($batch);
                 $importadas += count($batch);
-                $batch = [];
             }
+
+            DB::commit();
+
+            if ($importadas === 0 && $duplicadas > 0) {
+                return back()->withErrors([
+                    'archivo' => "Las notas de este archivo ya existen para el período activo ({$period->name}). No se importó nada."
+                ]);
+            }
+
+            $message = "✅ {$importadas} notas importadas correctamente ({$period->name})";
+
+            if ($duplicadas > 0 || $invalidas > 0) {
+                $extras = [];
+
+                if ($duplicadas > 0) {
+                    $extras[] = "{$duplicadas} duplicadas omitidas";
+                }
+
+                if ($invalidas > 0) {
+                    $extras[] = "{$invalidas} filas inválidas omitidas";
+                }
+
+                $message .= '. ' . implode(', ', $extras) . '.';
+            }
+
+            return back()->with('success', $message);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+
+            return back()->withErrors([
+                'archivo' => 'Error al importar notas. Revisa el archivo.'
+            ]);
         }
-
-        // Último bloque
-        if (!empty($batch)) {
-            Nota::insert($batch);
-            $importadas += count($batch);
-        }
-
-        DB::commit();
-
-        return back()->with(
-            'success',
-            "✅ {$importadas} notas importadas correctamente ({$period->name})"
-        );
-
-    } catch (\Throwable $e) {
-        DB::rollBack();
-        report($e);
-
-        return back()->withErrors([
-            'archivo' => 'Error al importar notas. Revisa el archivo.'
-        ]);
     }
-}
 
     /* =========================
        DETECTAR HOJA CORRECTA
@@ -149,5 +204,52 @@ public function store(Request $request)
         }
 
         return null;
+    }
+
+    private function buildNotaUniqueKey(array $row): ?string
+    {
+        $identificacion = $this->normalizeIdentificacion($row['identificacion'] ?? null);
+        if ($identificacion === '') {
+            return null;
+        }
+
+        $materiaKey = $this->nullableTrim($row['ide_materia'] ?? null);
+        if (!$materiaKey) {
+            $materiaKey = $this->normalizeTextKey($row['materia'] ?? null);
+        }
+
+        if (!$materiaKey) {
+            return null;
+        }
+
+        $grupo = $this->normalizeTextKey($row['grupo'] ?? null) ?: 'SIN-GRUPO';
+
+        return $identificacion . '|' . $materiaKey . '|' . $grupo;
+    }
+
+    private function normalizeIdentificacion($value): string
+    {
+        $text = trim((string) $value);
+        return preg_replace('/\s+/', '', $text);
+    }
+
+    private function nullableTrim($value): ?string
+    {
+        $text = trim((string) $value);
+        return $text !== '' ? $text : null;
+    }
+
+    private function normalizeTextKey($value): ?string
+    {
+        $text = $this->nullableTrim($value);
+
+        if ($text === null) {
+            return null;
+        }
+
+        $text = mb_strtoupper($text);
+        $text = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'U', 'N'], $text);
+
+        return preg_replace('/\s+/', ' ', $text);
     }
 }

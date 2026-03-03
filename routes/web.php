@@ -52,15 +52,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Estudiantes
     |--------------------------------------------------------------------------
     */
-Route::resource('estudiantes', EstudianteController::class)->except(['create', 'edit']);
+    Route::get('/estudiantes/reportes', [EstudianteController::class, 'reportes'])
+        ->name('estudiantes.reportes');
 
-// ✅ Importar Excel por PERIODO (manda period_id + archivo)
-Route::post('/estudiantes/importar-excel', [EstudianteController::class, 'cargarExcel'])
-    ->name('estudiantes.import');
+    Route::resource('estudiantes', EstudianteController::class)->except(['create', 'edit', 'store']);
 
-// ✅ (Opcional) Ver estudiantes por grupo (solo si de verdad lo sigues usando)
-Route::get('/estudiantes/grupos/{grupo}', [EstudianteController::class, 'showGrupo'])
-    ->name('estudiantes.grupos.show');
+    Route::post('/estudiantes/importar-excel', [EstudianteController::class, 'cargarExcel'])
+        ->name('estudiantes.import');
+
+
 
     /*
     |--------------------------------------------------------------------------
@@ -187,9 +187,13 @@ Route::get('/periodos/{period}/export-charts', [ReportController::class, 'export
     Route::get('/salud', [SaludController::class, 'index'])->name('salud.index');
     Route::get('/salud/{area}', [SaludController::class, 'area'])->name('salud.area');
     Route::post('/salud/{area}/pacientes', [SaludController::class, 'patientsStore'])->name('salud.pacientes.store');
+    Route::post('/salud/{area}/atenciones', [SaludController::class, 'clinicalAttentionStore'])->name('salud.atenciones.store');
+    Route::post('/salud/{area}/medicamentos', [SaludController::class, 'nursingInventoryStore'])->name('salud.enfermeria.medicamentos.store');
+    Route::post('/salud/{area}/entregas', [SaludController::class, 'nursingDeliveryStore'])->name('salud.enfermeria.entregas.store');
+    Route::post('/salud/{area}/actividades', [SaludController::class, 'nursingActivityStore'])->name('salud.enfermeria.actividades.store');
 
 
-    /*
+   /*
     |--------------------------------------------------------------------------
     | Deportes
     |--------------------------------------------------------------------------

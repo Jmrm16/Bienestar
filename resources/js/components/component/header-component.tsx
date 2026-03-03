@@ -10,7 +10,7 @@ export const HeaderComponent = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { name: 'Home', route: 'home' },
+    { name: 'Inicio', route: 'home' },
     { name: 'Permanencia y graduación', route: 'graduacion' },
     { name: 'Cultura', route: 'cultura' },
   ];
@@ -47,7 +47,7 @@ export const HeaderComponent = () => {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none"
-            aria-label="Toggle menu"
+            aria-label="Alternar menú"
           >
             {isMobileMenuOpen ? (
               <FaTimes className="text-xl text-gray-800 dark:text-gray-200" />
@@ -59,7 +59,7 @@ export const HeaderComponent = () => {
           {/* Logo */}
           <Link href={route('home')} className="flex items-center">
             <motion.div whileHover={{ scale: 1.05 }} className="flex items-center">
-              <img src="/img/logo.png" alt="Site Logo" className="h-8 md:h-10" />
+              <img src="/img/logo.png" alt="Logo del sitio" className="h-8 md:h-10" />
               <span className="ml-2 text-xl font-bold hidden md:block text-gray-800 dark:text-white">
                 Uniguajira
               </span>

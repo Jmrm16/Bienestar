@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { router } from "@inertiajs/react";
 import { toast } from "sonner";
-import { PencilLine, Delete, Search } from "lucide-react";
+import { PencilLine, Delete, Search, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -44,10 +45,10 @@ export type EstudianteRow = {
   dependencia?: string | null;
   programa_academico?: string | null;
 
-  servicio: string;      // opción B => ''
-  actividad: string;     // opción B => ''
+  servicio: string;  // Opción B => ''
+  actividad: string; // Opción B => ''
   responsable?: string | null;
-  trimestre: string;     // opción B => ''
+  trimestre: string; // Opción B => ''
 };
 
 export default function TablaEstudiantes({
@@ -57,6 +58,11 @@ export default function TablaEstudiantes({
   rows: EstudianteRow[];
   periodId: number;
 }) {
+  const textOrDash = (value?: string | null, fallback = "—") => {
+    const text = (value ?? "").trim();
+    return text !== "" ? text : fallback;
+  };
+
   const [q, setQ] = useState("");
   const [servicioFilter, setServicioFilter] = useState("all");
   const [trimestreFilter, setTrimestreFilter] = useState("all");
@@ -65,22 +71,30 @@ export default function TablaEstudiantes({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<EstudianteRow | null>(null);
 
+  // ✅ Cinturón de seguridad: si por error llega mezclado, igual mostramos SOLO el periodo seleccionado
+  const scopedRows = useMemo(() => {
+    const pid = Number(periodId) || 0;
+    if (!pid) return rows ?? [];
+    return (rows ?? []).filter((r) => Number(r.period_id) === pid);
+  }, [rows, periodId]);
+
   const servicios = useMemo(() => {
     const s = new Set<string>();
-    (rows ?? []).forEach((r) => s.add((r.servicio ?? "").trim() || "Sin servicio"));
-    return Array.from(s).sort();
-  }, [rows]);
+    (scopedRows ?? []).forEach((r) => s.add((r.servicio ?? "").trim() || "Sin servicio"));
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [scopedRows]);
 
   const trimestres = useMemo(() => {
     const s = new Set<string>();
-    (rows ?? []).forEach((r) => s.add((r.trimestre ?? "").trim() || "Sin trimestre"));
-    return Array.from(s).sort();
-  }, [rows]);
+    (scopedRows ?? []).forEach((r) => s.add((r.trimestre ?? "").trim() || "Sin trimestre"));
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [scopedRows]);
 
+  // ✅ Filtra + ordena SIEMPRE
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
+    const search = q.trim().toLowerCase();
 
-    return (rows ?? []).filter((r) => {
+    const list = (scopedRows ?? []).filter((r) => {
       const full = `${r.nombres ?? ""} ${r.apellidos ?? ""}`.toLowerCase();
       const ident = (r.identificacion ?? "").toLowerCase();
       const prog = (r.programa_academico ?? "").toLowerCase();
@@ -88,12 +102,12 @@ export default function TablaEstudiantes({
       const act = (r.actividad ?? "").toLowerCase();
 
       const matchesText =
-        !s ||
-        full.includes(s) ||
-        ident.includes(s) ||
-        prog.includes(s) ||
-        dep.includes(s) ||
-        act.includes(s);
+        !search ||
+        full.includes(search) ||
+        ident.includes(search) ||
+        prog.includes(search) ||
+        dep.includes(search) ||
+        act.includes(search);
 
       const svc = (r.servicio ?? "").trim() || "Sin servicio";
       const tri = (r.trimestre ?? "").trim() || "Sin trimestre";
@@ -103,7 +117,30 @@ export default function TablaEstudiantes({
 
       return matchesText && matchesSvc && matchesTri;
     });
-  }, [rows, q, servicioFilter, trimestreFilter]);
+
+    // ✅ Orden: servicio → actividad → apellidos → nombres → identificación
+    return list.sort((a, b) => {
+      const svcA = (a.servicio ?? "").trim().toLowerCase();
+      const svcB = (b.servicio ?? "").trim().toLowerCase();
+      if (svcA !== svcB) return svcA.localeCompare(svcB);
+
+      const actA = (a.actividad ?? "").trim().toLowerCase();
+      const actB = (b.actividad ?? "").trim().toLowerCase();
+      if (actA !== actB) return actA.localeCompare(actB);
+
+      const apA = (a.apellidos ?? "").trim().toLowerCase();
+      const apB = (b.apellidos ?? "").trim().toLowerCase();
+      if (apA !== apB) return apA.localeCompare(apB);
+
+      const nomA = (a.nombres ?? "").trim().toLowerCase();
+      const nomB = (b.nombres ?? "").trim().toLowerCase();
+      if (nomA !== nomB) return nomA.localeCompare(nomB);
+
+      const idA = (a.identificacion ?? "").trim().toLowerCase();
+      const idB = (b.identificacion ?? "").trim().toLowerCase();
+      return idA.localeCompare(idB);
+    });
+  }, [scopedRows, q, servicioFilter, trimestreFilter]);
 
   const openEdit = (r: EstudianteRow) => {
     setSelected(JSON.parse(JSON.stringify(r)));
@@ -113,6 +150,14 @@ export default function TablaEstudiantes({
   const openDelete = (r: EstudianteRow) => {
     setSelected(r);
     setDeleteOpen(true);
+  };
+
+  const openShow = (r: EstudianteRow) => {
+    router.get(
+      route("estudiantes.show", r.id),
+      { period_id: periodId },
+      { preserveScroll: true, preserveState: true }
+    );
   };
 
   const updateRow = () => {
@@ -213,16 +258,12 @@ export default function TablaEstudiantes({
 
       <div className="rounded-xl border overflow-hidden">
         <Table>
-          <TableCaption>Registros del periodo #{periodId}.</TableCaption>
+          <TableCaption>Vista compacta de los registros del período #{periodId}.</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>Identificación</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Servicio</TableHead>
-              <TableHead>Actividad</TableHead>
-              <TableHead>Trimestre</TableHead>
-              <TableHead>Programa</TableHead>
-              <TableHead>Dependencia</TableHead>
+              <TableHead>Estudiante</TableHead>
+              <TableHead>Contexto académico</TableHead>
+              <TableHead>Seguimiento</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -230,27 +271,75 @@ export default function TablaEstudiantes({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
                   No hay registros para mostrar.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.identificacion}</TableCell>
-                  <TableCell>{`${r.nombres ?? ""} ${r.apellidos ?? ""}`.trim() || "—"}</TableCell>
-                  <TableCell>{(r.servicio ?? "").trim() || "Sin servicio"}</TableCell>
-                  <TableCell className="max-w-[260px] truncate" title={r.actividad}>
-                    {(r.actividad ?? "").trim() || "—"}
+                  <TableCell className="align-top">
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-medium">
+                          {`${r.nombres ?? ""} ${r.apellidos ?? ""}`.trim() || "—"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {textOrDash(r.identificacion)}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {r.sexo ? <Badge variant="outline">{r.sexo}</Badge> : null}
+                        {r.estamento ? (
+                          <Badge variant="secondary">{r.estamento}</Badge>
+                        ) : null}
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell>{(r.trimestre ?? "").trim() || "—"}</TableCell>
-                  <TableCell className="max-w-[220px] truncate" title={r.programa_academico ?? ""}>
-                    {r.programa_academico ?? "—"}
+
+                  <TableCell className="align-top">
+                    <div className="space-y-1 max-w-[260px]">
+                      <p className="font-medium" title={r.programa_academico ?? ""}>
+                        {textOrDash(r.programa_academico, "Sin programa")}
+                      </p>
+                      <p className="text-sm text-muted-foreground" title={r.dependencia ?? ""}>
+                        {textOrDash(r.dependencia, "Sin dependencia")}
+                      </p>
+                    </div>
                   </TableCell>
-                  <TableCell className="max-w-[220px] truncate" title={r.dependencia ?? ""}>
-                    {r.dependencia ?? "—"}
+
+                  <TableCell className="align-top">
+                    <div className="max-w-[360px] space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary">
+                          {textOrDash(r.servicio, "Sin servicio")}
+                        </Badge>
+                        <Badge variant="outline">
+                          {textOrDash(r.trimestre, "Sin trimestre")}
+                        </Badge>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-medium">Actividad</p>
+                        <p
+                          className="text-sm text-muted-foreground line-clamp-2"
+                          title={r.actividad ?? ""}
+                        >
+                          {textOrDash(r.actividad, "Sin actividad")}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        Responsable: {textOrDash(r.responsable, "No registrado")}
+                      </p>
+                    </div>
                   </TableCell>
+
                   <TableCell className="text-right space-x-2">
+                    <Button variant="ghost" onClick={() => openShow(r)} title="Ver detalles">
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" onClick={() => openEdit(r)} title="Editar">
                       <PencilLine className="h-4 w-4" />
                     </Button>

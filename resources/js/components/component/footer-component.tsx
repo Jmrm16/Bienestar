@@ -8,20 +8,20 @@ const FooterComponent = () => {
   const currentYear = new Date().getFullYear();
   const footerLinks = [
     {
-      title: "Navigation",
+      title: "Navegación",
       links: [
-        { name: "Home", href: "/" },
+        { name: "Inicio", href: "/" },
         { name: "Permanencia y graduación", href: "/graduacion" },
         { name: "Cultura", href: "/cultura" },
-        { name: "Dashboard", href: "/dashboard" },
+        { name: "Panel de control", href: "/dashboard" },
       ],
     },
     {
       title: "Legal",
       links: [
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
-        { name: "Cookie Policy", href: "/cookies" },
+        { name: "Política de privacidad", href: "/privacy" },
+        { name: "Términos del servicio", href: "/terms" },
+        { name: "Política de cookies", href: "/cookies" },
       ],
     },
   ];
@@ -43,18 +43,18 @@ const FooterComponent = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Newsletter */}
           <div className="lg:col-span-2">
-            <h3 className="text-xl font-bold text-white mb-4">Subscribe to our newsletter</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Suscríbete a nuestro boletín</h3>
             <p className="mb-4">
-              Stay updated with our latest news and offers. No spam, we promise.
+              Mantente al día con nuestras noticias y novedades. Sin spam.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="email"
-                placeholder="Your email address"
+                placeholder="Tu correo electrónico"
                 className="bg-gray-800 border-gray-700 text-white placeholder-gray-400focus:ring-2 focus:ring-primary"
               />
               <Button variant="default" className="whitespace-nowrap">
-                Subscribe
+                Suscribirse
               </Button>
             </div>
           </div>
@@ -81,7 +81,7 @@ const FooterComponent = () => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           {/* Copyright */}
           <div className="text-sm">
-            © {currentYear} Your Company. All rights reserved.
+            © {currentYear} Bienestar Universitario. Todos los derechos reservados.
           </div>
           {/* Social Links */}
           <div className="flex space-x-4">
@@ -101,13 +101,13 @@ const FooterComponent = () => {
           {/* Legal Links */}
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <a href="/privacy" className="hover:text-primary transition-colors">
-              Privacy Policy
+              Política de privacidad
             </a>
             <a href="/terms" className="hover:text-primary transition-colors">
-              Terms of Service
+              Términos del servicio
             </a>
             <a href="/cookies" className="hover:text-primary transition-colors">
-              Cookie Policy
+              Política de cookies
             </a>
           </div>
         </div>

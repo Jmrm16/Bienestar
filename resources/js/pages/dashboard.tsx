@@ -7,7 +7,7 @@ import AsistenciaChart from '@/components/charts/AsistenciaChart';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Panel de control',
     href: '/dashboard',
   },
 ];
@@ -25,7 +25,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Dashboard" />
+      <Head title="Panel de control" />
 
       <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto">
         {/* Tarjetas de métricas con MetricCard */}

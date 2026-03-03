@@ -45,34 +45,16 @@ const SALUD_AREAS: SaludArea[] = [
     href: "/salud/odontologia",
     icon: Smile,
   },
+
+
   {
-    key: "nutricion",
-    title: "Nutrición",
-    description: "Valoración nutricional y planes de control.",
-    href: "/salud/nutricion",
-    icon: Apple,
-  },
-  {
-    key: "fisioterapia",
-    title: "Fisioterapia",
-    description: "Sesiones, evolución y recomendaciones.",
-    href: "/salud/fisioterapia",
-    icon: Dumbbell,
-  },
-  {
-    key: "quiropraxia",
-    title: "Quiropraxia",
+    key: "enfermeria",
+    title: "Enfermería",
     description: "Atenciones y seguimiento por sesión.",
-    href: "/salud/quiropraxia",
+    href: "/salud/enfermeria",
     icon: Activity,
   },
-  {
-    key: "cosmiatria",
-    title: "Cosmiatría",
-    description: "Procedimientos, controles y evidencia.",
-    href: "/salud/cosmiatria",
-    icon: Sparkles,
-  },
+
 ];
 
 export default function SaludIndex() {

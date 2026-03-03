@@ -52,11 +52,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Estudiantes
     |--------------------------------------------------------------------------
     */
-    Route::resource('estudiantes', EstudianteController::class)->except(['create', 'edit']);
-    Route::get('/estudiantes/grupos/{grupo}', [EstudianteController::class, 'showGrupo'])
-        ->name('estudiantes.grupos.show');
-    Route::post('/estudiantes/cargar-excel', [EstudianteController::class, 'cargarExcel'])
-        ->name('estudiantes.cargar-excel');
+Route::resource('estudiantes', EstudianteController::class)->except(['create', 'edit']);
+
+// ✅ Importar Excel por PERIODO (manda period_id + archivo)
+Route::post('/estudiantes/importar-excel', [EstudianteController::class, 'cargarExcel'])
+    ->name('estudiantes.import');
+
+// ✅ (Opcional) Ver estudiantes por grupo (solo si de verdad lo sigues usando)
+Route::get('/estudiantes/grupos/{grupo}', [EstudianteController::class, 'showGrupo'])
+    ->name('estudiantes.grupos.show');
 
     /*
     |--------------------------------------------------------------------------

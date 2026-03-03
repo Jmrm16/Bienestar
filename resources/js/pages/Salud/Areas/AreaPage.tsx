@@ -27,10 +27,8 @@ type Props = {
 const AREA_ICONS: Record<string, any> = {
   "medicina-general": HeartPulse,
   odontologia: Smile,
-  nutricion: Apple,
-  fisioterapia: Dumbbell,
-  quiropraxia: Activity,
-  cosmiatria: Sparkles,
+  enfermeria: Activity,
+
 };
 
 export default function AreaPage({ areaKey, areaTitle, patients, carreras }: Props) {

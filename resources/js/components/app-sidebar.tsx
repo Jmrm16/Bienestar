@@ -38,13 +38,13 @@ const mainNavItems: NavItem[] = [
     icon: LayoutGrid,
   },
   {
-    title: 'Tutorias',
+    title: 'Permanencia y Graduación',
     icon: Users,
     children: [
       {
-        title: 'Tutores',
-        url: '/tutores',
-        icon: Users,
+        title: 'Informes',
+        url: '/reportes/periodos',
+        icon: BookOpen,
       },
       {
         title: 'Asignaturas',
@@ -52,15 +52,16 @@ const mainNavItems: NavItem[] = [
         icon: BookOpen,
       },
       {
+        title: 'Tutores',
+        url: '/tutores',
+        icon: Users,
+      },
+      {
         title: 'Carreras',
         url: '/carreras',
         icon: Folder,
       },
-      {
-        title: 'Informes',
-        url: '/reportes/periodos',
-        icon: BookOpen,
-      },
+
       {
         title: 'Notas',
         url: '/notas',

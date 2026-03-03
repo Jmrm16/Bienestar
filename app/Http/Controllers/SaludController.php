@@ -13,6 +13,7 @@ class SaludController extends Controller
     private array $areas = [
         'medicina-general' => 'Medicina general',
         'odontologia'      => 'Odontología',
+        'enfermeria'       => 'Enfermería',
         'nutricion'        => 'Nutrición',
         'fisioterapia'     => 'Fisioterapia',
         'quiropraxia'      => 'Quiropraxia',

@@ -195,6 +195,15 @@ Route::get('/periodos/{period}/export-charts', [ReportController::class, 'export
     |--------------------------------------------------------------------------
     */
     Route::get('/deportes', [DeporteController::class, 'index'])->name('deportes.index');
+    Route::get('/deportes/{area}', [DeporteController::class, 'area'])->name('deportes.area');
+    Route::get('/deportes/{area}/participantes/export', [DeporteController::class, 'participantsExport'])
+        ->name('deportes.participantes.export');
+    Route::post('/deportes/{area}/participantes', [DeporteController::class, 'participantsStore'])
+        ->name('deportes.participantes.store');
+    Route::put('/deportes/{area}/participantes/{participant}', [DeporteController::class, 'participantsUpdate'])
+        ->name('deportes.participantes.update');
+    Route::delete('/deportes/{area}/participantes/{participant}', [DeporteController::class, 'participantsDestroy'])
+        ->name('deportes.participantes.destroy');
 
 
     /*

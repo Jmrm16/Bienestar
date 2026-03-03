@@ -42,24 +42,26 @@ type CarreraNode = {
   unique_estudiantes_total?: number;
 };
 
-type WindowRow = {
+export type WindowInsightRow = {
   window_id: number;
   name?: string;
 };
 
-type Insights = {
-  by_window?: WindowRow[]; // puede venir o no
+export type PeriodInsights = {
+  by_window?: WindowInsightRow[]; // puede venir o no
   tree?: {
     carreras?: CarreraNode[];
   };
 };
+
+const EMPTY_CARRERAS: CarreraNode[] = [];
 
 /* =========================
    HELPERS
 ========================= */
 
 // ✅ solo suma asistencias (estudiantes NO se suman)
-function sumAsis(perWindow: PerWindow, windows: WindowRow[]) {
+function sumAsis(perWindow: PerWindow, windows: WindowInsightRow[]) {
   let asis = 0;
   for (const w of windows) {
     const cell = perWindow?.[String(w.window_id)];
@@ -93,7 +95,7 @@ function inferWindowIdsFromTree(carreras: CarreraNode[]): number[] {
   return Array.from(set).sort((a, b) => a - b);
 }
 
-function HeaderCells({ windows }: { windows: WindowRow[] }) {
+function HeaderCells({ windows }: { windows: WindowInsightRow[] }) {
   return (
     <>
       {windows.map((w) => (
@@ -118,7 +120,7 @@ function DataCells({
   uniqueTotal,
 }: {
   perWindow: PerWindow;
-  windows: WindowRow[];
+  windows: WindowInsightRow[];
   uniqueTotal?: number;
 }) {
   const totalAsis = sumAsis(perWindow, windows);
@@ -144,18 +146,18 @@ function DataCells({
   );
 }
 
-export default function ReportTreeTable({ insights }: { insights: Insights | null }) {
-  const carreras = insights?.tree?.carreras ?? [];
+export default function ReportTreeTable({ insights }: { insights: PeriodInsights | null }) {
+  const carreras = insights?.tree?.carreras ?? EMPTY_CARRERAS;
 
   // ✅ windows auto-detect:
   // 1) si viene by_window -> úsalo
   // 2) si no -> infiere por keys de per_window
-  const windows: WindowRow[] = useMemo(() => {
+  const windows: WindowInsightRow[] = useMemo(() => {
     const by = insights?.by_window ?? [];
     if (by.length > 0) {
       // Asegura shape y orden
       return by
-        .map((w: any) => ({ window_id: Number(w.window_id), name: String(w.name ?? "") }))
+        .map((w) => ({ window_id: Number(w.window_id), name: String(w.name ?? "") }))
         .filter((w) => Number.isFinite(w.window_id));
     }
 

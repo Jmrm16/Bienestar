@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import PeriodInsightsPanel from "./Entregas/components/PeriodInsightsPanel";
+import type { PeriodInsights } from "./Entregas/components/PeriodInsightsPanel";
 import { type BreadcrumbItem } from "@/types";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -73,13 +74,10 @@ type Charts = {
 type Props = {
   period: Period;
   windows: Window[];
-  insights: any;
+  insights: PeriodInsights | null;
 
   // ✅ default (para no romper)
   charts: Charts;
-
-  // ✅ NUEVO: charts por window
-  charts_by_window: Record<string, Charts>;
   default_window_id: number | null;
 };
 
@@ -93,7 +91,6 @@ export default function WindowsIndex({
   windows,
   insights,
   charts,
-  charts_by_window,
   default_window_id,
 }: Props) {
   const totalPublicadas = useMemo(
@@ -112,15 +109,66 @@ export default function WindowsIndex({
     0;
 
   const [selectedWindowId, setSelectedWindowId] = useState<number>(defaultId);
+  const [chartsLoading, setChartsLoading] = useState(false);
+  const [chartCache, setChartCache] = useState<Record<string, Charts>>(() =>
+    defaultId ? { [String(defaultId)]: charts } : {}
+  );
 
   const selectedWindow = useMemo(() => {
     return windows.find((w) => Number(w.id) === Number(selectedWindowId)) ?? null;
   }, [windows, selectedWindowId]);
 
   const selectedCharts: Charts = useMemo(() => {
-    const by = charts_by_window?.[String(selectedWindowId)];
-    return by ?? charts;
-  }, [charts_by_window, selectedWindowId, charts]);
+    return chartCache[String(selectedWindowId)] ?? charts;
+  }, [chartCache, selectedWindowId, charts]);
+
+  useEffect(() => {
+    const key = String(selectedWindowId);
+
+    if (!selectedWindowId || chartCache[key]) {
+      return;
+    }
+
+    let cancelled = false;
+    setChartsLoading(true);
+
+    fetch(route("reports.windows.charts", [period.id, selectedWindowId]), {
+      headers: {
+        Accept: "application/json",
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar los gráficos del corte.");
+        }
+
+        return response.json() as Promise<Charts>;
+      })
+      .then((payload) => {
+        if (cancelled) {
+          return;
+        }
+
+        setChartCache((current) => ({
+          ...current,
+          [key]: payload,
+        }));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("No se pudieron cargar los gráficos del corte seleccionado");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setChartsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chartCache, period.id, selectedWindowId]);
 
   // -----------------------------
   //  Estado del modal Crear / Editar
@@ -490,11 +538,17 @@ export default function WindowsIndex({
 </Button>
 </div>
 
-          <ReportCharts
-            data={selectedCharts}
-            topTutores={35}
-            windowName={selectedWindow?.name}
-          />
+          {chartsLoading && !chartCache[String(selectedWindowId)] ? (
+            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+              Cargando gráficos del corte seleccionado...
+            </div>
+          ) : (
+            <ReportCharts
+              data={selectedCharts}
+              topTutores={35}
+              windowName={selectedWindow?.name}
+            />
+          )}
         </div>
       </div>
     </AppLayout>

@@ -4,11 +4,13 @@ import { type BreadcrumbItem } from "@/types";
 import React, { useMemo } from "react";
 
 import ImportarExcelDialog from "@/pages/Estudiantes/ImportarExcelDialog";
-import TablaEstudiantes, { type EstudianteRow } from "./TablaGrupos";
+import TablaEstudiantes, {
+  type EstudianteFilterOptions,
+  type EstudianteFilters,
+  type EstudiantePagination,
+} from "./TablaGrupos";
 
-import { MetricCard } from "@/components/component/MetricCard";
-import { Users, BarChart3, Layers3, FolderKanban } from "lucide-react";
-import { motion } from "framer-motion";
+import { BarChart3 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,27 +33,21 @@ type Period = { id: number; code: string; name?: string | null };
 const breadcrumbs: BreadcrumbItem[] = [{ title: "Estudiantes", href: "/estudiantes" }];
 
 export default function EstudiantesIndex() {
-  const { periods = [], selected_period_id = 0, rows = [] } = usePage().props as unknown as {
+  const {
+    periods = [],
+    selected_period_id = 0,
+    rows = { data: [], current_page: 1, next_page_url: null, prev_page_url: null, per_page: 50 },
+    filters = { q: "", servicio: "", trimestre: "" },
+    filter_options = { servicios: [], trimestres: [] },
+  } = usePage().props as unknown as {
     periods?: Period[];
     selected_period_id?: number;
-    rows?: EstudianteRow[];
+    rows?: EstudiantePagination;
+    filters?: EstudianteFilters;
+    filter_options?: EstudianteFilterOptions;
   };
 
   const periodId = Number(selected_period_id) || 0;
-
-  const totalRegistros = rows.length;
-  const totalEstudiantesUnicos = useMemo(
-    () => new Set(rows.map((row) => String(row.identificacion ?? "").trim()).filter(Boolean)).size,
-    [rows],
-  );
-  const totalServicios = useMemo(
-    () => new Set(rows.map((row) => (row.servicio ?? "").trim()).filter(Boolean)).size,
-    [rows],
-  );
-  const totalTrimestres = useMemo(
-    () => new Set(rows.map((row) => (row.trimestre ?? "").trim()).filter(Boolean)).size,
-    [rows],
-  );
 
   const periodLabel = useMemo(() => {
     const p = periods.find((x) => Number(x.id) === Number(periodId));
@@ -72,25 +68,19 @@ export default function EstudiantesIndex() {
       <Head title="Estudiantes | Importación por período" />
 
       <div className="flex flex-col gap-6 rounded-xl p-4 w-full flex-grow">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="space-y-2"
-        >
+        <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Estudiantes</h1>
           <p className="text-sm text-muted-foreground">
-            Administra la importación por período, revisa los registros cargados y accede al área de reportes del módulo.
+            Vista operativa del módulo. Se dejó sólo lo necesario para trabajar el período sin sobrecargar la página.
           </p>
-        </motion.div>
+        </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.8fr)]">
           <Card>
             <CardHeader className="pb-4">
               <CardTitle>Período de trabajo</CardTitle>
               <CardDescription>
-                Selecciona el período sobre el que quieres importar, consultar o editar estudiantes.
+                Cambia de período, importa la base y entra a reportes cuando necesites análisis.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -110,72 +100,54 @@ export default function EstudiantesIndex() {
                 </Select>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <ImportarExcelDialog />
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() =>
+                    router.get(route("estudiantes.reportes"), { period_id: periodId || undefined })
+                  }
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Ver reportes
+                </Button>
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-dashed">
             <CardHeader className="pb-4">
-              <CardTitle>Reportes e informes</CardTitle>
+              <CardTitle>Resumen actual</CardTitle>
               <CardDescription>
-                Abre la vista analítica del período para revisar distribución por servicios, programas y trimestres.
+                Contexto mínimo del período seleccionado.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex h-full flex-col justify-between gap-4">
+            <CardContent className="flex h-full flex-col gap-3">
               <div className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
                 Período activo: <span className="font-medium text-foreground">{periodLabel}</span>
               </div>
-
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() =>
-                  router.get(route("estudiantes.reportes"), { period_id: periodId || undefined })
-                }
-              >
-                <BarChart3 className="h-4 w-4" />
-                Ir a reportes
-              </Button>
+              <div className="grid gap-2 text-sm text-muted-foreground">
+                <div className="rounded-lg border bg-background px-3 py-2">
+                  Registros visibles: <span className="font-medium text-foreground">{rows.data.length}</span>
+                </div>
+                <div className="rounded-lg border bg-background px-3 py-2">
+                  Servicios filtrables: <span className="font-medium text-foreground">{filter_options.servicios.length}</span>
+                </div>
+                <div className="rounded-lg border bg-background px-3 py-2">
+                  Trimestres filtrables: <span className="font-medium text-foreground">{filter_options.trimestres.length}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Métricas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          <MetricCard
-            title="Registros importados"
-            value={totalRegistros}
-            icon={Layers3}
-            color="cyan"
-            detail="Filas cargadas en este período"
-          />
-          <MetricCard
-            title="Estudiantes únicos"
-            value={totalEstudiantesUnicos}
-            icon={Users}
-            color="purple"
-            detail="Identificaciones distintas"
-          />
-          <MetricCard
-            title="Servicios detectados"
-            value={totalServicios}
-            icon={FolderKanban}
-            color="blue"
-            detail="Servicios con registros"
-          />
-          <MetricCard
-            title="Trimestres activos"
-            value={totalTrimestres}
-            icon={BarChart3}
-            color="green"
-            detail="Trimestres encontrados"
-          />
-        </div>
-
-        {/* Tabla de registros */}
-        <TablaEstudiantes rows={rows} periodId={periodId} />
+        <TablaEstudiantes
+          rows={rows}
+          periodId={periodId}
+          filters={filters}
+          filterOptions={filter_options}
+        />
       </div>
     </AppLayout>
   );

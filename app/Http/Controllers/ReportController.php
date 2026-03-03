@@ -110,7 +110,6 @@ public function windowsIndex(ReportPeriod $period)
                 'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0],
                 'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0],
             ],
-            'charts_by_window' => [],
             'default_window_id' => null,
         ]);
     }
@@ -335,187 +334,28 @@ public function windowsIndex(ReportPeriod $period)
         'tree' => ['carreras' => $treeCarreras],
     ];
 
-    // =====================================================
-    // 3) CHARTS BY WINDOW (cacheado) - MISMO resultado
-    // =====================================================
-
-    $approvalMin = 3.0;
-
-    $cacheKeyCharts = "rep_charts_period_{$period->id}_" . md5($windowIds->implode(','));
-    $chartsByWindow = Cache::remember($cacheKeyCharts, now()->addMinutes(10), function () use ($period, $windowIds, $approvalMin) {
-
-        $buildChartsForWindow = function (int $wid) use ($period, $approvalMin) {
-
-            $baseA = DB::table('asistencias as a')
-                ->where('a.period_id', $period->id)
-                ->where('a.report_window_id', $wid);
-
-            $notaExpr = "COALESCE(n.final, n.definitiva)";
-
-            $baseStudentMateria = (clone $baseA)
-                ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
-                ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
-                ->selectRaw("
-                    TRIM(a.identificacion) as identificacion,
-                    COALESCE(NULLIF(TRIM(a.programa_academico), ''), 'Sin programa') as programa_key,
-                    a.tutor_id as tutor_id,
-                    LOWER(TRIM(COALESCE(s.nombre, ''))) as materia_key
-                ");
-
-            $withNotasBase = DB::query()
-                ->fromSub($baseStudentMateria, 'x')
-                ->leftJoin('notas as n', function ($j) use ($period) {
-                    $j->on(DB::raw('TRIM(n.identificacion)'), '=', DB::raw('x.identificacion'))
-                      ->on(DB::raw('LOWER(TRIM(n.materia))'), '=', DB::raw('x.materia_key'))
-                      ->where('n.period_id', $period->id);
-                });
-
-            $studentPrograma = (clone $withNotasBase)
-                ->selectRaw("x.programa_key as label, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
-                ->groupBy('label', 'identificacion');
-
-            $aprobExprP  = "SUM(CASE WHEN p.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
-            $reprobExprP = "SUM(CASE WHEN p.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
-
-            $porPrograma = DB::query()
-                ->fromSub($studentPrograma, 'p')
-                ->selectRaw("p.label as label, $aprobExprP as APROBADO, $reprobExprP as REPROBADO")
-                ->groupBy('label')
-                ->orderByRaw("($aprobExprP + $reprobExprP) DESC")
-                ->get()
-                ->map(fn($r) => [
-                    'label' => (string)$r->label,
-                    'APROBADO' => (int)$r->APROBADO,
-                    'REPROBADO' => (int)$r->REPROBADO,
-                    'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
-                ])
-                ->values();
-
-            $studentTutor = (clone $withNotasBase)
-                ->selectRaw("x.tutor_id as tutor_id, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
-                ->groupBy('tutor_id', 'identificacion');
-
-            $aprobExprT  = "SUM(CASE WHEN tt.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
-            $reprobExprT = "SUM(CASE WHEN tt.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
-
-            $porTutor = DB::query()
-                ->fromSub($studentTutor, 'tt')
-                ->leftJoin('tutors as t', 't.id', '=', 'tt.tutor_id')
-                ->selectRaw("
-                    COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', tt.tutor_id)) as label,
-                    $aprobExprT as APROBADO,
-                    $reprobExprT as REPROBADO
-                ")
-                ->groupBy('label')
-                ->orderByRaw("($aprobExprT + $reprobExprT) DESC")
-                ->get()
-                ->map(fn($r) => [
-                    'label' => (string)$r->label,
-                    'APROBADO' => (int)$r->APROBADO,
-                    'REPROBADO' => (int)$r->REPROBADO,
-                    'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
-                ])
-                ->values();
-
-            $totalAprobado  = (int)$porPrograma->sum('APROBADO');
-            $totalReprobado = (int)$porPrograma->sum('REPROBADO');
-
-            // SEXO
-            $sexo = ['FEMENINO' => 0, 'MASCULINO' => 0];
-            if (Schema::hasColumn('asistencias', 'sexo')) {
-                $sexoPorEstudiante = (clone $baseA)
-                    ->selectRaw("
-                        TRIM(a.identificacion) as identificacion,
-                        MAX(
-                            CASE
-                                WHEN UPPER(TRIM(a.sexo)) IN ('F', 'FEMENINO') THEN 'FEMENINO'
-                                WHEN UPPER(TRIM(a.sexo)) IN ('M', 'MASCULINO') THEN 'MASCULINO'
-                                ELSE NULL
-                            END
-                        ) as sexo_norm
-                    ")
-                    ->groupBy('identificacion');
-
-                $sexoRows = DB::query()
-                    ->fromSub($sexoPorEstudiante, 'sx')
-                    ->selectRaw("COALESCE(sx.sexo_norm, 'SIN_DATO') as label, COUNT(*) as total")
-                    ->groupBy('label')
-                    ->get();
-
-                $sexo = [
-                    'FEMENINO'  => (int)($sexoRows->firstWhere('label', 'FEMENINO')->total ?? 0),
-                    'MASCULINO' => (int)($sexoRows->firstWhere('label', 'MASCULINO')->total ?? 0),
-                ];
-            }
-
-            // GRUPOS
-            $grupos = ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0];
-            if (Schema::hasColumn('asistencias', 'grupo_priorizado')) {
-                $gpPorEstudiante = (clone $baseA)
-                    ->selectRaw("
-                        TRIM(a.identificacion) as identificacion,
-                        MAX(UPPER(COALESCE(NULLIF(TRIM(a.grupo_priorizado), ''), 'NINGUNO'))) as gp_norm
-                    ")
-                    ->groupBy('identificacion');
-
-                $gpRows = DB::query()
-                    ->fromSub($gpPorEstudiante, 'gp')
-                    ->selectRaw("gp.gp_norm as label, COUNT(*) as total")
-                    ->groupBy('label')
-                    ->get();
-
-                $grupos = [
-                    'NINGUNO'  => (int)($gpRows->firstWhere('label', 'NINGUNO')->total ?? 0),
-                    'AFRO'     => (int)($gpRows->firstWhere('label', 'AFRO')->total ?? 0),
-                    'INDIGENA' => (int)($gpRows->firstWhere('label', 'INDIGENA')->total ?? 0),
-                ];
-
-                $etnico = (int)(
-                    ($gpRows->firstWhere('label', 'ÉTNICO')->total ?? 0) +
-                    ($gpRows->firstWhere('label', 'ETNICO')->total ?? 0)
-                );
-                if ($etnico > 0 && $grupos['INDIGENA'] === 0) {
-                    $grupos['INDIGENA'] = $etnico;
-                }
-            }
-
-            return [
-                'porPrograma'    => $porPrograma,
-                'porTutor'       => $porTutor,
-                'totalAprobado'  => $totalAprobado,
-                'totalReprobado' => $totalReprobado,
-                'sexo'           => $sexo,
-                'grupos'         => $grupos,
-            ];
-        };
-
-        $out = [];
-        foreach ($windowIds as $wid) {
-            $out[(string)$wid] = $buildChartsForWindow((int)$wid);
-        }
-        return $out;
-    });
-
     $defaultWindowId = (int)($windowIds->last() ?? $windowIds->first());
-
-    $charts = $chartsByWindow[(string)$defaultWindowId] ?? [
-        'porPrograma'    => [],
-        'porTutor'       => [],
-        'totalAprobado'  => 0,
-        'totalReprobado' => 0,
-        'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0],
-        'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0],
-    ];
+    $charts = $defaultWindowId
+        ? $this->buildChartsForWindow($period, $defaultWindowId)
+        : $this->emptyCharts();
 
     return Inertia::render('Informe/WindowsIndex', [
         'period'   => $period,
         'windows'  => $windows,
         'insights' => $insights,
         'charts'   => $charts,
-        'charts_by_window' => $chartsByWindow,
         'default_window_id' => $defaultWindowId,
     ]);
 }
+
+    public function windowCharts(ReportPeriod $period, ReportWindow $window)
+    {
+        abort_unless($window->period_id === $period->id, 404);
+
+        return response()->json(
+            $this->buildChartsForWindow($period, (int) $window->id)
+        );
+    }
 
     public function windowsStore(Request $request, ReportPeriod $period)
     {
@@ -628,99 +468,10 @@ public function windowsIndex(ReportPeriod $period)
         }, $filename);
     }
 
-    // ✅ Usa la misma función interna de tu windowsIndex (idéntica lógica)
-    $approvalMin = 3.0;
-
-    $buildChartsForWindow = function (int $wid) use ($period, $approvalMin) {
-
-        $baseA = DB::table('asistencias as a')
-            ->where('a.period_id', $period->id)
-            ->where('a.report_window_id', $wid);
-
-        $notaExpr = "COALESCE(n.final, n.definitiva)";
-
-        $baseStudentMateria = (clone $baseA)
-            ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
-            ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
-            ->selectRaw("
-                TRIM(a.identificacion) as identificacion,
-                COALESCE(NULLIF(TRIM(a.programa_academico), ''), 'Sin programa') as programa_key,
-                a.tutor_id as tutor_id,
-                LOWER(TRIM(COALESCE(s.nombre, ''))) as materia_key
-            ");
-
-        $withNotasBase = DB::query()
-            ->fromSub($baseStudentMateria, 'x')
-            ->leftJoin('notas as n', function ($j) use ($period) {
-                $j->on(DB::raw('TRIM(n.identificacion)'), '=', DB::raw('x.identificacion'))
-                    ->on(DB::raw('LOWER(TRIM(n.materia))'), '=', DB::raw('x.materia_key'))
-                    ->where('n.period_id', $period->id);
-            });
-
-        $studentPrograma = (clone $withNotasBase)
-            ->selectRaw("x.programa_key as label, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
-            ->groupBy('label', 'identificacion');
-
-        $aprobExprP  = "SUM(CASE WHEN p.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
-        $reprobExprP = "SUM(CASE WHEN p.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
-
-        $porPrograma = DB::query()
-            ->fromSub($studentPrograma, 'p')
-            ->selectRaw("p.label as label, $aprobExprP as APROBADO, $reprobExprP as REPROBADO")
-            ->groupBy('label')
-            ->orderByRaw("($aprobExprP + $reprobExprP) DESC")
-            ->get()
-            ->map(fn($r) => [
-                'label' => (string)$r->label,
-                'APROBADO' => (int)$r->APROBADO,
-                'REPROBADO' => (int)$r->REPROBADO,
-                'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
-            ])
-            ->values()
-            ->all();
-
-        $studentTutor = (clone $withNotasBase)
-            ->selectRaw("x.tutor_id as tutor_id, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
-            ->groupBy('tutor_id', 'identificacion');
-
-        $aprobExprT  = "SUM(CASE WHEN tt.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
-        $reprobExprT = "SUM(CASE WHEN tt.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
-
-        $porTutor = DB::query()
-            ->fromSub($studentTutor, 'tt')
-            ->leftJoin('tutors as t', 't.id', '=', 'tt.tutor_id')
-            ->selectRaw("
-                COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', tt.tutor_id)) as label,
-                $aprobExprT as APROBADO,
-                $reprobExprT as REPROBADO
-            ")
-            ->groupBy('label')
-            ->orderByRaw("($aprobExprT + $reprobExprT) DESC")
-            ->get()
-            ->map(fn($r) => [
-                'label' => (string)$r->label,
-                'APROBADO' => (int)$r->APROBADO,
-                'REPROBADO' => (int)$r->REPROBADO,
-                'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
-            ])
-            ->values()
-            ->all();
-
-        $totalAprobado = array_sum(array_map(fn($x)=>$x['APROBADO'], $porPrograma));
-        $totalReprobado = array_sum(array_map(fn($x)=>$x['REPROBADO'], $porPrograma));
-
-        return [
-            'porPrograma' => $porPrograma,
-            'porTutor' => $porTutor,
-            'totalAprobado' => (int)$totalAprobado,
-            'totalReprobado' => (int)$totalReprobado,
-        ];
-    };
-
     // ----------- construir charts_by_window -----------
     $chartsByWindow = [];
     foreach ($windowIds as $wid) {
-        $chartsByWindow[(string)$wid] = $buildChartsForWindow((int)$wid);
+        $chartsByWindow[(string)$wid] = $this->buildChartsForWindow($period, (int) $wid);
     }
 
     // ----------- EXCEL -----------
@@ -832,6 +583,170 @@ public function windowsIndex(ReportPeriod $period)
     return response()->streamDownload(function () use ($writer) {
         $writer->save('php://output');
     }, $filename);
+}
+
+private function emptyCharts(): array
+{
+    return [
+        'porPrograma'    => [],
+        'porTutor'       => [],
+        'totalAprobado'  => 0,
+        'totalReprobado' => 0,
+        'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0],
+        'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0],
+    ];
+}
+
+private function buildChartsForWindow(ReportPeriod $period, int $windowId, float $approvalMin = 3.0): array
+{
+    return Cache::remember(
+        "rep_window_chart_period_{$period->id}_window_{$windowId}",
+        now()->addMinutes(10),
+        function () use ($period, $windowId, $approvalMin) {
+            $baseA = DB::table('asistencias as a')
+                ->where('a.period_id', $period->id)
+                ->where('a.report_window_id', $windowId);
+
+            $notaExpr = "COALESCE(n.final, n.definitiva)";
+
+            $baseStudentMateria = (clone $baseA)
+                ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+                ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+                ->selectRaw("
+                    TRIM(a.identificacion) as identificacion,
+                    COALESCE(NULLIF(TRIM(a.programa_academico), ''), 'Sin programa') as programa_key,
+                    a.tutor_id as tutor_id,
+                    LOWER(TRIM(COALESCE(s.nombre, ''))) as materia_key
+                ");
+
+            $withNotasBase = DB::query()
+                ->fromSub($baseStudentMateria, 'x')
+                ->leftJoin('notas as n', function ($j) use ($period) {
+                    $j->on(DB::raw('TRIM(n.identificacion)'), '=', DB::raw('x.identificacion'))
+                        ->on(DB::raw('LOWER(TRIM(n.materia))'), '=', DB::raw('x.materia_key'))
+                        ->where('n.period_id', $period->id);
+                });
+
+            $studentPrograma = (clone $withNotasBase)
+                ->selectRaw("x.programa_key as label, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
+                ->groupBy('label', 'identificacion');
+
+            $aprobExprP  = "SUM(CASE WHEN p.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
+            $reprobExprP = "SUM(CASE WHEN p.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
+
+            $porPrograma = DB::query()
+                ->fromSub($studentPrograma, 'p')
+                ->selectRaw("p.label as label, $aprobExprP as APROBADO, $reprobExprP as REPROBADO")
+                ->groupBy('label')
+                ->orderByRaw("($aprobExprP + $reprobExprP) DESC")
+                ->get()
+                ->map(fn($r) => [
+                    'label' => (string)$r->label,
+                    'APROBADO' => (int)$r->APROBADO,
+                    'REPROBADO' => (int)$r->REPROBADO,
+                    'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
+                ])
+                ->values()
+                ->all();
+
+            $studentTutor = (clone $withNotasBase)
+                ->selectRaw("x.tutor_id as tutor_id, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
+                ->groupBy('tutor_id', 'identificacion');
+
+            $aprobExprT  = "SUM(CASE WHEN tt.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
+            $reprobExprT = "SUM(CASE WHEN tt.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
+
+            $porTutor = DB::query()
+                ->fromSub($studentTutor, 'tt')
+                ->leftJoin('tutors as t', 't.id', '=', 'tt.tutor_id')
+                ->selectRaw("
+                    COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', tt.tutor_id)) as label,
+                    $aprobExprT as APROBADO,
+                    $reprobExprT as REPROBADO
+                ")
+                ->groupBy('label')
+                ->orderByRaw("($aprobExprT + $reprobExprT) DESC")
+                ->get()
+                ->map(fn($r) => [
+                    'label' => (string)$r->label,
+                    'APROBADO' => (int)$r->APROBADO,
+                    'REPROBADO' => (int)$r->REPROBADO,
+                    'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
+                ])
+                ->values()
+                ->all();
+
+            $totalAprobado  = (int) array_sum(array_column($porPrograma, 'APROBADO'));
+            $totalReprobado = (int) array_sum(array_column($porPrograma, 'REPROBADO'));
+
+            $sexo = ['FEMENINO' => 0, 'MASCULINO' => 0];
+            if (Schema::hasColumn('asistencias', 'sexo')) {
+                $sexoPorEstudiante = (clone $baseA)
+                    ->selectRaw("
+                        TRIM(a.identificacion) as identificacion,
+                        MAX(
+                            CASE
+                                WHEN UPPER(TRIM(a.sexo)) IN ('F', 'FEMENINO') THEN 'FEMENINO'
+                                WHEN UPPER(TRIM(a.sexo)) IN ('M', 'MASCULINO') THEN 'MASCULINO'
+                                ELSE NULL
+                            END
+                        ) as sexo_norm
+                    ")
+                    ->groupBy('identificacion');
+
+                $sexoRows = DB::query()
+                    ->fromSub($sexoPorEstudiante, 'sx')
+                    ->selectRaw("COALESCE(sx.sexo_norm, 'SIN_DATO') as label, COUNT(*) as total")
+                    ->groupBy('label')
+                    ->get();
+
+                $sexo = [
+                    'FEMENINO'  => (int)($sexoRows->firstWhere('label', 'FEMENINO')->total ?? 0),
+                    'MASCULINO' => (int)($sexoRows->firstWhere('label', 'MASCULINO')->total ?? 0),
+                ];
+            }
+
+            $grupos = ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0];
+            if (Schema::hasColumn('asistencias', 'grupo_priorizado')) {
+                $gpPorEstudiante = (clone $baseA)
+                    ->selectRaw("
+                        TRIM(a.identificacion) as identificacion,
+                        MAX(UPPER(COALESCE(NULLIF(TRIM(a.grupo_priorizado), ''), 'NINGUNO'))) as gp_norm
+                    ")
+                    ->groupBy('identificacion');
+
+                $gpRows = DB::query()
+                    ->fromSub($gpPorEstudiante, 'gp')
+                    ->selectRaw("gp.gp_norm as label, COUNT(*) as total")
+                    ->groupBy('label')
+                    ->get();
+
+                $grupos = [
+                    'NINGUNO'  => (int)($gpRows->firstWhere('label', 'NINGUNO')->total ?? 0),
+                    'AFRO'     => (int)($gpRows->firstWhere('label', 'AFRO')->total ?? 0),
+                    'INDIGENA' => (int)($gpRows->firstWhere('label', 'INDIGENA')->total ?? 0),
+                ];
+
+                $etnico = (int)(
+                    ($gpRows->firstWhere('label', 'ÉTNICO')->total ?? 0) +
+                    ($gpRows->firstWhere('label', 'ETNICO')->total ?? 0)
+                );
+
+                if ($etnico > 0 && $grupos['INDIGENA'] === 0) {
+                    $grupos['INDIGENA'] = $etnico;
+                }
+            }
+
+            return [
+                'porPrograma'    => $porPrograma,
+                'porTutor'       => $porTutor,
+                'totalAprobado'  => $totalAprobado,
+                'totalReprobado' => $totalReprobado,
+                'sexo'           => $sexo,
+                'grupos'         => $grupos,
+            ];
+        }
+    );
 }
 
 /**

@@ -20,7 +20,7 @@ class EstudianteController extends Controller
      */
     public function index(Request $request)
     {
-        return Inertia::render('Estudiantes/index', $this->buildPeriodPayload($request));
+        return Inertia::render('Estudiantes/index', $this->buildIndexPayload($request));
     }
 
     /**
@@ -29,7 +29,7 @@ class EstudianteController extends Controller
      */
     public function reportes(Request $request)
     {
-        return Inertia::render('Estudiantes/Reportes', $this->buildPeriodPayload($request));
+        return Inertia::render('Estudiantes/Reportes', $this->buildReportPayload($request));
     }
 
     /**
@@ -422,7 +422,118 @@ class EstudianteController extends Controller
         return [$nombres, $apellidos];
     }
 
-    private function buildPeriodPayload(Request $request): array
+    private function buildIndexPayload(Request $request): array
+    {
+        $periods = ReportPeriod::orderByDesc('id')->get(['id', 'code', 'name']);
+
+        $selectedPeriodId = (int) ($request->query('period_id') ?: ($periods->first()->id ?? 0));
+        $search = trim((string) $request->query('q', ''));
+        $servicio = trim((string) $request->query('servicio', ''));
+        $trimestre = trim((string) $request->query('trimestre', ''));
+
+        $rows = [
+            'data' => [],
+            'current_page' => 1,
+            'next_page_url' => null,
+            'prev_page_url' => null,
+            'per_page' => 50,
+        ];
+
+        $filterOptions = [
+            'servicios' => [],
+            'trimestres' => [],
+        ];
+
+        if ($selectedPeriodId) {
+            $periodQuery = Estudiante::query()->where('period_id', $selectedPeriodId);
+
+            $filterOptions['servicios'] = (clone $periodQuery)
+                ->whereNotNull('servicio')
+                ->where('servicio', '!=', '')
+                ->distinct()
+                ->orderBy('servicio')
+                ->pluck('servicio')
+                ->values();
+
+            $filterOptions['trimestres'] = (clone $periodQuery)
+                ->whereNotNull('trimestre')
+                ->where('trimestre', '!=', '')
+                ->distinct()
+                ->orderBy('trimestre')
+                ->pluck('trimestre')
+                ->values();
+
+            $rowsQuery = (clone $periodQuery)
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($inner) use ($search) {
+                        $like = '%' . $search . '%';
+
+                        $inner->where('identificacion', 'like', $like)
+                            ->orWhere('nombres', 'like', $like)
+                            ->orWhere('apellidos', 'like', $like)
+                            ->orWhere('programa_academico', 'like', $like)
+                            ->orWhere('dependencia', 'like', $like)
+                            ->orWhere('actividad', 'like', $like);
+                    });
+                })
+                ->when($servicio !== '', fn ($query) => $query->where('servicio', $servicio))
+                ->when($trimestre !== '', fn ($query) => $query->where('trimestre', $trimestre));
+
+            $rows = $rowsQuery
+                ->select([
+                    'id',
+                    'period_id',
+                    'identificacion',
+                    'nombres',
+                    'apellidos',
+                    'sexo',
+                    'grupos_prioritarios',
+                    'estamento',
+                    'dependencia',
+                    'programa_academico',
+                    'servicio',
+                    'actividad',
+                    'responsable',
+                    'trimestre',
+                ])
+                ->orderBy('servicio')
+                ->orderBy('actividad')
+                ->orderBy('apellidos')
+                ->orderBy('nombres')
+                ->simplePaginate(50)
+                ->withQueryString()
+                ->through(fn (Estudiante $row) => [
+                    'id' => $row->id,
+                    'period_id' => $row->period_id,
+                    'identificacion' => $row->identificacion,
+                    'nombres' => $row->nombres,
+                    'apellidos' => $row->apellidos,
+                    'sexo' => $row->sexo,
+                    'grupos_prioritarios' => $row->grupos_prioritarios,
+                    'estamento' => $row->estamento,
+                    'dependencia' => $row->dependencia,
+                    'programa_academico' => $row->programa_academico,
+                    'servicio' => $row->servicio ?? '',
+                    'actividad' => $row->actividad ?? '',
+                    'responsable' => $row->responsable,
+                    'trimestre' => $row->trimestre ?? '',
+                ]);
+        }
+
+        return [
+            'periods' => $periods,
+            'selected_period_id' => $selectedPeriodId,
+            'filters' => [
+                'q' => $search,
+                'servicio' => $servicio,
+                'trimestre' => $trimestre,
+            ],
+            'filter_options' => $filterOptions,
+            'rows' => $rows,
+        ];
+    }
+
+    private function buildReportPayload(Request $request): array
     {
         $periods = ReportPeriod::orderByDesc('id')->get(['id', 'code', 'name']);
 

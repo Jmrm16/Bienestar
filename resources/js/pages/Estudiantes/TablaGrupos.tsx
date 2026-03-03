@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { router } from "@inertiajs/react";
 import { toast } from "sonner";
-import { PencilLine, Delete, Search, Eye } from "lucide-react";
+import { PencilLine, Delete, Search, Eye, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableCaption,
   TableHead,
   TableHeader,
   TableRow,
@@ -51,96 +50,76 @@ export type EstudianteRow = {
   trimestre: string; // Opción B => ''
 };
 
+export type EstudianteFilters = {
+  q: string;
+  servicio: string;
+  trimestre: string;
+};
+
+export type EstudianteFilterOptions = {
+  servicios: string[];
+  trimestres: string[];
+};
+
+export type EstudiantePagination = {
+  data: EstudianteRow[];
+  current_page: number;
+  next_page_url?: string | null;
+  prev_page_url?: string | null;
+  per_page: number;
+};
+
 export default function TablaEstudiantes({
   rows,
   periodId,
+  filters,
+  filterOptions,
 }: {
-  rows: EstudianteRow[];
+  rows: EstudiantePagination;
   periodId: number;
+  filters: EstudianteFilters;
+  filterOptions: EstudianteFilterOptions;
 }) {
   const textOrDash = (value?: string | null, fallback = "—") => {
     const text = (value ?? "").trim();
     return text !== "" ? text : fallback;
   };
 
-  const [q, setQ] = useState("");
-  const [servicioFilter, setServicioFilter] = useState("all");
-  const [trimestreFilter, setTrimestreFilter] = useState("all");
+  const [searchDraft, setSearchDraft] = useState(filters.q);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<EstudianteRow | null>(null);
 
-  // ✅ Cinturón de seguridad: si por error llega mezclado, igual mostramos SOLO el periodo seleccionado
-  const scopedRows = useMemo(() => {
-    const pid = Number(periodId) || 0;
-    if (!pid) return rows ?? [];
-    return (rows ?? []).filter((r) => Number(r.period_id) === pid);
-  }, [rows, periodId]);
+  useEffect(() => {
+    setSearchDraft(filters.q);
+  }, [filters.q]);
 
-  const servicios = useMemo(() => {
-    const s = new Set<string>();
-    (scopedRows ?? []).forEach((r) => s.add((r.servicio ?? "").trim() || "Sin servicio"));
-    return Array.from(s).sort((a, b) => a.localeCompare(b));
-  }, [scopedRows]);
+  const currentRows = rows.data ?? [];
+  const servicios = filterOptions.servicios ?? [];
+  const trimestres = filterOptions.trimestres ?? [];
+  const hasActiveFilters = Boolean(filters.q || filters.servicio || filters.trimestre);
 
-  const trimestres = useMemo(() => {
-    const s = new Set<string>();
-    (scopedRows ?? []).forEach((r) => s.add((r.trimestre ?? "").trim() || "Sin trimestre"));
-    return Array.from(s).sort((a, b) => a.localeCompare(b));
-  }, [scopedRows]);
+  const applyFilters = (next?: Partial<EstudianteFilters>, page = 1) => {
+    const payload = {
+      period_id: periodId || undefined,
+      q: (next?.q ?? filters.q) || undefined,
+      servicio: (next?.servicio ?? filters.servicio) || undefined,
+      trimestre: (next?.trimestre ?? filters.trimestre) || undefined,
+      page,
+    };
 
-  // ✅ Filtra + ordena SIEMPRE
-  const filtered = useMemo(() => {
-    const search = q.trim().toLowerCase();
-
-    const list = (scopedRows ?? []).filter((r) => {
-      const full = `${r.nombres ?? ""} ${r.apellidos ?? ""}`.toLowerCase();
-      const ident = (r.identificacion ?? "").toLowerCase();
-      const prog = (r.programa_academico ?? "").toLowerCase();
-      const dep = (r.dependencia ?? "").toLowerCase();
-      const act = (r.actividad ?? "").toLowerCase();
-
-      const matchesText =
-        !search ||
-        full.includes(search) ||
-        ident.includes(search) ||
-        prog.includes(search) ||
-        dep.includes(search) ||
-        act.includes(search);
-
-      const svc = (r.servicio ?? "").trim() || "Sin servicio";
-      const tri = (r.trimestre ?? "").trim() || "Sin trimestre";
-
-      const matchesSvc = servicioFilter === "all" || svc === servicioFilter;
-      const matchesTri = trimestreFilter === "all" || tri === trimestreFilter;
-
-      return matchesText && matchesSvc && matchesTri;
+    router.get(route("estudiantes.index"), payload, {
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
     });
+  };
 
-    // ✅ Orden: servicio → actividad → apellidos → nombres → identificación
-    return list.sort((a, b) => {
-      const svcA = (a.servicio ?? "").trim().toLowerCase();
-      const svcB = (b.servicio ?? "").trim().toLowerCase();
-      if (svcA !== svcB) return svcA.localeCompare(svcB);
-
-      const actA = (a.actividad ?? "").trim().toLowerCase();
-      const actB = (b.actividad ?? "").trim().toLowerCase();
-      if (actA !== actB) return actA.localeCompare(actB);
-
-      const apA = (a.apellidos ?? "").trim().toLowerCase();
-      const apB = (b.apellidos ?? "").trim().toLowerCase();
-      if (apA !== apB) return apA.localeCompare(apB);
-
-      const nomA = (a.nombres ?? "").trim().toLowerCase();
-      const nomB = (b.nombres ?? "").trim().toLowerCase();
-      if (nomA !== nomB) return nomA.localeCompare(nomB);
-
-      const idA = (a.identificacion ?? "").trim().toLowerCase();
-      const idB = (b.identificacion ?? "").trim().toLowerCase();
-      return idA.localeCompare(idB);
-    });
-  }, [scopedRows, q, servicioFilter, trimestreFilter]);
+  const clearFilters = () => {
+    setSearchDraft("");
+    applyFilters({ q: "", servicio: "", trimestre: "" });
+  };
 
   const openEdit = (r: EstudianteRow) => {
     setSelected(JSON.parse(JSON.stringify(r)));
@@ -207,26 +186,36 @@ export default function TablaEstudiantes({
 
   return (
     <div className="bg-card text-card-foreground flex flex-col gap-4 rounded-xl border p-4 shadow-sm">
-      <div className="flex flex-col md:flex-row md:items-end gap-3 justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Registros importados</h2>
           <p className="text-sm text-muted-foreground">
-            Filtra por servicio/trimestre y busca por identificación, nombre, programa o actividad.
+            La búsqueda y los filtros se aplican desde el servidor para evitar cargar todo el período en pantalla.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full md:w-[760px]">
-          <div className="relative">
+        <div className="grid w-full gap-2 md:grid-cols-[minmax(0,1.4fr)_220px_220px_auto_auto] lg:max-w-[980px]">
+          <div className="relative md:col-span-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar..."
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  applyFilters({ q: searchDraft.trim() });
+                }
+              }}
+              placeholder="Buscar por nombre, identificación, programa o actividad"
               className="pl-9"
             />
           </div>
 
-          <Select value={servicioFilter} onValueChange={setServicioFilter}>
+          <Select
+            value={filters.servicio || "all"}
+            onValueChange={(value) =>
+              applyFilters({ servicio: value === "all" ? "" : value })
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Servicio" />
             </SelectTrigger>
@@ -240,7 +229,12 @@ export default function TablaEstudiantes({
             </SelectContent>
           </Select>
 
-          <Select value={trimestreFilter} onValueChange={setTrimestreFilter}>
+          <Select
+            value={filters.trimestre || "all"}
+            onValueChange={(value) =>
+              applyFilters({ trimestre: value === "all" ? "" : value })
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Trimestre" />
             </SelectTrigger>
@@ -253,12 +247,42 @@ export default function TablaEstudiantes({
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            variant="outline"
+            onClick={() => applyFilters({ q: searchDraft.trim() })}
+          >
+            Buscar
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={clearFilters}
+            disabled={!hasActiveFilters && searchDraft === ""}
+          >
+            <X className="mr-2 h-4 w-4" />
+            Limpiar
+          </Button>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          Página {rows.current_page}. Mostrando {currentRows.length} registros del período seleccionado.
+        </span>
+        {hasActiveFilters ? (
+          <span>
+            Filtros activos:
+            {" "}
+            {[filters.q && "búsqueda", filters.servicio && "servicio", filters.trimestre && "trimestre"]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        ) : null}
       </div>
 
       <div className="rounded-xl border overflow-hidden">
         <Table>
-          <TableCaption>Vista compacta de los registros del período #{periodId}.</TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>Estudiante</TableHead>
@@ -269,14 +293,14 @@ export default function TablaEstudiantes({
           </TableHeader>
 
           <TableBody>
-            {filtered.length === 0 ? (
+            {currentRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
                   No hay registros para mostrar.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((r) => (
+              currentRows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="align-top">
                     <div className="space-y-2">
@@ -358,6 +382,30 @@ export default function TablaEstudiantes({
           </TableBody>
         </Table>
       </div>
+
+      {(rows.prev_page_url || rows.next_page_url) && (
+        <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Navegación por páginas para mantener el listado liviano.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              disabled={!rows.prev_page_url}
+              onClick={() => applyFilters({}, Math.max(1, rows.current_page - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!rows.next_page_url}
+              onClick={() => applyFilters({}, rows.current_page + 1)}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* ✅ Modal Editar */}
       <Dialog

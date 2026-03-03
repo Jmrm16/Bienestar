@@ -158,6 +158,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/periodos/{period}', [ReportController::class, 'periodsDestroy'])->name('periods.destroy');
 
         Route::get('/periodos/{period}/entregas', [ReportController::class, 'windowsIndex'])->name('windows.index');
+        Route::get('/periodos/{period}/entregas/{window}/charts', [ReportController::class, 'windowCharts'])->name('windows.charts');
         Route::post('/periodos/{period}/entregas', [ReportController::class, 'windowsStore'])->name('windows.store');
         Route::put('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsUpdate'])->name('windows.update');
         Route::delete('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsDestroy'])->name('windows.destroy');

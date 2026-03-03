@@ -6,21 +6,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
+import type { AreaStyle } from "./area-styles";
+import {
+  getParticipantEstamentoBadgeClass,
+  getParticipantStateBadgeClass,
+} from "./participant-badges";
 import type { SportParticipant } from "./types";
 
 export function ParticipantsTable({
   rows,
   onEdit,
   onDelete,
+  style,
 }: {
   rows: SportParticipant[];
   onEdit: (participant: SportParticipant) => void;
   onDelete: (participant: SportParticipant) => void;
+  style: AreaStyle;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border">
+    <div className={`overflow-hidden rounded-3xl border ${style.softCard}`}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -50,15 +58,24 @@ export function ParticipantsTable({
                 <TableCell>
                   {participant.nombres} {participant.apellidos}
                 </TableCell>
-                <TableCell>{participant.estamento}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={getParticipantEstamentoBadgeClass(participant.estamento)}>
+                    {participant.estamento}
+                  </Badge>
+                </TableCell>
                 <TableCell>{participant.carrera_nombre ?? "No aplica"}</TableCell>
-                <TableCell>{participant.estado}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={getParticipantStateBadgeClass(participant.estado)}>
+                    {participant.estado}
+                  </Badge>
+                </TableCell>
                 <TableCell>{participant.fecha_ingreso ?? "Sin fecha"}</TableCell>
                 <TableCell className="text-right">
                   <div className="inline-flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
+                      className={style.badge}
                       onClick={() => onEdit(participant)}
                     >
                       <Pencil className="mr-2 h-4 w-4" />

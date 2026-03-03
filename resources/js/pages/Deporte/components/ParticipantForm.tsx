@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -8,6 +9,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  getParticipantEstamentoBadgeClass,
+  getParticipantStateBadgeClass,
+  PARTICIPANT_ESTAMENTOS,
+  PARTICIPANT_STATES,
+} from "./participant-badges";
 import type { Carrera, SportParticipant } from "./types";
 
 export type ParticipantFormValues = {
@@ -138,13 +145,19 @@ export function ParticipantForm({
             <SelectValue placeholder="Selecciona" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Estudiante">Estudiante</SelectItem>
-            <SelectItem value="Docente">Docente</SelectItem>
-            <SelectItem value="Administrativo">Administrativo</SelectItem>
-            <SelectItem value="Egresado">Egresado</SelectItem>
-            <SelectItem value="Invitado">Invitado</SelectItem>
+            {PARTICIPANT_ESTAMENTOS.map((estamento) => (
+              <SelectItem key={estamento} value={estamento}>
+                {estamento}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <Badge
+          variant="outline"
+          className={getParticipantEstamentoBadgeClass(value.estamento)}
+        >
+          {value.estamento}
+        </Badge>
       </div>
 
       <div className="space-y-2">
@@ -158,11 +171,19 @@ export function ParticipantForm({
             <SelectValue placeholder="Selecciona" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Activo">Activo</SelectItem>
-            <SelectItem value="Inactivo">Inactivo</SelectItem>
-            <SelectItem value="Retirado">Retirado</SelectItem>
+            {PARTICIPANT_STATES.map((state) => (
+              <SelectItem key={state} value={state}>
+                {state}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <Badge
+          variant="outline"
+          className={getParticipantStateBadgeClass(value.estado)}
+        >
+          {value.estado}
+        </Badge>
       </div>
 
       <div className="space-y-2">

@@ -15,6 +15,7 @@ import {
   type ParticipantFormValues,
   validateParticipant,
 } from "./ParticipantForm";
+import { getAreaStyle } from "./area-styles";
 import type { Carrera, SportParticipant } from "./types";
 
 export function ParticipantDialog({
@@ -24,6 +25,7 @@ export function ParticipantDialog({
   carreras,
   participant,
   mode,
+  sportKey,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
@@ -31,12 +33,14 @@ export function ParticipantDialog({
   carreras: Carrera[];
   participant?: SportParticipant | null;
   mode: "create" | "edit";
+  sportKey: string;
 }) {
   const [values, setValues] = useState<ParticipantFormValues>(
     buildParticipantFormValues(participant)
   );
   const [saving, setSaving] = useState(false);
   const errors = useMemo(() => validateParticipant(values), [values]);
+  const style = getAreaStyle(sportKey);
 
   useEffect(() => {
     if (open) {
@@ -65,7 +69,7 @@ export function ParticipantDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
-        <DialogHeader>
+        <DialogHeader className={`rounded-2xl border p-4 ${style.emphasisPanel}`}>
           <DialogTitle>
             {mode === "create" ? "Agregar participante" : "Editar participante"}
           </DialogTitle>
@@ -81,12 +85,17 @@ export function ParticipantDialog({
         <DialogFooter className="gap-2">
           <Button
             variant="outline"
+            className={style.badge}
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving}
+            className={`${style.hero} border-0 hover:opacity-90`}
+          >
             {saving ? "Guardando..." : mode === "create" ? "Guardar" : "Actualizar"}
           </Button>
         </DialogFooter>

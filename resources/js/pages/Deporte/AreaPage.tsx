@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 import { Head, Link } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import { type BreadcrumbItem } from "@/types";
@@ -15,12 +14,16 @@ import {
   Activity,
   ArrowLeft,
   CalendarDays,
+  CheckCircle2,
+  ClipboardList,
   Dumbbell,
+  FileSpreadsheet,
   MapPin,
+  ShieldCheck,
   Trophy,
-  Volleyball,
 } from "lucide-react";
 import { ParticipantsSection } from "./components/ParticipantsSection";
+import { getAreaStyle } from "./components/area-styles";
 import type {
   Carrera,
   ParticipantStats,
@@ -51,13 +54,6 @@ type Props = {
   participantStats: ParticipantStats;
 };
 
-const AREA_ICONS: Record<string, ComponentType<{ className?: string }>> = {
-  futbol: Trophy,
-  voleibol: Volleyball,
-  "entrenamiento-funcional": Dumbbell,
-  "actividad-fisica-musicalizada": Activity,
-};
-
 export default function AreaPage({
   area,
   participants,
@@ -69,14 +65,15 @@ export default function AreaPage({
     { title: area.title, href: area.href },
   ];
 
-  const Icon = AREA_ICONS[area.key] ?? Trophy;
+  const style = getAreaStyle(area.key);
+  const Icon = style.icon;
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={`${area.title} | Deporte`} />
 
       <div className="flex h-full flex-grow flex-col gap-6 rounded-xl p-4">
-        <Card className="rounded-2xl border-none bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white shadow-lg">
+        <Card className={`overflow-hidden rounded-3xl border shadow-lg ${style.hero}`}>
           <CardContent className="flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
               <Link
@@ -87,7 +84,7 @@ export default function AreaPage({
                 Volver al modulo
               </Link>
               <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-white/15 p-3 backdrop-blur">
+                <div className={`rounded-2xl p-3 backdrop-blur ${style.heroIconWrap}`}>
                   <Icon className="h-7 w-7" />
                 </div>
                 <div>
@@ -103,7 +100,7 @@ export default function AreaPage({
             </div>
 
             <div className="flex flex-col gap-3 lg:items-end">
-              <Badge className="w-fit border-white/20 bg-white/10 text-white hover:bg-white/10">
+              <Badge className={`w-fit ${style.heroBadge}`}>
                 {area.kind === "servicio" ? "Servicio" : "Disciplina"}
               </Badge>
               <div className="text-sm text-white/75">Enfoque principal</div>
@@ -116,7 +113,7 @@ export default function AreaPage({
           <MetricCard
             title="Tipo de oferta"
             value={area.kind === "servicio" ? "Servicio" : "Disciplina"}
-            icon={Volleyball}
+            icon={Icon}
             color="green"
             detail="Clasificacion del catalogo"
           />
@@ -137,25 +134,39 @@ export default function AreaPage({
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.9fr]">
-          <Card className="rounded-2xl">
+          <Card className={`rounded-3xl border ${style.softCard}`}>
             <CardHeader>
-              <CardTitle>Informacion de la oferta</CardTitle>
+              <CardTitle>Informacion general</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border bg-muted/30 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <CalendarDays className="h-4 w-4" />
-                    Horario
+                <div className={`rounded-3xl border p-5 shadow-sm ${style.softCard}`}>
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className={`rounded-2xl p-2 ${style.softIcon}`}>
+                      <CalendarDays className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Horario</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        Programacion
+                      </div>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {area.schedule}
                   </p>
                 </div>
-                <div className="rounded-2xl border bg-muted/30 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <MapPin className="h-4 w-4" />
-                    Lugar
+                <div className={`rounded-3xl border p-5 shadow-sm ${style.softCard}`}>
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className={`rounded-2xl p-2 ${style.softIcon}`}>
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">Lugar</div>
+                      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        Escenario
+                      </div>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {area.location}
@@ -164,24 +175,44 @@ export default function AreaPage({
               </div>
 
               <div>
-                <h2 className="mb-3 text-base font-semibold">Descripcion</h2>
-                <div className="rounded-2xl border p-4 text-sm text-muted-foreground">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className={`rounded-2xl p-2 ${style.softIcon}`}>
+                    <ClipboardList className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold">Descripcion</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Resumen de la oferta deportiva
+                    </p>
+                  </div>
+                </div>
+                <div className={`rounded-3xl border p-5 text-sm leading-7 text-muted-foreground ${style.emphasisPanel}`}>
                   {area.description}
                 </div>
               </div>
 
               <div>
-                <h2 className="mb-3 text-base font-semibold">
-                  {area.kind === "servicio"
-                    ? "Practicas o implementos disponibles"
-                    : "Lineas de trabajo"}
-                </h2>
+                <div className="mb-3 flex items-center gap-3">
+                  <div className={`rounded-2xl p-2 ${style.softIcon}`}>
+                    <Activity className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold">
+                      {area.kind === "servicio"
+                        ? "Practicas o implementos disponibles"
+                        : "Lineas de trabajo"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Componentes principales de esta oferta
+                    </p>
+                  </div>
+                </div>
                 {area.services.length > 0 ? (
                   <div className="grid gap-3 md:grid-cols-3">
                     {area.services.map((service) => (
                       <div
                         key={service}
-                        className="rounded-2xl border p-4 text-sm text-muted-foreground"
+                        className={`rounded-3xl border p-4 text-sm text-muted-foreground shadow-sm ${style.softCard}`}
                       >
                         {service}
                       </div>
@@ -196,31 +227,54 @@ export default function AreaPage({
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className={`rounded-3xl border ${style.softCard}`}>
             <CardHeader>
               <CardTitle>Requisitos y control</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {area.requirements.map((requirement) => (
-                <div
-                  key={requirement}
-                  className="rounded-2xl border p-4 text-sm text-muted-foreground"
-                >
-                  {requirement}
-                </div>
-              ))}
+              <div className="space-y-3">
+                {area.requirements.map((requirement) => (
+                  <div
+                    key={requirement}
+                    className={`flex items-start gap-3 rounded-3xl border p-4 shadow-sm ${style.softCard}`}
+                  >
+                    <div className={`mt-0.5 rounded-full p-1.5 ${style.softIcon}`}>
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{requirement}</p>
+                  </div>
+                ))}
+              </div>
 
-              <div className="rounded-2xl border border-dashed bg-muted/20 p-4">
-                <div className="mb-2 text-sm font-medium">
-                  Siguiente paso recomendado
+              <div className={`rounded-3xl border border-dashed p-5 ${style.emphasisPanel}`}>
+                <div className="mb-3 flex items-center gap-3">
+                  <div className={`rounded-2xl p-2 ${style.softIcon}`}>
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Gestion operativa</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                      Seguimiento
+                    </div>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Si luego me pasas horarios, responsables o cupos reales, este
-                  modulo ya esta listo para parametrizarlos sin rehacer la
-                  estructura.
+                  Usa la seccion de participantes para llevar registros,
+                  mantener el control de la disciplina y exportar informes en
+                  CSV cuando lo necesites.
                 </p>
-                <Button asChild className="mt-4 w-full">
-                  <Link href="/deportes">Ver otras disciplinas</Link>
+                <div className="mt-4 grid gap-3">
+                  <div className={`flex items-center gap-3 rounded-2xl border p-3 text-sm text-muted-foreground ${style.softCard}`}>
+                    <ClipboardList className={`h-4 w-4 ${style.action}`} />
+                    Registro y actualizacion de participantes
+                  </div>
+                  <div className={`flex items-center gap-3 rounded-2xl border p-3 text-sm text-muted-foreground ${style.softCard}`}>
+                    <FileSpreadsheet className={`h-4 w-4 ${style.action}`} />
+                    Exportacion de informes por disciplina
+                  </div>
+                </div>
+                <Button asChild className="mt-5 w-full">
+                  <Link href="/deportes">Volver al catalogo</Link>
                 </Button>
               </div>
             </CardContent>

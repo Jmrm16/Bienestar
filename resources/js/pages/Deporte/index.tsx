@@ -1,18 +1,11 @@
-import type { ComponentType } from "react";
 import { Head, router } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import { type BreadcrumbItem } from "@/types";
 import { MetricCard } from "@/components/component/MetricCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import {
-  Activity,
-  ArrowRight,
-  Dumbbell,
-  Trophy,
-  Users,
-  Volleyball,
-} from "lucide-react";
+import { Activity, ArrowRight, Trophy, Users, Volleyball } from "lucide-react";
+import { getAreaStyle } from "./components/area-styles";
 
 type SportArea = {
   key: string;
@@ -44,16 +37,7 @@ type Props = {
   stats: Stats;
 };
 
-const breadcrumbs: BreadcrumbItem[] = [
-  { title: "Deporte", href: "/deportes" },
-];
-
-const AREA_ICONS: Record<string, ComponentType<{ className?: string }>> = {
-  futbol: Trophy,
-  voleibol: Volleyball,
-  "entrenamiento-funcional": Dumbbell,
-  "actividad-fisica-musicalizada": Activity,
-};
+const breadcrumbs: BreadcrumbItem[] = [{ title: "Deporte", href: "/deportes" }];
 
 export default function DeporteIndex({
   moduleDescription,
@@ -107,40 +91,64 @@ export default function DeporteIndex({
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <MetricCard
-            title="Ofertas activas"
-            value={stats.offers}
-            icon={Volleyball}
-            color="green"
-            detail="Catalogo actual del area"
-          />
-          <MetricCard
-            title="Disciplinas"
-            value={stats.disciplines}
-            icon={Users}
-            color="blue"
-            detail="Procesos deportivos listados"
-          />
-          <MetricCard
-            title="Servicios"
-            value={stats.services}
-            icon={Trophy}
-            color="cyan"
-            detail="Prestaciones de apoyo al deporte"
-          />
-          <MetricCard
-            title="Practica libre"
-            value={stats.free_time_policy}
-            icon={Activity}
-            color="purple"
-            detail="Tiempo maximo para prestamo"
-          />
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Panorama del area
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Vista general del catalogo deportivo disponible en la sede.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+            <MetricCard
+              title="Ofertas activas"
+              value={stats.offers}
+              icon={Volleyball}
+              color="green"
+              detail="Catalogo actual del area"
+            />
+            <MetricCard
+              title="Disciplinas"
+              value={stats.disciplines}
+              icon={Users}
+              color="blue"
+              detail="Procesos deportivos listados"
+            />
+            <MetricCard
+              title="Servicios"
+              value={stats.services}
+              icon={Trophy}
+              color="cyan"
+              detail="Prestaciones de apoyo al deporte"
+            />
+            <MetricCard
+              title="Practica libre"
+              value={stats.free_time_policy}
+              icon={Activity}
+              color="purple"
+              detail="Tiempo maximo para prestamo"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Oferta por disciplina
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Cada tarjeta resume una oferta y conserva una identidad visual
+              propia.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           {areas.map((area, idx) => {
-            const Icon = AREA_ICONS[area.key] ?? Volleyball;
+            const style = getAreaStyle(area.key);
+            const Icon = style.icon;
 
             return (
               <motion.button
@@ -149,29 +157,35 @@ export default function DeporteIndex({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                className="group rounded-2xl border bg-background p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                className={`group relative overflow-hidden rounded-3xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${style.shell}`}
               >
+                <div
+                  className={`absolute -right-8 -top-8 h-28 w-28 rounded-full blur-2xl ${style.glow}`}
+                />
+
                 <div className="flex items-start justify-between gap-4">
-                  <div className="rounded-2xl border bg-muted/30 p-3">
+                  <div className={`rounded-2xl border p-3 ${style.iconWrap}`}>
                     <Icon className="h-6 w-6" />
                   </div>
-                  <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
+                  <span className={`rounded-full border px-3 py-1 text-xs font-medium ${style.badge}`}>
                     {area.kind === "servicio" ? "Servicio" : "Disciplina"}
                   </span>
                 </div>
 
-                <div className="mt-4">
-                  <h2 className="text-lg font-semibold">{area.title}</h2>
-                  <p className="mt-2 line-clamp-3 min-h-[4.5rem] text-sm text-muted-foreground">
+                <div className="relative mt-5">
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    {area.title}
+                  </h2>
+                  <p className="mt-2 line-clamp-2 min-h-[3rem] text-sm text-muted-foreground">
                     {area.description}
                   </p>
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-muted/40 p-3">
-                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className={`mt-4 rounded-3xl border p-4 ${style.focusPanel}`}>
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                     Enfoque
                   </div>
-                  <div className="mt-1 text-sm font-medium text-foreground">
+                  <div className="mt-1 text-sm font-medium leading-6 text-foreground">
                     {area.focus}
                   </div>
                 </div>
@@ -181,7 +195,7 @@ export default function DeporteIndex({
                     {area.services.slice(0, 2).map((item) => (
                       <span
                         key={item}
-                        className="rounded-full border px-2 py-1 text-xs text-muted-foreground"
+                        className="rounded-full border bg-background/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur"
                       >
                         {item}
                       </span>
@@ -189,7 +203,7 @@ export default function DeporteIndex({
                   </div>
                 ) : null}
 
-                <div className="mt-5 flex items-center justify-between text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <div className={`mt-5 flex items-center justify-between text-sm font-medium ${style.action}`}>
                   <span>Ver informacion</span>
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                 </div>

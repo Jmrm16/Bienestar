@@ -12,6 +12,7 @@ class Tutor extends Model
     protected $fillable = [
         'codigo',
         'cedula_hash',
+        'tipo_resolucion',
         'nombre',
         'apellido',
         'tipo_documento',

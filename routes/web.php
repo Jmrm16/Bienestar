@@ -71,6 +71,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::resource('tutores', TutorController::class)->except(['create', 'edit']);
+    Route::post('/tutores/importar-excel', [TutorController::class, 'import'])
+        ->name('tutores.import');
     Route::get('/tutores/{tutor}/perfil', [TutorController::class, 'perfil'])->name('tutores.perfil');
 
     /*

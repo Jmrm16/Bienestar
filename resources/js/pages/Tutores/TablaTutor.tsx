@@ -1,5 +1,7 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   Eye,
   PencilLine,
   Trash2,
@@ -52,6 +54,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import AgregarTutor from '@/pages/Tutores/AgregaTutor';
+import ImportarTutoresDialog from "@/pages/Tutores/ImportarTutoresDialog";
 
 /* ===== Tipos ===== */
 interface Asignatura {
@@ -93,6 +96,8 @@ function csrfToken(): string {
   return el?.content ?? "";
 }
 
+const ITEMS_PER_PAGE = 10;
+
 const TablaTutor = () => {
   const { tutores = [], asignaturas = [], carreras = [] } = usePage().props as unknown as {
     tutores: Tutor[];
@@ -108,6 +113,7 @@ const TablaTutor = () => {
   /* ───────── MODALES ───────── */
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [deleteTutor, setDeleteTutor] = useState<Tutor | null>(null);
@@ -139,6 +145,27 @@ const TablaTutor = () => {
       return matchesSearch && matchesCarrera && matchesAsignatura;
     });
   }, [tutores, search, carreraFilter, asignaturaFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, carreraFilter, asignaturaFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTutores.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedTutores = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTutores.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredTutores]);
+
+  const pageStart = filteredTutores.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const pageEnd = Math.min(currentPage * ITEMS_PER_PAGE, filteredTutores.length);
 
   /* ───────── EDITAR ───────── */
   const openEdit = (tutor: Tutor) => {
@@ -290,9 +317,10 @@ const TablaTutor = () => {
           </Button>
         </CardContent>
       </Card>
-       <div className="flex space-x-4 mb-4">
-            <AgregarTutor />
-        </div>
+      <div className="mb-4 flex flex-wrap gap-3">
+        <AgregarTutor />
+        <ImportarTutoresDialog />
+      </div>
 
       {/* TABLA */}
       <Card>
@@ -309,7 +337,7 @@ const TablaTutor = () => {
             </TableHeader>
 
             <TableBody>
-              {filteredTutores.map((t) => (
+              {paginatedTutores.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -404,6 +432,37 @@ const TablaTutor = () => {
             </TableBody>
           </Table>
         </CardContent>
+        <div className="flex flex-col gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {pageStart}-{pageEnd} de {filteredTutores.length} tutores
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Anterior
+            </Button>
+
+            <span className="min-w-24 text-center text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </Card>
 
       {/* MODAL EDITAR */}

@@ -1,8 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Crear from '@/pages/Cultura/Crear';
+import { resolveCulturaImageUrl } from '@/lib/cultura-media';
 
 interface Cultura {
   id: number;
@@ -10,6 +10,8 @@ interface Cultura {
   descripcion: string;
   tipo: string;
   imagen_banner?: string;
+  imagen_url?: string | null;
+  contenido_json?: unknown;
 }
 
 interface CulturaIndexProps {
@@ -28,15 +30,18 @@ export default function CulturaIndex({ culturas }: CulturaIndexProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {culturas.map((item) => (
+          {culturas.map((item) => {
+            const imageUrl = resolveCulturaImageUrl(item, '');
+
+            return (
             <Card key={item.id}>
               <CardHeader>
                 <CardTitle>{item.titulo}</CardTitle>
               </CardHeader>
               <CardContent>
-                {item.imagen_banner && (
+                {imageUrl && (
                   <img
-                    src={`/storage/${item.imagen_banner}`}
+                    src={imageUrl}
                     alt={item.titulo}
                     className="mb-3 rounded-lg max-h-48 object-cover w-full"
                   />
@@ -50,7 +55,7 @@ export default function CulturaIndex({ culturas }: CulturaIndexProps) {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       </div>
     </AppLayout>

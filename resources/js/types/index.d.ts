@@ -80,7 +80,8 @@ export interface Cultura {
   tipo: string;
   fecha: string; // formato ISO, por ejemplo "2025-06-05T00:00:00.000000Z"
   imagen_banner?: string;
-  contenido_json?: any; // JSON de bloques Editor.js
+  imagen_url?: string | null;
+  contenido_json?: unknown; // JSON de bloques Editor.js
 }
 
   export interface NavItem {

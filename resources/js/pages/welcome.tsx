@@ -3,11 +3,21 @@ import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import HeaderComponent from '@/../js/components/component/header-component';
 import FooterComponent from '@/../js/components/component/footer-component';
+import { resolveCulturaImageUrl } from '@/lib/cultura-media';
+
+type JQueryCollectionLike = {
+  owlCarousel?: (options?: Record<string, unknown>) => void;
+  trigger: (eventName: string) => void;
+};
+
+type JQueryLike = ((selector: string) => JQueryCollectionLike) & {
+  fn?: {
+    owlCarousel?: unknown;
+  };
+};
 
 declare global {
-  interface Window {
-    $: any;
-  }
+
 }
 
 interface Cultura {
@@ -16,7 +26,9 @@ interface Cultura {
   titulo: string;
   descripcion: string;
   imagen_banner?: string;
+  imagen_url?: string | null;
   fecha?: string;
+  contenido_json?: unknown;
 }
 
 // Animations
@@ -100,32 +112,18 @@ export default function Welcome() {
 
   const slides = [
     {
-      img: 'https://diariodelnorte.net/wp-content/uploads/2024/02/edificio-Uniguajira-750x375.png',
+      img: 'https://lh3.googleusercontent.com/gps-cs-s/AHVAweo16BTxd_JpF4S1J-W9FyE0tOM6RsWonQq4zQTBby_myZ69nExSLgI-G1Q9ePd-FBvvMnczNe5TZxRoteiXkxB5doAbRhDqHNCfLERV5gRaNLmkICjcuTiQzXkusW1XfegCD2w3xA=s680-w680-h510-rw',
       title: 'Universidad de La Guajira',
       subtitle: 'Educación superior de calidad en la región',
       button: { label: 'Conócenos', href: '/institucional' },
     },
     {
-      img: 'https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp',
+      img: 'https://lh3.googleusercontent.com/gps-cs-s/AHVAweq7zl7WYXF7B4Pc6oDf1b1sA9JlrwYqT0IL3egAsTXIesRhr6RHMV-X_6wNsF3ZGsoST0wZj4LQbM9DfDxTl_Lm5HPhoF4h7-YcRVKe34nwJjgyTHfMsFoZf3zA4xwpJBQBfsGz=s680-w680-h510-rw',
       title: 'Oportunidades Académicas',
       subtitle: 'Programas, becas y desarrollo estudiantil',
       button: { label: 'Explorar programas', href: '/programas' },
     },
   ];
-
-  const quickLinks = [
-    { icon: '📚', title: 'Académicos', link: '/programas' },
-    { icon: '🏛️', title: 'Admisiones', link: '/admisiones' },
-    { icon: '🔬', title: 'Investigación', link: '/investigacion' },
-    { icon: '🌎', title: 'Internacional', link: '/internacional' },
-  ];
-
-  const testimonials = [
-    { quote: 'La Universidad de La Guajira me ha brindado herramientas valiosas para mi desarrollo profesional.', author: 'María González', role: 'Egresada de Ingeniería' },
-    { quote: 'Excelente ambiente académico y docentes altamente capacitados.', author: 'Carlos Mendoza', role: 'Estudiante de Derecho' },
-    { quote: 'Las oportunidades de investigación son increíbles; muy contento con mi experiencia.', author: 'Luisa Fernández', role: 'Investigadora' },
-  ];
-
   return (
     <>
       <Head title="Inicio | Universidad de La Guajira">
@@ -172,19 +170,7 @@ export default function Welcome() {
         <section className="-mt-10 relative z-10">
           <div className="mx-auto max-w-7xl px-4 md:px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white rounded-2xl shadow p-4">
-              {quickLinks.map((item, idx) => (
-                <Link
-                  key={idx}
-                  href={item.link}
-                  className="group rounded-xl p-4 hover:bg-gray-100 transition border border-gray-100"
-                >
-                  <div className="text-2xl mb-2">{item.icon}</div>
-                  <div className="font-semibold">{item.title}</div>
-                  <div className="mt-1 text-sm text-gray-500 opacity-0 group-hover:opacity-100 transition">
-                    Ver más
-                  </div>
-                </Link>
-              ))}
+  
             </div>
           </div>
         </section>
@@ -205,7 +191,7 @@ export default function Welcome() {
                 <motion.article key={item.id} variants={fadeInUp} className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition">
                   <Link href={`/cultura/${item.id}/item`}>
                     <div className="relative aspect-[16/9] overflow-hidden">
-                      <img src={item.imagen_banner ? `/storage/${item.imagen_banner}` : defaultNewsImage} alt={item.titulo} className="h-full w-full object-cover hover:scale-105 transition-transform" />
+                      <img src={resolveCulturaImageUrl(item, defaultNewsImage)} alt={item.titulo} className="h-full w-full object-cover hover:scale-105 transition-transform" />
                     </div>
                   </Link>
                   <div className="p-5">
@@ -237,7 +223,7 @@ export default function Welcome() {
               {noticiasRecientes.map(noticia => (
                 <motion.article key={noticia.id} variants={fadeInUp} className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition">
                   <div className="relative aspect-[16/9]">
-                    <img src={noticia.imagen_banner ? `/storage/${noticia.imagen_banner}` : defaultNewsImage} alt={noticia.titulo} className="h-full w-full object-cover hover:scale-105 transition-transform" />
+                    <img src={resolveCulturaImageUrl(noticia, defaultNewsImage)} alt={noticia.titulo} className="h-full w-full object-cover hover:scale-105 transition-transform" />
                   </div>
                   <div className="p-5">
                     <div className="flex justify-between items-center text-xs mb-2">
@@ -253,34 +239,7 @@ export default function Welcome() {
           </div>
         </motion.section>
 
-        {/* TESTIMONIOS */}
-        <motion.section variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }} className="py-16">
-          <div className="mx-auto max-w-7xl px-4 md:px-6">
-            <motion.div variants={fadeInUp} className="text-center mb-12">
-              <h2 className="text-3xl font-bold">Testimonios <span className="text-blue-600">de nuestra comunidad</span></h2>
-              <p className="mt-2 text-gray-600 max-w-2xl mx-auto">
-                Voces de estudiantes, egresados y colaboradores.
-              </p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {testimonials.map((t, i) => (
-                <motion.blockquote key={i} variants={fadeInUp} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-                  <div className="text-yellow-500">★★★★★</div>
-                  <p className="mt-3 italic text-gray-700">“{t.quote}”</p>
-                  <footer className="mt-4 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
-                      {t.author.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-semibold">{t.author}</div>
-                      <div className="text-sm text-gray-500">{t.role}</div>
-                    </div>
-                  </footer>
-                </motion.blockquote>
-              ))}
-            </div>
-          </div>
-        </motion.section>
+        
       </main>
 
       <FooterComponent />

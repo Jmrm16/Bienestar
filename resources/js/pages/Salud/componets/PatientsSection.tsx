@@ -39,20 +39,27 @@ export function PatientsSection({
   }, [q, patients]);
 
   const handleCreate = (values: PatientFormValues) => {
-    router.post(
-      `/salud/${areaKey}/pacientes`,
-      {
-        ...values,
-        carrera_id: Number(values.carrera_id), // ✅ convertir a number
-      },
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          setOpenCreate(false);
-          setQ("");
+    return new Promise<void>((resolve, reject) => {
+      router.post(
+        `/salud/${areaKey}/pacientes`,
+        {
+          ...values,
+          carrera_id: Number(values.carrera_id),
         },
-      }
-    );
+        {
+          preserveScroll: true,
+          onSuccess: () => {
+            setOpenCreate(false);
+            setQ("");
+            resolve();
+          },
+          onError: (errors) => {
+            const firstError = Object.values(errors)[0];
+            reject(new Error(typeof firstError === "string" ? firstError : "No se pudo guardar"));
+          },
+        }
+      );
+    });
   };
 
   return (

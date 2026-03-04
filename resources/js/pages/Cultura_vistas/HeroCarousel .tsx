@@ -1,114 +1,67 @@
-import { useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Link } from '@inertiajs/react';
-
-declare global {
-  interface Window {
-    $: any;
-    jQuery: any;
-    owlCarousel: any;
-  }
+interface HeroCarouselProps {
+  stats?: Array<{
+    label: string;
+    value: number;
+  }>;
 }
 
-const slides = [
-  {
-    image: 'https://diariodelnorte.net/wp-content/uploads/2024/02/edificio-Uniguajira-750x375.png',
-    title: 'Bienestar y Permanencia',
-    subtitle: 'Conoce nuestros programas de acompañamiento y apoyo académico.',
-    button: 'Ver más',
-    link: '#servicios',
-  },
-  {
-    image: 'https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp',
-    title: 'Educación con Propósito',
-    subtitle: 'Impulsando tu formación integral en la sede Maicao.',
-    button: 'Explorar',
-    link: '#quienes-somos',
-  },
-];
-
-export default function HeroCarousel() {
-  useEffect(() => {
-    const initOwlCarousel = () => {
-      if (window.$ && window.$.fn?.owlCarousel) {
-        $('.hero-slider').owlCarousel({
-          loop: true,
-          nav: false,
-          dots: true,
-          items: 1,
-          autoplay: true,
-          autoplayTimeout: 5000,
-          autoplayHoverPause: true,
-          smartSpeed: 1000,
-        });
-      } else {
-        setTimeout(initOwlCarousel, 100);
-      }
-    };
-
-    initOwlCarousel();
-
-    return () => {
-      if (window.$?.fn?.owlCarousel) {
-        $('.hero-slider').trigger('destroy.owl.carousel');
-      }
-    };
-  }, []);
+export default function HeroCarousel({ stats = [] }: HeroCarouselProps) {
+  const heroStats = stats.slice(0, 3);
 
   return (
-    <div className="hero-slider owl-carousel relative">
-      {slides.map((slide, i) => (
-        <motion.div
-          key={i}
-          className="hs-item h-[500px] bg-cover bg-center relative"
-          style={{ backgroundImage: `url('${slide.image}')` }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          {/* Banda oscura con contenido en la parte inferior */}
-          <motion.div
-            className="hs-text absolute bottom-0 left-0 right-0 p-5 bg-black/60 text-white z-20"
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <div className="container mx-auto">
-              <motion.h2
-                className="text-3xl md:text-4xl font-bold"
-                initial={{ x: -30, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.5, type: 'spring' }}
-              >
-                {slide.title}
-              </motion.h2>
-              <motion.p
-                className="my-2 text-base md:text-lg"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-              >
-                {slide.subtitle}
-              </motion.p>
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.9 }}
-              >
-                <Link
-                  href={slide.link}
-                  className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition z-30 relative mt-2"
-                >
-                  {slide.button}
-                </Link>
-              </motion.div>
-            </div>
-          </motion.div>
+    <section className="relative overflow-hidden bg-stone-950 text-white">
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-30"
+        style={{
+          backgroundImage:
+            "url('https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp')",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-stone-950 via-stone-900/90 to-amber-950/70" />
 
-          {/* Capa base opcional para oscurecer imagen */}
-          <div className="absolute inset-0 z-10 bg-black/30"></div>
-        </motion.div>
-      ))}
-    </div>
+      <div className="relative mx-auto flex min-h-[440px] max-w-7xl flex-col justify-center px-4 py-16 md:px-6">
+        <div className="max-w-3xl">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-amber-300">
+            Bienestar Universitario
+          </p>
+          <h2 className="text-4xl font-bold leading-tight md:text-5xl">
+            Cultura universitaria con una página más clara y enfocada
+          </h2>
+          <p className="mt-4 max-w-2xl text-base text-stone-200 md:text-lg">
+            Consulta eventos, noticias, áreas artísticas y piezas destacadas sin repetir información ni
+            cargar de más la vista principal.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a
+              href="#eventos"
+              className="inline-flex items-center justify-center rounded-lg bg-amber-500 px-6 py-3 font-semibold text-stone-950 transition hover:bg-amber-400"
+            >
+              Ver eventos
+            </a>
+            <a
+              href="#noticias"
+              className="inline-flex items-center justify-center rounded-lg border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
+            >
+              Ir a noticias
+            </a>
+          </div>
+        </div>
+
+        {heroStats.length > 0 && (
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {heroStats.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm"
+              >
+                <p className="text-3xl font-bold text-amber-300">{item.value}</p>
+                <p className="mt-1 text-sm text-stone-200">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

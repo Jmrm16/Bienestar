@@ -44,7 +44,7 @@ export function PatientCreateDialog({
   const errors = useMemo(() => validatePatient(values), [values]);
 
   const handleSave = async () => {
-    if (hasErrors(errors as any)) {
+    if (hasErrors(errors)) {
       toast.error("Revisa los campos obligatorios");
       return;
     }
@@ -70,8 +70,8 @@ export function PatientCreateDialog({
         carrera_id: "",
         semestre: "",
       });
-    } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo guardar");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "No se pudo guardar");
     } finally {
       setSaving(false);
     }

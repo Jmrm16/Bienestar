@@ -265,14 +265,7 @@ const handleQuitarTutor = (grupoId: number, tutorId: number) => {
                         <Eye className="mr-2 size-4" /> Ver asistencias
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setGrupoParaImportar(grupo);
-                          setIsImportarOpen(true);
-                        }}
-                      >
-                        <Upload className="mr-2 size-4" /> Importar archivo
-                      </DropdownMenuItem>
+ 
 
                       {/* 🔥 SIEMPRE PERMITIR ASIGNAR TUTOR */}
                       <DropdownMenuItem

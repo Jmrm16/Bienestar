@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Cultura } from "@/types";
+import { resolveCulturaImageUrl } from "@/lib/cultura-media";
 
 import {
   Carousel,
@@ -12,6 +13,9 @@ import {
 interface Props {
   culturas: Cultura[];
 }
+
+const DEFAULT_IMG =
+  "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp";
 
 const CarouselSize = ({ culturas }: Props) => {
   return (
@@ -28,7 +32,7 @@ const CarouselSize = ({ culturas }: Props) => {
                   <a href={`/cultura/${item.id}/item`} className="block">
                     <div className="overflow-hidden">
                       <img
-                        src={`/storage/${item.imagen_banner}`}
+                        src={resolveCulturaImageUrl(item, DEFAULT_IMG)}
                         alt={item.titulo}
                         className="w-full h-36 object-cover transition-transform duration-300 hover:scale-105"
                       />

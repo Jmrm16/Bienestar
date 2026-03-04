@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Cultura;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 
 class CulturaController extends Controller
 {
     public function index()
     {
-        $culturas = Cultura::latest()->get();
+        $culturas = $this->presentCulturas(Cultura::latest()->get());
+
         return Inertia::render('Cultura/index', ['culturas' => $culturas]);
     }
 
@@ -36,7 +39,7 @@ class CulturaController extends Controller
             $data['imagen_banner'] = $request->file('imagen_banner')->store('cultura', 'public');
         }
 
-        $data['contenido_json'] = $request->input('contenido_json'); // ✅ guardar bloques
+        $data['contenido_json'] = $this->prepareEditorContentForStorage($request->input('contenido_json'));
 
         Cultura::create($data);
         return redirect()->route('cultura.index');
@@ -44,7 +47,7 @@ class CulturaController extends Controller
 
     public function edit(Cultura $cultura)
     {
-        return Inertia::render('Cultura/Edit', ['cultura' => $cultura]);
+        return Inertia::render('Cultura/Edit', ['cultura' => $this->presentCultura($cultura)]);
     }
 
     public function update(Request $request, Cultura $cultura)
@@ -61,12 +64,17 @@ class CulturaController extends Controller
 
         if ($request->hasFile('imagen_banner')) {
             if ($cultura->imagen_banner) {
-                Storage::disk('public')->delete($cultura->imagen_banner);
+                $storedPath = Cultura::normalizeMediaPath($cultura->imagen_banner);
+
+                if ($storedPath) {
+                    Storage::disk('public')->delete($storedPath);
+                }
             }
+
             $data['imagen_banner'] = $request->file('imagen_banner')->store('cultura', 'public');
         }
 
-        $data['contenido_json'] = $request->input('contenido_json'); // ✅ actualizar bloques
+        $data['contenido_json'] = $this->prepareEditorContentForStorage($request->input('contenido_json'));
 
         $cultura->update($data);
         return redirect()->route('cultura.index');
@@ -75,113 +83,208 @@ class CulturaController extends Controller
     public function destroy(Cultura $cultura)
     {
         if ($cultura->imagen_banner) {
-            Storage::disk('public')->delete($cultura->imagen_banner);
+            $storedPath = Cultura::normalizeMediaPath($cultura->imagen_banner);
+
+            if ($storedPath) {
+                Storage::disk('public')->delete($storedPath);
+            }
         }
 
         $cultura->delete();
         return redirect()->route('cultura.index');
     }
-public function uploadImage(Request $request)
-{
-    $request->validate([
-        'image' => 'required|image|max:2048',
-    ]);
+    public function uploadImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|max:2048',
+        ]);
 
-    $path = $request->file('image')->store('cultura/editor', 'public');
+        $path = $request->file('image')->store('cultura/editor', 'public');
 
-    return response()->json([
-        'success' => 1,
-        'file' => [
-            'url' => asset('storage/' . $path), // ✅ corregido
-        ],
-    ]);
-}
-public function vistaPublica()
-{
-    $eventos = Cultura::eventos()
-        ->recientes()
-        ->where('fecha', '>=', now())
-        ->take(3)
-        ->get()
-        ->map(function ($item) {
-            $item->imagen_url = $item->imagen_url ?? $this->extraerPrimeraImagenDelJson($item->contenido_json);
-            return $item;
-        });
+        return response()->json([
+            'success' => 1,
+            'file' => [
+                'url' => $this->mediaUrl($path),
+            ],
+        ]);
+    }
 
-    $noticias = Cultura::noticias()
-        ->recientes()
-        ->take(2)
-        ->get()
-        ->map(function ($item) {
-            $item->imagen_url = $item->imagen_url ?? $this->extraerPrimeraImagenDelJson($item->contenido_json);
-            return $item;
-        });
+    public function media(string $path)
+    {
+        $storedPath = Cultura::normalizeMediaPath(urldecode($path));
 
-    // Galería: incluye cualquier cultura que tenga imagen, sin filtrar por tipo
-    $galeria = Cultura::where('publicado', true)
-        ->recientes()
-        ->take(12)
-        ->get()
-        ->map(function ($item) {
-            $item->imagen_url = $item->imagen_url ?? $this->extraerPrimeraImagenDelJson($item->contenido_json);
-            return $item;
-        })
-        ->filter(fn ($item) => $item->imagen_url); // Solo las que tienen imagen
+        abort_if(! $storedPath || str_contains($storedPath, '..'), Response::HTTP_NOT_FOUND);
+        abort_unless(Storage::disk('public')->exists($storedPath), Response::HTTP_NOT_FOUND);
 
-    $areasCulturales = [
-        ['icon' => 'literatura', 'title' => "Literatura y Poesía"],
-        ['icon' => 'musica', 'title' => "Música"],
-        ['icon' => 'cine', 'title' => "Cine y Teatro"],
-        ['icon' => 'danza', 'title' => "Danza"],
-        ['icon' => 'fotografia', 'title' => "Fotografía"],
-        ['icon' => 'artes', 'title' => "Artes Visuales"]
-    ];
+        return Storage::disk('public')->response($storedPath, null, [
+            'Cache-Control' => 'public, max-age=31536000',
+        ]);
+    }
 
-    return Inertia::render('cultura', [
-        'eventos' => $eventos,
-        'noticias' => $noticias,
-        'areasCulturales' => $areasCulturales,
-        'galeria' => $galeria->values(), // reindexar
-    ]);
-}
+    public function vistaPublica()
+    {
+        $eventos = $this->presentCulturas(
+            Cultura::eventos()
+                ->recientes()
+                ->where('fecha', '>=', now())
+                ->take(3)
+                ->get()
+        );
+
+        $noticias = $this->presentCulturas(
+            Cultura::noticias()
+                ->recientes()
+                ->take(2)
+                ->get()
+        );
+
+        $galeria = $this->presentCulturas(
+            Cultura::where('publicado', true)
+                ->recientes()
+                ->take(12)
+                ->get()
+        )->filter(fn (array $item) => ! empty($item['imagen_url']));
+
+        $areasCulturales = [
+            ['icon' => 'literatura', 'title' => 'Literatura y Poesía'],
+            ['icon' => 'musica', 'title' => 'Música'],
+            ['icon' => 'cine', 'title' => 'Cine y Teatro'],
+            ['icon' => 'danza', 'title' => 'Danza'],
+            ['icon' => 'fotografia', 'title' => 'Fotografía'],
+            ['icon' => 'artes', 'title' => 'Artes Visuales'],
+        ];
+
+        return Inertia::render('cultura', [
+            'eventos' => $eventos,
+            'noticias' => $noticias,
+            'areasCulturales' => $areasCulturales,
+            'galeria' => $galeria->values(),
+        ]);
+    }
 
 /**
  * Extrae la primera imagen del contenido_json (Editor.js)
  */
-private function extraerPrimeraImagenDelJson($contenido)
-{
-    try {
+    private function extraerPrimeraImagenDelJson($contenido): ?string
+    {
+        try {
+            $json = is_string($contenido) ? json_decode($contenido, true) : $contenido;
+            $bloques = $json['blocks'] ?? [];
+
+            foreach ($bloques as $bloque) {
+                if (($bloque['type'] ?? null) === 'image' && ! empty($bloque['data']['file']['url'])) {
+                    return $this->normalizeMediaUrl($bloque['data']['file']['url']);
+                }
+            }
+        } catch (\Throwable $e) {
+            // opcional: log error
+        }
+
+        return null;
+    }
+
+    public function home()
+    {
+        $culturas = $this->presentCulturas(
+            Cultura::where('publicado', true)
+                ->orderBy('fecha', 'desc')
+                ->take(8)
+                ->get()
+        );
+
+        return Inertia::render('welcome', [
+            'culturas' => $culturas,
+        ]);
+    }
+
+    public function show(Cultura $cultura)
+    {
+        return Inertia::render('Cultura_vistas/ShowCultura', [
+            'cultura' => $this->presentCultura($cultura),
+        ]);
+    }
+
+    private function presentCulturas(Collection $culturas): Collection
+    {
+        return $culturas->map(fn (Cultura $cultura) => $this->presentCultura($cultura))->values();
+    }
+
+    private function presentCultura(Cultura $cultura): array
+    {
+        $payload = $cultura->toArray();
+        $payload['contenido_json'] = $this->normalizeEditorContentForOutput($payload['contenido_json'] ?? null);
+        $payload['imagen_url'] = $payload['imagen_url'] ?? $this->extraerPrimeraImagenDelJson($payload['contenido_json']);
+
+        if (empty($payload['imagen_url'])) {
+            $payload['imagen_url'] = $this->extraerPrimeraImagenDelJson($payload['contenido_json']);
+        }
+
+        return $payload;
+    }
+
+    private function prepareEditorContentForStorage($contenido): ?string
+    {
+        if (empty($contenido)) {
+            return null;
+        }
+
         $json = is_string($contenido) ? json_decode($contenido, true) : $contenido;
-        $bloques = $json['blocks'] ?? [];
-        foreach ($bloques as $bloque) {
-            if ($bloque['type'] === 'image' && !empty($bloque['data']['file']['url'])) {
-                return $bloque['data']['file']['url'];
+
+        if (! is_array($json)) {
+            return is_string($contenido) ? $contenido : null;
+        }
+
+        foreach ($json['blocks'] ?? [] as &$bloque) {
+            if (($bloque['type'] ?? null) !== 'image' || empty($bloque['data']['file']['url'])) {
+                continue;
+            }
+
+            $normalizedPath = Cultura::normalizeMediaPath($bloque['data']['file']['url']);
+
+            if ($normalizedPath) {
+                $bloque['data']['file']['url'] = $normalizedPath;
             }
         }
-    } catch (\Throwable $e) {
-        // opcional: log error
+
+        return json_encode($json, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
-    return null;
-}
 
-// Si decides dejarlo en CulturaController
-public function home()
-{
-    $culturas = Cultura::where('publicado', true)
-        ->orderBy('fecha', 'desc')
-        ->take(8)
-        ->get();
+    private function normalizeEditorContentForOutput($contenido): array|string|null
+    {
+        if (empty($contenido)) {
+            return $contenido;
+        }
 
-    return Inertia::render('welcome', [
-        'culturas' => $culturas,
-    ]);
-}
+        $json = is_string($contenido) ? json_decode($contenido, true) : $contenido;
 
-public function show(Cultura $cultura)
-{
-    return Inertia::render('Cultura_vistas/ShowCultura', [
-        'cultura' => $cultura
-    ]);
-}
+        if (! is_array($json)) {
+            return $contenido;
+        }
 
+        foreach ($json['blocks'] ?? [] as &$bloque) {
+            if (($bloque['type'] ?? null) !== 'image' || empty($bloque['data']['file']['url'])) {
+                continue;
+            }
+
+            $bloque['data']['file']['url'] = $this->normalizeMediaUrl($bloque['data']['file']['url']);
+        }
+
+        return $json;
+    }
+
+    private function normalizeMediaUrl(?string $value): ?string
+    {
+        $normalizedPath = Cultura::normalizeMediaPath($value);
+
+        if ($normalizedPath) {
+            return $this->mediaUrl($normalizedPath);
+        }
+
+        return $value;
+    }
+
+    private function mediaUrl(string $path): string
+    {
+        return '/media/cultura/' . ltrim($path, '/');
+    }
 }

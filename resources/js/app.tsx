@@ -13,10 +13,7 @@ import React, { useEffect, useState } from "react";
 import { Loader } from "@/components/ui/loader";
 
 declare global {
-  interface Window {
-    $: any;
-    jQuery: any;
-  }
+
 }
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";

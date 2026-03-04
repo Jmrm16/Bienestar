@@ -36,7 +36,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
+        <AuthLayout title="Iniciar sesión" description="Enter your email and password below to log in">
             <Head title="Log in" />
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
@@ -92,16 +92,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                     <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Log in
+                       iniciar sesión
                     </Button>
                 </div>
 
-                <div className="text-muted-foreground text-center text-sm">
-                    ¿No tienes una cuenta?{' '}
-                    <TextLink href={route('register')} tabIndex={5}>
-                        Registrarse
-                    </TextLink>
-                </div>
+
             </form>
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}

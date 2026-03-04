@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asistencia;
 use App\Models\GrupoT;
+use App\Models\Nota;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Inertia\Inertia;
@@ -359,11 +360,100 @@ class AsistenciaImportController extends Controller
      */
     public function verAsistenciasPorGrupo($grupoId)
     {
-        $grupo = GrupoT::with('asistencias')->findOrFail($grupoId);
+        $grupo = GrupoT::with('asignatura')->findOrFail($grupoId);
+        $grupo->load([
+            'tutores' => fn ($query) => $query
+                ->when(
+                    $grupo->period_id,
+                    fn ($tutores) => $tutores->where('periodo_grupo_tutor.period_id', $grupo->period_id)
+                )
+                ->orderBy('nombre')
+                ->orderBy('apellido'),
+        ]);
+
+        $materiaGrupo = $this->normalizeText((string) optional($grupo->asignatura)->nombre);
+
+        $notas = collect();
+        if ($grupo->period_id && $materiaGrupo !== '') {
+            $notas = Nota::query()
+                ->where('period_id', $grupo->period_id)
+                ->get()
+                ->keyBy(fn (Nota $nota) => $this->notaKey(
+                    (string) $nota->identificacion,
+                    (string) $nota->materia
+                ));
+        }
+
+        $asistencias = Asistencia::query()
+            ->where('grupo_id', $grupo->id)
+            ->when($grupo->period_id, fn ($query) => $query->where('period_id', $grupo->period_id))
+            ->orderBy('apellidos_del_estudiante')
+            ->orderBy('nombres_del_estudiante')
+            ->orderBy('fecha')
+            ->get()
+            ->map(function (Asistencia $asistencia) use ($notas, $materiaGrupo) {
+                $nota = $materiaGrupo !== ''
+                    ? $notas->get($this->notaKey(
+                        (string) $asistencia->identificacion,
+                        $materiaGrupo
+                    ))
+                    : null;
+
+                return [
+                    'id' => $asistencia->id,
+                    'nombres_del_estudiante' => $asistencia->nombres_del_estudiante,
+                    'apellidos_del_estudiante' => $asistencia->apellidos_del_estudiante,
+                    'identificacion' => $asistencia->identificacion,
+                    'codigo_estudiantil' => $asistencia->codigo_estudiantil,
+                    'programa_academico' => $asistencia->programa_academico,
+                    'sexo' => $asistencia->sexo,
+                    'grupo_priorizado' => $asistencia->grupo_priorizado,
+                    'fecha' => $asistencia->fecha?->toDateString() ?? (string) $asistencia->fecha,
+                    'nota_1' => $nota?->nota_1,
+                    'nota_2' => $nota?->nota_2,
+                    'nota_3' => $nota?->nota_3,
+                    'definitiva' => $nota?->definitiva,
+                    'final' => $nota?->final,
+                ];
+            });
 
         return Inertia::render('Asistencias/TablaAsistencias', [
-            'grupo' => $grupo,
-            'asistencias' => $grupo->asistencias ?? [],
+            'grupo' => [
+                'id' => $grupo->id,
+                'nombre' => $grupo->nombre,
+                'codigo' => $grupo->codigo,
+                'asignatura_id' => $grupo->asignatura_id,
+                'materia' => optional($grupo->asignatura)->nombre,
+                'tutores' => $grupo->tutores->map(fn ($tutor) => [
+                    'id' => $tutor->id,
+                    'nombre' => $tutor->nombre,
+                    'apellido' => $tutor->apellido,
+                    'rol' => $tutor->pivot->rol ?? null,
+                ])->values(),
+            ],
+            'asistencias' => $asistencias,
         ]);
+    }
+
+    private function notaKey(string $identificacion, string $materia): string
+    {
+        return $this->normalizeIdentificacion($identificacion) . '|' . $this->normalizeText($materia);
+    }
+
+    private function normalizeIdentificacion(string $value): string
+    {
+        return preg_replace('/[^0-9a-z]/i', '', $this->normalizeText($value));
+    }
+
+    private function normalizeText(string $value): string
+    {
+        $value = trim(mb_strtolower($value));
+        $value = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n'],
+            $value
+        );
+
+        return preg_replace('/\s+/', ' ', $value);
     }
 }

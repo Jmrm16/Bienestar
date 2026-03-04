@@ -5,7 +5,7 @@ import FooterComponent from "@/components/component/footer-component";
 import HeaderpermaComponent from "./Cultura_vistas/headerperma";
 import HeroCarousel from "./Cultura_vistas/HeroCarousel "; // ← FIX: sin espacio al final
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { resolveCulturaImageUrl } from "@/lib/cultura-media";
 import {
   CalendarDays,
   Newspaper,
@@ -26,7 +26,7 @@ type CulturaItem = {
   categoria?: string;
   imagen_url?: string;
   imagen_banner?: string;
-  contenido_json?: any;
+  contenido_json?: unknown;
 };
 
 type CulturaProps = {
@@ -38,7 +38,6 @@ type CulturaProps = {
 
 // Paleta (clara) con acento institucional marrón elegante
 const ACCENT = "#8B4513";      // primary
-const ACCENT_HOVER = "#A0522D"; // hover
 
 const DEFAULT_IMG =
   "https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp";
@@ -56,24 +55,8 @@ function formatDate(iso?: string) {
   }
 }
 
-function parseFirstImageFromEditorJS(json: any): string | null {
-  try {
-    const parsed = typeof json === "string" ? JSON.parse(json) : json;
-    const imageBlock = parsed?.blocks?.find((b: any) => b?.type === "image");
-    return imageBlock?.data?.file?.url || null;
-  } catch {
-    return null;
-  }
-}
-
 function safeImage(item: CulturaItem): string {
-  return (
-    item.imagen_url ||
-    (item.contenido_json ? parseFirstImageFromEditorJS(item.contenido_json) : null) ||
-    item.imagen_banner
-      ? `/storage/${item.imagen_banner}`
-      : DEFAULT_IMG
-  );
+  return resolveCulturaImageUrl(item, DEFAULT_IMG);
 }
 
 function badgeTone(tipo?: string) {
@@ -126,20 +109,30 @@ export default function Cultura() {
     [noticias]
   );
 
+  const eventosDestacados = useMemo(() => eventosOrdenados.slice(0, 6), [eventosOrdenados]);
+  const noticiasDestacadas = useMemo(() => noticiasOrdenadas.slice(0, 4), [noticiasOrdenadas]);
+  const galeriaDestacada = useMemo(() => galeria.slice(0, 8), [galeria]);
+  const cultureSummary = useMemo(
+    () => [
+      { label: "Eventos activos", value: eventos.length },
+      { label: "Noticias visibles", value: noticias.length },
+      { label: "Piezas en galería", value: galeria.length },
+    ],
+    [eventos.length, noticias.length, galeria.length]
+  );
+
   return (
     <>
       <Head title="Cultura Universitaria" />
       <HeaderComponent />
 
       <main className="min-h-screen bg-[#FDFDFC] text-[#1b1b18]">
-        {/* HERO */}
         <section className="w-full relative">
           <HeaderpermaComponent />
-          <HeroCarousel />
+          <HeroCarousel stats={cultureSummary} />
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent z-10" />
         </section>
 
-        {/* BIENVENIDA */}
         <section className="w-full py-14 md:py-16" style={{ backgroundColor: "#f8f4e8" }}>
           <div className="mx-auto max-w-7xl px-4 md:px-6 text-center">
             <h2
@@ -149,29 +142,22 @@ export default function Cultura() {
               Cultura y Arte Universitario
             </h2>
             <p className="text-lg text-gray-700 max-w-3xl mx-auto">
-              Descubre el vibrante mundo cultural de nuestra universidad: eventos,
-              exposiciones, talleres y más para enriquecer tu experiencia académica.
+              Explora lo principal de la agenda cultural sin duplicar tarjetas ni obligarte a recorrer
+              bloques demasiado largos en una sola visita.
             </p>
           </div>
         </section>
 
-        {/* EVENTOS */}
-        <section className="w-full py-12 bg-white">
+        <section id="eventos" className="w-full scroll-mt-24 py-12 bg-white">
           <div className="mx-auto max-w-7xl px-4 md:px-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
               <h3 className="text-2xl font-bold" style={{ color: ACCENT }}>
                 Próximos Eventos Culturales
               </h3>
-              <Link href="/cultura/calendario">
-                <Button
-                  variant="outline"
-                  className="border px-4"
-                  style={{ borderColor: ACCENT, color: ACCENT }}
-                >
-                  <CalendarDays className="mr-2 h-4 w-4" />
-                  Ver calendario completo
-                </Button>
-              </Link>
+              <div className="inline-flex items-center rounded-full bg-amber-50 px-4 py-2 text-sm text-amber-900">
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Mostrando {eventosDestacados.length} de {eventosOrdenados.length} eventos
+              </div>
             </div>
 
             {eventosOrdenados.length === 0 ? (
@@ -180,7 +166,7 @@ export default function Cultura() {
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {eventosOrdenados.map((evento) => {
+                {eventosDestacados.map((evento) => {
                   const img = safeImage(evento);
                   return (
                     <Card
@@ -252,15 +238,26 @@ export default function Cultura() {
                 })}
               </div>
             )}
+
+            {eventosOrdenados.length > eventosDestacados.length && (
+              <p className="mt-6 text-sm text-gray-500">
+                Hay {eventosOrdenados.length - eventosDestacados.length} eventos adicionales publicados.
+                Puedes encontrarlos más abajo dentro de las publicaciones culturales.
+              </p>
+            )}
           </div>
         </section>
 
-        {/* NOTICIAS */}
-        <section className="w-full py-12" style={{ backgroundColor: "#f5f5f0" }}>
+        <section id="noticias" className="w-full scroll-mt-24 py-12" style={{ backgroundColor: "#f5f5f0" }}>
           <div className="mx-auto max-w-7xl px-4 md:px-6">
-            <h3 className="text-2xl font-bold mb-8" style={{ color: ACCENT }}>
-              Noticias Culturales
-            </h3>
+            <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <h3 className="text-2xl font-bold" style={{ color: ACCENT }}>
+                Noticias Culturales
+              </h3>
+              <span className="text-sm text-gray-500">
+                Selección reciente de {noticiasDestacadas.length} noticias destacadas
+              </span>
+            </div>
 
             {noticiasOrdenadas.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
@@ -268,7 +265,7 @@ export default function Cultura() {
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-8">
-                {noticiasOrdenadas.map((noticia) => (
+                {noticiasDestacadas.map((noticia) => (
                   <Card
                     key={noticia.id}
                     className="hover:shadow-md transition-shadow border border-gray-100"
@@ -309,8 +306,7 @@ export default function Cultura() {
           </div>
         </section>
 
-        {/* ÁREAS CULTURALES */}
-        <section className="w-full py-12 bg-white">
+        <section id="areas" className="w-full scroll-mt-24 py-12 bg-white">
           <div className="mx-auto max-w-7xl px-4 md:px-6">
             <h3
               className="text-2xl font-bold text-center mb-10"
@@ -338,17 +334,8 @@ export default function Cultura() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-gray-700">
-                        Conoce más sobre esta disciplina cultural.
+                        Espacio institucional para actividades, talleres y muestras relacionadas con esta área.
                       </p>
-                      <Link href={`/cultura/area/${encodeURIComponent(area.title)}`}>
-                        <Button
-                          variant="link"
-                          className="p-0 mt-2 font-semibold"
-                          style={{ color: ACCENT }}
-                        >
-                          Conoce más
-                        </Button>
-                      </Link>
                     </CardContent>
                   </Card>
                 ))}
@@ -357,8 +344,7 @@ export default function Cultura() {
           </div>
         </section>
 
-        {/* GALERÍA */}
-        <section className="w-full py-12" style={{ backgroundColor: "#f8f4e8" }}>
+        <section id="galeria" className="w-full scroll-mt-24 py-12" style={{ backgroundColor: "#f8f4e8" }}>
           <div className="mx-auto max-w-7xl px-4 md:px-6 text-center">
             <h3 className="text-2xl font-bold mb-8" style={{ color: ACCENT }}>
               Galería Cultural
@@ -371,7 +357,7 @@ export default function Cultura() {
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {galeria.map((item) => {
+                  {galeriaDestacada.map((item) => {
                     const img = safeImage(item);
                     return (
                       <Link
@@ -390,16 +376,11 @@ export default function Cultura() {
                     );
                   })}
                 </div>
-
-                <Link href="/cultura/galeria">
-                  <Button
-                    variant="outline"
-                    className="mt-8"
-                    style={{ borderColor: ACCENT, color: ACCENT }}
-                  >
-                    Ver galería completa
-                  </Button>
-                </Link>
+                {galeria.length > galeriaDestacada.length && (
+                  <p className="mt-6 text-sm text-gray-500">
+                    Se muestran {galeriaDestacada.length} elementos para mantener la carga visual ligera.
+                  </p>
+                )}
               </>
             )}
           </div>

@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -83,6 +84,9 @@ const CreateCulturaModal = () => {
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Nueva publicación cultural</DialogTitle>
+          <DialogDescription>
+            Completa los datos básicos para registrar una publicación cultural.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">

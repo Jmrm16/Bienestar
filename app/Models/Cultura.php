@@ -21,7 +21,7 @@ class Cultura extends Model
         'lugar', // Nueva columna para eventos
         'hora', // Nueva columna para eventos
     ];
-       protected $appends = ['imagen_url']; // 👈 AÑADE ESTA LÍNEA
+    protected $appends = ['imagen_url'];
 
     protected $casts = [
         'publicado' => 'boolean',
@@ -45,9 +45,41 @@ class Cultura extends Model
         return $query->orderBy('fecha', 'desc');
     }
 
-    // Accesor para la URL completa de la imagen
-    public function getImagenUrlAttribute()
+    public function getImagenUrlAttribute(): ?string
     {
-        return $this->imagen_banner ? asset('storage/' . $this->imagen_banner) : null;
+        $path = self::normalizeMediaPath($this->imagen_banner);
+
+        if ($path) {
+            return '/media/cultura/' . ltrim($path, '/');
+        }
+
+        return is_string($this->imagen_banner) && $this->imagen_banner !== ''
+            ? $this->imagen_banner
+            : null;
+    }
+
+    public static function normalizeMediaPath(?string $value): ?string
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $path = trim($value);
+
+        if (preg_match('#^https?://#i', $path)) {
+            $path = parse_url($path, PHP_URL_PATH) ?: $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'media/cultura/')) {
+            return substr($path, strlen('media/cultura/'));
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            return substr($path, strlen('storage/'));
+        }
+
+        return $path;
     }
 }

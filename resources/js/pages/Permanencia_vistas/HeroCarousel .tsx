@@ -1,29 +1,50 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from '@inertiajs/react';
+
+type OwlCarouselOptions = {
+  loop?: boolean;
+  nav?: boolean;
+  dots?: boolean;
+  items?: number;
+  autoplay?: boolean;
+  autoplayTimeout?: number;
+  autoplayHoverPause?: boolean;
+  smartSpeed?: number;
+};
+
+type JQueryCollectionLike = {
+  owlCarousel?: (options?: OwlCarouselOptions) => void;
+  trigger: (eventName: string) => void;
+};
+
+type JQueryLike = ((selector: string) => JQueryCollectionLike) & {
+  fn?: {
+    owlCarousel?: (options?: OwlCarouselOptions) => void;
+  };
+};
 
 declare global {
   interface Window {
-    $: any;
-    jQuery: any;
-    owlCarousel: any;
+    $?: JQueryLike;
+    jQuery?: JQueryLike;
+    owlCarousel?: (options?: OwlCarouselOptions) => void;
   }
 }
 
 const slides = [
   {
     image: 'https://diariodelnorte.net/wp-content/uploads/2024/02/edificio-Uniguajira-750x375.png',
-    title: 'Bienestar y Permanencia',
-    subtitle: 'Conoce nuestros programas de acompañamiento y apoyo académico.',
-    button: 'Ver más',
+    title: 'Permanencia y Graduación Exitosa',
+    subtitle: 'Conoce las rutas de acompañamiento académico y bienestar disponibles en sede Maicao.',
+    button: 'Ver líneas de apoyo',
     link: '#servicios',
   },
   {
     image: 'https://uniguajira.edu.co/wp-content/uploads/2024/05/unnamed-5-1-1024x576.webp',
-    title: 'Educación con Propósito',
-    subtitle: 'Impulsando tu formación integral en la sede Maicao.',
-    button: 'Explorar',
-    link: '#quienes-somos',
+    title: 'Equipo y canales institucionales',
+    subtitle: 'Ubica el equipo de referencia y los contactos oficiales de Bienestar Universitario en Maicao.',
+    button: 'Ir a contacto',
+    link: '#contacto',
   },
 ];
 
@@ -95,12 +116,12 @@ export default function HeroCarousel() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.9 }}
               >
-                <Link
+                <a
                   href={slide.link}
                   className="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition z-30 relative mt-2"
                 >
                   {slide.button}
-                </Link>
+                </a>
               </motion.div>
             </div>
           </motion.div>

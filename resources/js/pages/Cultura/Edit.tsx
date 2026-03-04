@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, useForm, router } from "@inertiajs/react";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import EditorCultura from "./EditorCultura";
 import { ArrowLeft } from "lucide-react";
+import { type OutputData } from "@editorjs/editorjs";
 
 interface Cultura {
   id: number;
@@ -17,11 +18,24 @@ interface Cultura {
   tipo: string;
   fecha: string;
   publicado: boolean;
-  contenido_json: any;
+  contenido_json: OutputData | string | null;
 }
 
 interface EditCulturaProps {
   cultura: Cultura;
+}
+
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const isoCandidate = value.includes("T") ? value.split("T")[0] : value;
+  return /^\d{4}-\d{2}-\d{2}$/.test(isoCandidate) ? isoCandidate : "";
 }
 
 export default function EditCultura({ cultura }: EditCulturaProps) {
@@ -30,12 +44,12 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
     titulo: cultura.titulo,
     descripcion: cultura.descripcion,
     tipo: cultura.tipo,
-    fecha: cultura.fecha,
+    fecha: toDateInputValue(cultura.fecha),
     imagen_banner: null as File | null,
     publicado: cultura.publicado,
   });
 
-  const [contenido, setContenido] = useState<any>(() => {
+  const [contenido, setContenido] = useState<OutputData | null>(() => {
     try {
       if (!cultura.contenido_json) return null;
       return typeof cultura.contenido_json === "string"
@@ -65,7 +79,9 @@ export default function EditCultura({ cultura }: EditCulturaProps) {
       return formData;
     });
 
-    post(`/culturas/${cultura.id}`);
+    post(`/culturas/${cultura.id}`, {
+      forceFormData: true,
+    });
   };
 
   return (

@@ -53,8 +53,7 @@ export default function ShowAsignatura({ asignatura, tutores }: Props) {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-zinc-700">
             <p><strong>Nombre:</strong> {asignatura.nombre}</p>
-            <p><strong>Código:</strong> {asignatura.codigo}</p>
-            <p><strong>Docente:</strong> {asignatura.docente}</p>
+          
             <p><strong>Carrera:</strong> {asignatura.carrera.nombre}</p>
           </CardContent>
         </Card>
@@ -68,7 +67,7 @@ export default function ShowAsignatura({ asignatura, tutores }: Props) {
           <TablaGrupo
             grupos={asignatura.grupos}
             tutores={tutores}
-            onSeleccionarGrupo={(grupo) => setGrupoSeleccionadoHandler(grupo as Grupo)}
+      
           />
         </div>
       </div>

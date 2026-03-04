@@ -35,6 +35,9 @@ Route::get('/', [CulturaController::class, 'home'])->name('home');
 Route::get('/graduacion', fn () => Inertia::render('graduacion'))->name('graduacion');
 Route::get('/cultura', [CulturaController::class, 'vistaPublica'])->name('cultura');
 Route::get('/cultura/{cultura}/item', [CulturaController::class, 'show'])->name('cultura.show');
+Route::get('/media/cultura/{path}', [CulturaController::class, 'media'])
+    ->where('path', '.*')
+    ->name('cultura.media');
 Route::get('/permanencia/tutorias', [TutoriasController::class, 'index'])->name('tutorias.index');
 
 /*

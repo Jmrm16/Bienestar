@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,11 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import TutorAsignaturasField from "@/pages/Tutores/TutorAsignaturasField";
 
 interface Asignatura {
   id: number;
   nombre: string;
-  codigo: string;
+  codigo?: string | null;
+  carrera_id: number;
 }
 
 interface Carrera {
@@ -66,6 +68,21 @@ const AgregarTutor = () => {
     carreras?: Carrera[];
   };
 
+  const carreraSeleccionada = useMemo(
+    () => carreras.find((carrera) => carrera.id === form.carrera_id) ?? null,
+    [carreras, form.carrera_id]
+  );
+
+  const asignaturasDisponibles = useMemo(() => {
+    if (form.carrera_id === "") {
+      return [];
+    }
+
+    return asignaturas
+      .filter((asignatura) => asignatura.carrera_id === form.carrera_id)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [asignaturas, form.carrera_id]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -76,7 +93,21 @@ const AgregarTutor = () => {
 
   const handleCarreraChange = (value: string) => {
     const parsed = Number(value);
-    setForm((prev) => ({ ...prev, carrera_id: Number.isNaN(parsed) ? "" : parsed }));
+    const nextCareerId = Number.isNaN(parsed) ? "" : parsed;
+
+    setForm((prev) => ({
+      ...prev,
+      carrera_id: nextCareerId,
+      asignaturas:
+        nextCareerId === ""
+          ? []
+          : prev.asignaturas.filter((subjectId) =>
+              asignaturas.some(
+                (subject) =>
+                  subject.id === subjectId && subject.carrera_id === nextCareerId
+              )
+            ),
+    }));
   };
 
   const handleAsignaturasChange = (id: number) => {
@@ -329,22 +360,13 @@ const AgregarTutor = () => {
               </div>
 
               <div className="mt-4">
-                <Label>Asignaturas</Label>
-                <div className="max-h-40 overflow-y-auto border rounded p-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {asignaturas.map((a) => (
-                      <label key={a.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={form.asignaturas.includes(a.id)}
-                          onCheckedChange={() => handleAsignaturasChange(a.id)}
-                        />
-                        <span className="text-sm">
-                          {a.nombre} ({a.codigo})
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <TutorAsignaturasField
+                  asignaturas={asignaturasDisponibles}
+                  selectedIds={form.asignaturas}
+                  onToggle={handleAsignaturasChange}
+                  onClear={() => setForm((prev) => ({ ...prev, asignaturas: [] }))}
+                  carreraNombre={carreraSeleccionada?.nombre ?? null}
+                />
               </div>
             </form>
           </div>

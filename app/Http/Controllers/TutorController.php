@@ -23,7 +23,7 @@ class TutorController extends Controller
     public function index()
     {
         $tutores = Tutor::with(['asignaturas', 'carrera'])->get();
-        $asignaturas = Asignatura::all();
+        $asignaturas = Asignatura::orderBy('nombre')->get();
         $totalTutores = Tutor::count();
         $carreras = Carrera::all();
         $grupos = GrupoT::with('carrera')->orderBy('nombre')->get();
@@ -71,6 +71,9 @@ class TutorController extends Controller
             'activo'            => 'nullable|boolean',
         ]);
 
+        $subjectIds = array_values(array_unique(array_map('intval', $request->input('asignaturas', []))));
+        $this->assertSubjectsMatchCareer((int) $request->carrera_id, $subjectIds);
+
         $tutor = Tutor::create([
             'codigo'           => $request->codigo,
             'tipo_resolucion'  => $request->tipo_resolucion, // ✅ NUEVO
@@ -89,7 +92,7 @@ class TutorController extends Controller
             'activo'           => $request->boolean('activo', true),
         ]);
 
-        $tutor->asignaturas()->sync($request->asignaturas);
+        $tutor->asignaturas()->sync($subjectIds);
 
         return redirect()->back()->with('success', 'Tutor registrado exitosamente.');
     }
@@ -279,6 +282,9 @@ class TutorController extends Controller
             'reset_password'    => 'nullable|boolean',
         ]);
 
+        $subjectIds = array_values(array_unique(array_map('intval', $request->input('asignaturas', []))));
+        $this->assertSubjectsMatchCareer((int) $request->carrera_id, $subjectIds);
+
         $payload = [
             'codigo'           => $request->codigo,
             'tipo_resolucion'  => $request->tipo_resolucion, // ✅ NUEVO
@@ -301,7 +307,7 @@ class TutorController extends Controller
         }
 
         $tutor->update($payload);
-        $tutor->asignaturas()->sync($request->asignaturas);
+        $tutor->asignaturas()->sync($subjectIds);
 
         return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');
     }
@@ -412,7 +418,7 @@ class TutorController extends Controller
             ]);
         }
 
-        $subjectIds = $this->resolveSubjectIds($rowData, $subjectLookup);
+        $subjectIds = $this->resolveSubjectIds($rowData, $subjectLookup, $resolvedCareerId);
 
         return [[
             'codigo' => $codigo !== '' ? $codigo : $documento,
@@ -467,7 +473,7 @@ class TutorController extends Controller
 
     private function buildSubjectLookup(): array
     {
-        $select = ['id', 'nombre'];
+        $select = ['id', 'nombre', 'carrera_id'];
         $hasCodeColumn = Schema::hasColumn('asignaturas', 'codigo');
         if ($hasCodeColumn) {
             $select[] = 'codigo';
@@ -475,11 +481,13 @@ class TutorController extends Controller
 
         $lookup = [];
         foreach (Asignatura::query()->get($select) as $subject) {
-            $lookup[(string) $subject->id] = $subject->id;
-            $lookup[$this->normalizeImportText($subject->nombre)] = $subject->id;
+            $careerKey = (string) $subject->carrera_id;
+            $lookup[$careerKey] ??= [];
+            $lookup[$careerKey][(string) $subject->id] = $subject->id;
+            $lookup[$careerKey][$this->normalizeImportText($subject->nombre)] = $subject->id;
 
             if ($hasCodeColumn && ! empty($subject->codigo)) {
-                $lookup[$this->normalizeImportText($subject->codigo)] = $subject->id;
+                $lookup[$careerKey][$this->normalizeImportText($subject->codigo)] = $subject->id;
             }
         }
 
@@ -503,7 +511,7 @@ class TutorController extends Controller
         return null;
     }
 
-    private function resolveSubjectIds(array $rowData, array $subjectLookup): array
+    private function resolveSubjectIds(array $rowData, array $subjectLookup, int $careerId): array
     {
         $rawSubjects = trim(implode('|', array_filter([
             $rowData['asignaturas'] ?? null,
@@ -516,6 +524,7 @@ class TutorController extends Controller
 
         $subjects = preg_split('/[\n,;|]+/', $rawSubjects) ?: [];
         $ids = [];
+        $careerSubjects = $subjectLookup[(string) $careerId] ?? [];
 
         foreach ($subjects as $subject) {
             $value = trim((string) $subject);
@@ -524,12 +533,30 @@ class TutorController extends Controller
             }
 
             $key = is_numeric($value) ? (string) (int) $value : $this->normalizeImportText($value);
-            if (isset($subjectLookup[$key])) {
-                $ids[] = $subjectLookup[$key];
+            if (isset($careerSubjects[$key])) {
+                $ids[] = $careerSubjects[$key];
             }
         }
 
         return array_values(array_unique($ids));
+    }
+
+    private function assertSubjectsMatchCareer(int $careerId, array $subjectIds): void
+    {
+        if ($subjectIds === []) {
+            return;
+        }
+
+        $validCount = Asignatura::query()
+            ->where('carrera_id', $careerId)
+            ->whereIn('id', $subjectIds)
+            ->count();
+
+        if ($validCount !== count($subjectIds)) {
+            throw ValidationException::withMessages([
+                'asignaturas' => 'Solo puedes asignar asignaturas de la carrera seleccionada.',
+            ]);
+        }
     }
 
     private function splitFullName(string $fullName): array

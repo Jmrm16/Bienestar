@@ -82,6 +82,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | ⚠️ IMPORTANTE: NO repetir asignaturas.show porque ya viene con resource.
     */
     Route::resource('asignaturas', AsignaturaController::class)->except(['create', 'edit']);
+    Route::post('/asignaturas/importar-excel', [AsignaturaController::class, 'import'])
+        ->name('asignaturas.import');
 
     /*
     |--------------------------------------------------------------------------
@@ -105,6 +107,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::resource('grupost', GrupoTController::class)->except(['create', 'edit']);
+    Route::post('/grupost/importar-excel', [GrupoTController::class, 'import'])
+        ->name('grupost.import');
 
     Route::post('/grupost/{grupo}/asignar-tutor', [GrupoTController::class, 'asignarTutor'])
         ->name('grupost.asignar-tutor');

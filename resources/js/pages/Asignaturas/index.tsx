@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
 import AgregarAsignatura from '@/pages/Asignaturas/AgregarAsignatura';
+import ImportarAsignaturasDialog from '@/pages/Asignaturas/ImportarAsignaturasDialog';
 import TablaAsignatura from '@/pages/Asignaturas/TablaAsignatura';
 import { MetricCard } from '@/components/component/MetricCard';
 import { HardDrive } from 'lucide-react';
@@ -91,11 +92,10 @@ export default function Index(props: Props) {
           <p className="mb-4 text-3xl font-bold">Asignaturas</p>
 
           <div className="flex space-x-4 mb-4">
-            {/* Pasamos carreras correctamente */}
             <AgregarAsignatura carreras={props.carreras ?? []} />
+            <ImportarAsignaturasDialog />
           </div>
 
-          {/* 🔥 PROPS CORREGIDOS AQUÍ 🔥 */}
           <TablaAsignatura
             asignaturas={asignaturasList}
             carreras={props.carreras ?? []}

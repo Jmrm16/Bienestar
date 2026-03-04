@@ -55,12 +55,14 @@ import {
 } from "@/components/ui/tooltip";
 import AgregarTutor from '@/pages/Tutores/AgregaTutor';
 import ImportarTutoresDialog from "@/pages/Tutores/ImportarTutoresDialog";
+import TutorAsignaturasField from "@/pages/Tutores/TutorAsignaturasField";
 
 /* ===== Tipos ===== */
 interface Asignatura {
   id: number;
   nombre: string;
-  codigo?: string;
+  codigo?: string | null;
+  carrera_id: number;
 }
 
 interface Carrera {
@@ -124,6 +126,24 @@ const TablaTutor = () => {
     return map;
   }, [asignaturas]);
 
+  const carrerasMap = useMemo(() => {
+    const map = new Map<number, Carrera>();
+    carreras.forEach((carrera) => map.set(carrera.id, carrera));
+    return map;
+  }, [carreras]);
+
+  const asignaturasDisponibles = useMemo(() => {
+    if (!selectedTutor) {
+      return [];
+    }
+
+    return asignaturas
+      .filter((asignatura) => asignatura.carrera_id === selectedTutor.carrera_id)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [asignaturas, selectedTutor]);
+
+  const asignaturasSeleccionadas = selectedTutor?.asignaturas.map((a) => a.id) ?? [];
+
   /* ───────── FILTRADO ───────── */
   const filteredTutores = useMemo(() => {
     const q = search.toLowerCase();
@@ -173,6 +193,9 @@ const TablaTutor = () => {
     clone.codigo = clone.codigo ?? "";
     clone.activo = typeof clone.activo === "boolean" ? clone.activo : true;
     clone.tipo_resolucion = clone.tipo_resolucion ?? "";
+    clone.asignaturas = (clone.asignaturas ?? []).filter(
+      (subject: Asignatura) => subject.carrera_id === clone.carrera_id
+    );
     setSelectedTutor(clone);
     setEditOpen(true);
   };
@@ -183,6 +206,25 @@ const TablaTutor = () => {
   ) => {
     if (!selectedTutor) return;
     setSelectedTutor({ ...selectedTutor, [field]: value } as Tutor);
+  };
+
+  const handleCarreraTutorChange = (value: string) => {
+    if (!selectedTutor) return;
+
+    const carreraId = Number(value);
+    const validSubjectIds = new Set(
+      asignaturas
+        .filter((subject) => subject.carrera_id === carreraId)
+        .map((subject) => subject.id)
+    );
+
+    setSelectedTutor({
+      ...selectedTutor,
+      carrera_id: carreraId,
+      asignaturas: selectedTutor.asignaturas.filter((subject) =>
+        validSubjectIds.has(subject.id)
+      ),
+    });
   };
 
   const toggleAsignatura = (id: number) => {
@@ -610,9 +652,7 @@ const TablaTutor = () => {
             <Label>Carrera</Label>
             <Select
               value={String(selectedTutor.carrera_id)}
-              onValueChange={(v) =>
-                handleFieldChange("carrera_id", Number(v))
-              }
+              onValueChange={handleCarreraTutorChange}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecciona una carrera" />
@@ -657,29 +697,16 @@ const TablaTutor = () => {
           </div>
         </div>
 
-        {/* Asignaturas */}
         <div className="mt-6">
-          <Label>Asignaturas</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-            {asignaturas.map((a) => (
-              <div key={a.id} className="flex items-center space-x-2">
-                <Checkbox
-                  checked={selectedTutor.asignaturas.some(
-                    (x) => x.id === a.id
-                  )}
-                  onCheckedChange={() => toggleAsignatura(a.id)}
-                />
-                <div className="flex flex-col text-sm">
-                  <span className="font-medium">{a.nombre}</span>
-                  {a.codigo && (
-                    <span className="text-xs text-muted-foreground">
-                      {a.codigo}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <TutorAsignaturasField
+            asignaturas={asignaturasDisponibles}
+            selectedIds={asignaturasSeleccionadas}
+            onToggle={toggleAsignatura}
+            onClear={() =>
+              setSelectedTutor({ ...selectedTutor, asignaturas: [] })
+            }
+            carreraNombre={carrerasMap.get(selectedTutor.carrera_id)?.nombre ?? null}
+          />
         </div>
 
         {/* Footer */}

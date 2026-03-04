@@ -4,6 +4,7 @@ import { Asignatura, Grupo, Carrera, Tutor } from '@/types'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import AgregarGrupo from '@/pages/Tutores/AgregarGrupo'
+import ImportarGruposDialog from '@/pages/Tutores/ImportarGruposDialog'
 import TablaGrupo from '@/pages/Tutores/TablaGrupos'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
@@ -17,12 +18,6 @@ interface Props {
 }
 
 export default function ShowAsignatura({ asignatura, tutores }: Props) {
-  const [grupoSeleccionado, setGrupoSeleccionado] = React.useState<Grupo | null>(null)
-
-  const setGrupoSeleccionadoHandler = (grupo: Grupo) => {
-    setGrupoSeleccionado(grupo)
-  }
-
   return (
     <AppLayout
       breadcrumbs={[
@@ -63,6 +58,7 @@ export default function ShowAsignatura({ asignatura, tutores }: Props) {
           <p className="text-2xl font-bold text-zinc-800 mb-4">Grupos</p>
           <div className="flex space-x-4 mb-4">
             <AgregarGrupo />
+            <ImportarGruposDialog />
           </div>
           <TablaGrupo
             grupos={asignatura.grupos}

@@ -1,5 +1,13 @@
-import { useMemo, useState } from "react";
-import { Delete, PencilLine, Eye, Search, Filter } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Delete,
+  PencilLine,
+  Eye,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -45,6 +53,8 @@ interface Asignatura {
   carrera?: Carrera;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function TablaAsignatura({
   asignaturas,
   carreras,
@@ -59,6 +69,7 @@ export default function TablaAsignatura({
   // ✅ Modales
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   const [selectedAsignatura, setSelectedAsignatura] = useState<Asignatura | null>(null);
   const [deleteAsignatura, setDeleteAsignatura] = useState<Asignatura | null>(null);
@@ -84,6 +95,36 @@ export default function TablaAsignatura({
       return matchesSearch && matchesCarrera;
     });
   }, [asignaturas, carreras, search, carreraFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, carreraFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAsignaturas.length / ITEMS_PER_PAGE)
+  );
+  const currentPage = Math.min(page, totalPages);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const paginatedAsignaturas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAsignaturas.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredAsignaturas]);
+
+  const pageStart =
+    filteredAsignaturas.length === 0
+      ? 0
+      : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const pageEnd = Math.min(
+    currentPage * ITEMS_PER_PAGE,
+    filteredAsignaturas.length
+  );
 
   const limpiarFiltros = () => {
     setSearch("");
@@ -189,7 +230,7 @@ export default function TablaAsignatura({
           </TableHeader>
 
           <TableBody>
-            {filteredAsignaturas.map((asignatura) => (
+            {paginatedAsignaturas.map((asignatura) => (
               <TableRow key={asignatura.id}>
                 <TableCell>{asignatura.nombre}</TableCell>
 
@@ -314,7 +355,7 @@ export default function TablaAsignatura({
               </TableRow>
             ))}
 
-            {filteredAsignaturas.length === 0 && (
+            {paginatedAsignaturas.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
                   No hay resultados con esos filtros.
@@ -323,6 +364,38 @@ export default function TablaAsignatura({
             )}
           </TableBody>
         </Table>
+
+        <div className="flex flex-col gap-3 border-t px-6 pt-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {pageStart}-{pageEnd} de {filteredAsignaturas.length} asignaturas
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Anterior
+            </Button>
+
+            <span className="min-w-24 text-center text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

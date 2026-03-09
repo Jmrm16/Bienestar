@@ -177,6 +177,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
 Route::get('/periodos/{period}/export-charts', [ReportController::class, 'exportChartsExcel'])
     ->name('period.export_charts');
+Route::get('/periodos/{period}/export-pdf', [ReportController::class, 'exportChartsPdf'])
+    ->name('period.export_pdf');
 
  
     });

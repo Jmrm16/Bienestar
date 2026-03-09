@@ -67,8 +67,11 @@ type Charts = {
   porTutor: ChartRow[];
   totalAprobado: number;
   totalReprobado: number;
-  sexo: { FEMENINO: number; MASCULINO: number };
-  grupos: { NINGUNO: number; AFRO: number; INDIGENA: number };
+  totalEstudiantesUnicos?: number;
+  totalEvaluados?: number;
+  totalSinNota?: number;
+  sexo: { FEMENINO: number; MASCULINO: number; SIN_DATO?: number };
+  grupos: { NINGUNO: number; AFRO: number; INDIGENA: number; OTROS?: number };
 };
 
 type Props = {
@@ -79,6 +82,18 @@ type Props = {
   // ✅ default (para no romper)
   charts: Charts;
   default_window_id: number | null;
+};
+
+const EMPTY_CHARTS: Charts = {
+  porPrograma: [],
+  porTutor: [],
+  totalAprobado: 0,
+  totalReprobado: 0,
+  totalEstudiantesUnicos: 0,
+  totalEvaluados: 0,
+  totalSinNota: 0,
+  sexo: { FEMENINO: 0, MASCULINO: 0, SIN_DATO: 0 },
+  grupos: { NINGUNO: 0, AFRO: 0, INDIGENA: 0, OTROS: 0 },
 };
 
 const breadcrumbs = (p: Period): BreadcrumbItem[] => [
@@ -119,8 +134,8 @@ export default function WindowsIndex({
   }, [windows, selectedWindowId]);
 
   const selectedCharts: Charts = useMemo(() => {
-    return chartCache[String(selectedWindowId)] ?? charts;
-  }, [chartCache, selectedWindowId, charts]);
+    return chartCache[String(selectedWindowId)] ?? EMPTY_CHARTS;
+  }, [chartCache, selectedWindowId]);
 
   useEffect(() => {
     const key = String(selectedWindowId);
@@ -132,14 +147,25 @@ export default function WindowsIndex({
     let cancelled = false;
     setChartsLoading(true);
 
-    fetch(route("reports.windows.charts", [period.id, selectedWindowId]), {
+    const chartsUrl = route("reports.windows.charts", [period.id, selectedWindowId], false);
+
+    fetch(chartsUrl, {
       headers: {
         Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
       },
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error("No se pudieron cargar los gráficos del corte.");
+          let detail = "";
+          try {
+            const payload = (await response.json()) as { message?: string };
+            detail = String(payload?.message ?? "");
+          } catch {
+            // noop: fallback con status
+          }
+
+          throw new Error(detail || `HTTP ${response.status}`);
         }
 
         return response.json() as Promise<Charts>;
@@ -154,9 +180,11 @@ export default function WindowsIndex({
           [key]: payload,
         }));
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!cancelled) {
-          toast.error("No se pudieron cargar los gráficos del corte seleccionado");
+          const detail =
+            error instanceof Error && error.message ? ` (${error.message})` : "";
+          toast.error(`No se pudieron cargar los gráficos del corte seleccionado${detail}`);
         }
       })
       .finally(() => {
@@ -527,16 +555,19 @@ export default function WindowsIndex({
     </Select>
   </div>
 
-  {/* ✅ Botón exportar Excel (charts de TODO el periodo) */}
-<Button
-  variant="outline"
-  className="gap-2"
-  onClick={() => window.open(route("reports.period.export_charts", period.id), "_blank")}
->
-  <Download className="h-4 w-4" />
-  Exportar Excel (Charts)
-</Button>
+  <Button
+    className="gap-2 bg-rose-600 text-white hover:bg-rose-700"
+    onClick={() =>
+      window.open(`${route("reports.period.export_pdf", period.id)}?autoprint=1`, "_blank")
+    }
+  >
+    <Download className="h-4 w-4" />
+    Exportar PDF
+  </Button>
 </div>
+          <p className="text-xs text-muted-foreground">
+            Las gráficas se calculan por el corte seleccionado. El panel superior resume todo el período.
+          </p>
 
           {chartsLoading && !chartCache[String(selectedWindowId)] ? (
             <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">

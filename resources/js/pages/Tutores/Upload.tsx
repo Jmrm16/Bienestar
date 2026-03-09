@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import NotificationsAndAlerts from "@/components/notifications-and-alerts";
 
 interface Props {
   window: {
@@ -24,7 +26,10 @@ export default function UploadInforme({ window }: Props) {
   };
 
   const handleImport = () => {
-    if (!file) return alert("Selecciona un archivo");
+    if (!file) {
+      toast.error("Selecciona un archivo");
+      return;
+    }
 
     const form = new FormData();
     form.append("archivo", file);
@@ -35,7 +40,8 @@ export default function UploadInforme({ window }: Props) {
       forceFormData: true,
       onError: (errors) => {
         console.log("Errores import:", errors);
-        alert("Error al importar. Revisa consola y/o logs.");
+        const firstError = Object.values(errors)[0] as string | undefined;
+        toast.error(firstError || "Error al importar asistencias");
       },
       onFinish: () => setImporting(false),
     });
@@ -46,6 +52,8 @@ export default function UploadInforme({ window }: Props) {
       <Head title="Subir asistencias" />
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <NotificationsAndAlerts className="mb-2" />
+
         <Card>
           <CardHeader className="space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

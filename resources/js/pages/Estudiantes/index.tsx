@@ -106,7 +106,13 @@ export default function EstudiantesIndex() {
                   variant="outline"
                   className="gap-2"
                   onClick={() =>
-                    router.get(route("estudiantes.reportes"), { period_id: periodId || undefined })
+                    router.get(route("estudiantes.reportes"), {
+                      period_id: periodId || undefined,
+                      q: filters.q || undefined,
+                      servicio: filters.servicio || undefined,
+                      trimestre: filters.trimestre || undefined,
+                      page: rows.current_page > 1 ? rows.current_page : undefined,
+                    })
                   }
                 >
                   <BarChart3 className="h-4 w-4" />

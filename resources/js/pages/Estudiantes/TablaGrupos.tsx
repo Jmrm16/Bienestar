@@ -134,7 +134,13 @@ export default function TablaEstudiantes({
   const openShow = (r: EstudianteRow) => {
     router.get(
       route("estudiantes.show", r.id),
-      { period_id: periodId },
+      {
+        period_id: periodId || undefined,
+        q: filters.q || undefined,
+        servicio: filters.servicio || undefined,
+        trimestre: filters.trimestre || undefined,
+        page: rows.current_page > 1 ? rows.current_page : undefined,
+      },
       { preserveScroll: true, preserveState: true }
     );
   };

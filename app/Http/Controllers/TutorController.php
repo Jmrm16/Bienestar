@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asistencia;
 use App\Models\Tutor;
 use App\Models\Asignatura;
 use App\Models\Carrera;
@@ -42,8 +43,115 @@ class TutorController extends Controller
      */
     public function perfil(Tutor $tutor)
     {
+        $tutor->load([
+            'carrera:id,nombre',
+            'asignaturas:id,nombre,carrera_id',
+            'grupos' => fn ($query) => $query
+                ->select('grupo_t.id', 'grupo_t.nombre', 'grupo_t.codigo', 'grupo_t.carrera_id', 'grupo_t.asignatura_id', 'grupo_t.period_id')
+                ->with([
+                    'carrera:id,nombre',
+                    'asignatura:id,nombre',
+                    'periodo:id,code,name',
+                ])
+                ->orderByDesc('period_id')
+                ->orderBy('nombre'),
+        ]);
+
+        $groupIds = $tutor->grupos
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $periodIds = $tutor->grupos
+            ->map(fn (GrupoT $grupo) => (int) ($grupo->pivot->period_id ?? $grupo->period_id))
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $attendanceMeta = collect();
+        if ($groupIds->isNotEmpty() && $periodIds->isNotEmpty()) {
+            $attendanceMeta = Asistencia::query()
+                ->whereIn('grupo_id', $groupIds)
+                ->whereIn('period_id', $periodIds)
+                ->selectRaw('grupo_id, period_id, COUNT(*) as total_asistencias, COUNT(DISTINCT identificacion) as total_estudiantes, MAX(fecha) as ultima_fecha')
+                ->groupBy('grupo_id', 'period_id')
+                ->get()
+                ->keyBy(fn ($row) => $row->grupo_id . '|' . $row->period_id);
+        }
+
+        $grupos = $tutor->grupos
+            ->map(function (GrupoT $grupo) use ($attendanceMeta) {
+                $periodId = (int) ($grupo->pivot->period_id ?? $grupo->period_id ?? 0);
+                $meta = $attendanceMeta->get($grupo->id . '|' . $periodId);
+
+                return [
+                    'id' => $grupo->id,
+                    'nombre' => $grupo->nombre,
+                    'codigo' => $grupo->codigo,
+                    'rol' => $grupo->pivot->rol ?? null,
+                    'period' => $grupo->periodo
+                        ? [
+                            'id' => $grupo->periodo->id,
+                            'code' => $grupo->periodo->code,
+                            'name' => $grupo->periodo->name,
+                        ]
+                        : null,
+                    'carrera' => $grupo->carrera
+                        ? [
+                            'id' => $grupo->carrera->id,
+                            'nombre' => $grupo->carrera->nombre,
+                        ]
+                        : null,
+                    'asignatura' => $grupo->asignatura
+                        ? [
+                            'id' => $grupo->asignatura->id,
+                            'nombre' => $grupo->asignatura->nombre,
+                        ]
+                        : null,
+                    'total_asistencias' => (int) ($meta->total_asistencias ?? 0),
+                    'total_estudiantes' => (int) ($meta->total_estudiantes ?? 0),
+                    'ultima_fecha' => $meta->ultima_fecha ?? null,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Tutores/tutorprofile', [
-            'tutor' => $tutor->load(['asignaturas', 'carrera']),
+            'tutor' => [
+                'id' => $tutor->id,
+                'codigo' => $tutor->codigo,
+                'tipo_resolucion' => $tutor->tipo_resolucion,
+                'nombre' => $tutor->nombre,
+                'apellido' => $tutor->apellido,
+                'tipo_documento' => $tutor->tipo_documento,
+                'documento' => $tutor->documento,
+                'lugar_expedicion' => $tutor->lugar_expedicion,
+                'sexo' => $tutor->sexo,
+                'grupo_priorizado' => $tutor->grupo_priorizado,
+                'sede' => $tutor->sede,
+                'correo' => $tutor->correo,
+                'telefono' => $tutor->telefono,
+                'activo' => (bool) $tutor->activo,
+                'carrera' => $tutor->carrera
+                    ? [
+                        'id' => $tutor->carrera->id,
+                        'nombre' => $tutor->carrera->nombre,
+                    ]
+                    : null,
+                'asignaturas' => $tutor->asignaturas
+                    ->map(fn (Asignatura $asignatura) => [
+                        'id' => $asignatura->id,
+                        'nombre' => $asignatura->nombre,
+                    ])
+                    ->values(),
+                'grupos' => $grupos,
+            ],
+            'resumen' => [
+                'total_grupos' => $grupos->count(),
+                'grupos_con_asistencias' => $grupos->where('total_asistencias', '>', 0)->count(),
+                'total_estudiantes' => (int) $grupos->sum('total_estudiantes'),
+                'total_asistencias' => (int) $grupos->sum('total_asistencias'),
+            ],
         ]);
     }
 
@@ -751,6 +859,7 @@ class TutorController extends Controller
     {
         return [
             'lic educacion infantil' => 'LICENCIATURA EN EDUCACION INFANTIL',
+            'ingenieria de sistema' => 'INGENIERIA DE SISTEMAS',
         ];
     }
 }

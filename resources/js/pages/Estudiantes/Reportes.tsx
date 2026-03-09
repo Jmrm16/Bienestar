@@ -19,6 +19,7 @@ import {
 import type { EstudianteRow } from "./TablaGrupos";
 
 type Period = { id: number; code: string; name?: string | null };
+type ReturnFilters = { q: string; servicio: string; trimestre: string; page: number };
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: "Estudiantes", href: "/estudiantes" },
@@ -26,10 +27,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function EstudiantesReportes() {
-  const { periods = [], selected_period_id = 0, rows = [] } = usePage().props as unknown as {
+  const { periods = [], selected_period_id = 0, rows = [], return_filters = { q: "", servicio: "", trimestre: "", page: 1 } } = usePage().props as unknown as {
     periods?: Period[];
     selected_period_id?: number;
     rows?: EstudianteRow[];
+    return_filters?: ReturnFilters;
   };
 
   const periodId = Number(selected_period_id) || 0;
@@ -47,7 +49,13 @@ export default function EstudiantesReportes() {
   const onChangePeriod = (value: string) => {
     router.get(
       route("estudiantes.reportes"),
-      { period_id: Number(value) },
+      {
+        period_id: Number(value),
+        q: return_filters.q || undefined,
+        servicio: return_filters.servicio || undefined,
+        trimestre: return_filters.trimestre || undefined,
+        page: return_filters.page > 1 ? return_filters.page : undefined,
+      },
       { preserveScroll: true, preserveState: true },
     );
   };
@@ -69,7 +77,13 @@ export default function EstudiantesReportes() {
             variant="outline"
             className="gap-2"
             onClick={() =>
-              router.get(route("estudiantes.index"), { period_id: periodId || undefined })
+              router.get(route("estudiantes.index"), {
+                period_id: periodId || undefined,
+                q: return_filters.q || undefined,
+                servicio: return_filters.servicio || undefined,
+                trimestre: return_filters.trimestre || undefined,
+                page: return_filters.page > 1 ? return_filters.page : undefined,
+              })
             }
           >
             <ArrowLeft className="h-4 w-4" />

@@ -22,6 +22,8 @@ use PhpOffice\PhpSpreadsheet\Chart\Legend;
 use PhpOffice\PhpSpreadsheet\Chart\PlotArea;
 use PhpOffice\PhpSpreadsheet\Chart\Title;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 class ReportController extends Controller
 {
     /* =====================================================
@@ -90,9 +92,11 @@ public function windowsIndex(ReportPeriod $period)
 {
     $windows = $period->windows()
         ->orderBy('open_at')
+        ->orderBy('id')
         ->get(['id','period_id','name','tutor_type','open_at','due_at','close_at','instructions','is_published']);
 
-    $windowIds = $windows->pluck('id')->values();
+    $windowIds = $windows->pluck('id')->map(fn ($id) => (int) $id)->values();
+    $orderedWindowIds = $windowIds->all();
 
     if ($windowIds->isEmpty()) {
         return Inertia::render('Informe/WindowsIndex', [
@@ -107,8 +111,11 @@ public function windowsIndex(ReportPeriod $period)
                 'porTutor'       => [],
                 'totalAprobado'  => 0,
                 'totalReprobado' => 0,
-                'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0],
-                'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0],
+                'totalEstudiantesUnicos' => 0,
+                'totalEvaluados' => 0,
+                'totalSinNota'   => 0,
+                'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0, 'SIN_DATO' => 0],
+                'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0, 'OTROS' => 0],
             ],
             'default_window_id' => null,
         ]);
@@ -118,9 +125,8 @@ public function windowsIndex(ReportPeriod $period)
     // 1) BY WINDOW (ANTES: N+1). AHORA: 2 queries agregadas
     // =====================================================
 
-    $asistAgg = DB::table('asistencias as a')
-        ->where('a.period_id', $period->id)
-        ->whereIn('a.report_window_id', $windowIds)
+    $asistAgg = DB::query()
+        ->fromSub($this->buildIncrementalAsistenciasQuery($period->id, $orderedWindowIds), 'a')
         ->selectRaw("
             a.report_window_id as window_id,
             COUNT(*) as asistencias,
@@ -162,182 +168,61 @@ public function windowsIndex(ReportPeriod $period)
     // 2) TREE (cacheado) - MISMA estructura que ya usas
     // =====================================================
 
-    $cacheKeyTree = "rep_tree_period_{$period->id}_" . md5($windowIds->implode(','));
+    $cacheKeyTree = "rep_tree_v3_period_{$period->id}_" . md5($windowIds->implode(','));
 
-    $treeCarreras = Cache::remember($cacheKeyTree, now()->addMinutes(10), function () use ($period, $windowIds) {
+    $treeCarreras = Cache::remember(
+        $cacheKeyTree,
+        now()->addMinutes(10),
+        fn() => $this->buildTreeForWindowIds($period->id, $orderedWindowIds)
+    );
 
-        $rowsPerWindow = DB::table('asistencias as a')
-            ->where('a.period_id', $period->id)
-            ->whereIn('a.report_window_id', $windowIds)
-            ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
-            ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
-            ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
-            ->leftJoin('tutors as t', 't.id', '=', 'a.tutor_id')
-            ->selectRaw("
-                a.report_window_id as window_id,
+    $byType = [];
+    foreach (['R1', 'R2'] as $tutorType) {
+        $typeWindowIds = $windows
+            ->filter(fn($w) => (string) $w->tutor_type === $tutorType)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->values()
+            ->all();
 
-                COALESCE(c.id, 0) as carrera_id,
-                COALESCE(c.nombre, a.programa_academico, 'Sin carrera') as carrera_name,
+        $cacheKeyType = "rep_tree_v3_period_{$period->id}_{$tutorType}_" . md5(implode(',', $typeWindowIds));
 
-                COALESCE(s.id, 0) as asignatura_id,
-                COALESCE(s.nombre, 'Sin asignatura') as asignatura_name,
+        $treeByType = Cache::remember(
+            $cacheKeyType,
+            now()->addMinutes(10),
+            fn() => $this->buildTreeForWindowIds($period->id, $typeWindowIds)
+        );
 
-                a.tutor_id as tutor_id,
-                COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', a.tutor_id)) as tutor_name,
-
-                COUNT(DISTINCT TRIM(a.identificacion)) as estudiantes,
-                COUNT(*) as asistencias
-            ")
-            ->groupBy(
-                'a.report_window_id',
-                'c.id', 'c.nombre', 'a.programa_academico',
-                's.id', 's.nombre',
-                'a.tutor_id',
-                't.nombre', 't.apellido'
-            )
-            ->get();
-
-        $uniqueCarrera = DB::table('asistencias as a')
-            ->where('a.period_id', $period->id)
-            ->whereIn('a.report_window_id', $windowIds)
-            ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
-            ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
-            ->selectRaw("COALESCE(c.id, 0) as carrera_id, COUNT(DISTINCT TRIM(a.identificacion)) as unique_estudiantes_total")
-            ->groupBy('c.id')
-            ->get()
-            ->keyBy('carrera_id');
-
-        $uniqueAsignatura = DB::table('asistencias as a')
-            ->where('a.period_id', $period->id)
-            ->whereIn('a.report_window_id', $windowIds)
-            ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
-            ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
-            ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
-            ->selectRaw("
-                COALESCE(c.id, 0) as carrera_id,
-                COALESCE(s.id, 0) as asignatura_id,
-                COUNT(DISTINCT TRIM(a.identificacion)) as unique_estudiantes_total
-            ")
-            ->groupBy('c.id', 's.id')
-            ->get();
-
-        $uniqueAsignaturaMap = [];
-        foreach ($uniqueAsignatura as $u) {
-            $uniqueAsignaturaMap[((int)$u->carrera_id) . ':' . ((int)$u->asignatura_id)] = (int)$u->unique_estudiantes_total;
-        }
-
-        $uniqueTutor = DB::table('asistencias as a')
-            ->where('a.period_id', $period->id)
-            ->whereIn('a.report_window_id', $windowIds)
-            ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
-            ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
-            ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
-            ->selectRaw("
-                COALESCE(c.id, 0) as carrera_id,
-                COALESCE(s.id, 0) as asignatura_id,
-                a.tutor_id as tutor_id,
-                COUNT(DISTINCT TRIM(a.identificacion)) as unique_estudiantes_total
-            ")
-            ->groupBy('c.id', 's.id', 'a.tutor_id')
-            ->get();
-
-        $uniqueTutorMap = [];
-        foreach ($uniqueTutor as $u) {
-            $uniqueTutorMap[((int)$u->carrera_id) . ':' . ((int)$u->asignatura_id) . ':' . ((int)$u->tutor_id)] = (int)$u->unique_estudiantes_total;
-        }
-
-        $addCell = function (&$node, $wid, $est, $asis) {
-            $k = (string)$wid;
-            if (!isset($node['per_window'][$k])) {
-                $node['per_window'][$k] = ['estudiantes' => 0, 'asistencias' => 0];
-            }
-            $node['per_window'][$k]['estudiantes'] += (int)$est;
-            $node['per_window'][$k]['asistencias'] += (int)$asis;
-        };
-
-        $tree = [];
-        foreach ($rowsPerWindow as $r) {
-            $wid = (int)$r->window_id;
-
-            $cId = (int)$r->carrera_id;    $cName = (string)$r->carrera_name;
-            $aId = (int)$r->asignatura_id; $aName = (string)$r->asignatura_name;
-            $tId = (int)$r->tutor_id;      $tName = (string)$r->tutor_name;
-
-            $est = (int)$r->estudiantes;
-            $asis = (int)$r->asistencias;
-
-            if (!isset($tree[$cId])) {
-                $tree[$cId] = [
-                    'id' => $cId,
-                    'name' => $cName,
-                    'per_window' => [],
-                    'asignaturas' => [],
-                    'unique_estudiantes_total' => (int)($uniqueCarrera[$cId]->unique_estudiantes_total ?? 0),
-                ];
-            }
-            $addCell($tree[$cId], $wid, $est, $asis);
-
-            if (!isset($tree[$cId]['asignaturas'][$aId])) {
-                $keyA = $cId . ':' . $aId;
-                $tree[$cId]['asignaturas'][$aId] = [
-                    'id' => $aId,
-                    'name' => $aName,
-                    'per_window' => [],
-                    'tutores' => [],
-                    'unique_estudiantes_total' => (int)($uniqueAsignaturaMap[$keyA] ?? 0),
-                ];
-            }
-            $addCell($tree[$cId]['asignaturas'][$aId], $wid, $est, $asis);
-
-            if (!isset($tree[$cId]['asignaturas'][$aId]['tutores'][$tId])) {
-                $keyT = $cId . ':' . $aId . ':' . $tId;
-                $tree[$cId]['asignaturas'][$aId]['tutores'][$tId] = [
-                    'id' => $tId,
-                    'name' => $tName,
-                    'per_window' => [],
-                    'unique_estudiantes_total' => (int)($uniqueTutorMap[$keyT] ?? 0),
-                ];
-            }
-            $addCell($tree[$cId]['asignaturas'][$aId]['tutores'][$tId], $wid, $est, $asis);
-        }
-
-        $sumNodeAsis = function ($node) {
-            $sum = 0;
-            foreach (($node['per_window'] ?? []) as $cell) {
-                $sum += (int)($cell['asistencias'] ?? 0);
-            }
-            return $sum;
-        };
-        $nodeUnique = fn($node) => (int)($node['unique_estudiantes_total'] ?? 0);
-
-        $carreras = array_values($tree);
-        foreach ($carreras as &$c) {
-            $asigs = array_values($c['asignaturas']);
-            foreach ($asigs as &$a) {
-                $a['tutores'] = array_values($a['tutores']);
-                usort($a['tutores'], fn($x,$y) => ($nodeUnique($y) <=> $nodeUnique($x)) ?: ($sumNodeAsis($y) <=> $sumNodeAsis($x)));
-            }
-            unset($a);
-
-            usort($asigs, fn($x,$y) => ($nodeUnique($y) <=> $nodeUnique($x)) ?: ($sumNodeAsis($y) <=> $sumNodeAsis($x)));
-            $c['asignaturas'] = $asigs;
-        }
-        unset($c);
-
-        usort($carreras, fn($x,$y) => ($nodeUnique($y) <=> $nodeUnique($x)) ?: ($sumNodeAsis($y) <=> $sumNodeAsis($x)));
-
-        return $carreras;
-    });
+        $byType[$tutorType] = [
+            'by_window' => $byWindow
+                ->filter(fn($row) => (string)($row['tutor_type'] ?? '') === $tutorType)
+                ->values()
+                ->all(),
+            'tree' => ['carreras' => $treeByType],
+        ];
+    }
 
     $insights = [
         'by_window' => $byWindow,
         'tree' => ['carreras' => $treeCarreras],
+        'by_type' => $byType,
     ];
 
     $defaultWindowId = (int)($windowIds->last() ?? $windowIds->first());
-    $charts = $defaultWindowId
-        ? $this->buildChartsForWindow($period, $defaultWindowId)
-        : $this->emptyCharts();
+    $charts = $this->emptyCharts();
+    if ($defaultWindowId) {
+        try {
+            $charts = $this->buildChartsForWindow($period, $defaultWindowId);
+        } catch (\Throwable $e) {
+            Log::error('windowsIndex default charts failed', [
+                'period_id' => (int) $period->id,
+                'window_id' => (int) $defaultWindowId,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+        }
+    }
 
     return Inertia::render('Informe/WindowsIndex', [
         'period'   => $period,
@@ -352,9 +237,21 @@ public function windowsIndex(ReportPeriod $period)
     {
         abort_unless($window->period_id === $period->id, 404);
 
-        return response()->json(
-            $this->buildChartsForWindow($period, (int) $window->id)
-        );
+        try {
+            return response()->json(
+                $this->buildChartsForWindow($period, (int) $window->id)
+            );
+        } catch (\Throwable $e) {
+            Log::error('windowCharts failed', [
+                'period_id' => (int) $period->id,
+                'window_id' => (int) $window->id,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json($this->emptyCharts(), 200);
+        }
     }
 
     public function windowsStore(Request $request, ReportPeriod $period)
@@ -471,7 +368,18 @@ public function windowsIndex(ReportPeriod $period)
     // ----------- construir charts_by_window -----------
     $chartsByWindow = [];
     foreach ($windowIds as $wid) {
-        $chartsByWindow[(string)$wid] = $this->buildChartsForWindow($period, (int) $wid);
+        try {
+            $chartsByWindow[(string)$wid] = $this->buildChartsForWindow($period, (int) $wid);
+        } catch (\Throwable $e) {
+            Log::error('exportChartsExcel window failed', [
+                'period_id' => (int) $period->id,
+                'window_id' => (int) $wid,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            $chartsByWindow[(string)$wid] = $this->emptyCharts();
+        }
     }
 
     // ----------- EXCEL -----------
@@ -585,6 +493,402 @@ public function windowsIndex(ReportPeriod $period)
     }, $filename);
 }
 
+public function exportChartsPdf(Request $request, ReportPeriod $period)
+{
+    $windows = $period->windows()
+        ->orderBy('open_at')
+        ->orderBy('id')
+        ->get(['id', 'period_id', 'name', 'tutor_type', 'open_at', 'due_at', 'close_at', 'instructions', 'is_published']);
+
+    $r1WindowsAll = $windows
+        ->filter(fn ($w) => strtoupper((string)($w->tutor_type ?? '')) === 'R1')
+        ->values();
+    $r2WindowsAll = $windows
+        ->filter(fn ($w) => strtoupper((string)($w->tutor_type ?? '')) === 'R2')
+        ->values();
+
+    // El esquema academico del modulo trabaja con 3 cortes.
+    // Si existen mas entregas por tipo, se ignoran en el PDF y se avisa en la vista.
+    $totalCuts = 3;
+    $r1Windows = $r1WindowsAll->take($totalCuts)->values();
+    $r2Windows = $r2WindowsAll->take($totalCuts)->values();
+    $selectedWindowIds = $r1Windows
+        ->concat($r2Windows)
+        ->pluck('id')
+        ->map(fn ($id) => (int)$id)
+        ->unique()
+        ->values();
+
+    $chartsByWindow = [];
+    foreach ($selectedWindowIds as $wid) {
+        try {
+            $chartsByWindow[(string)$wid] = $this->buildChartsForWindow($period, (int)$wid);
+        } catch (\Throwable $e) {
+            Log::error('exportChartsPdf window failed', [
+                'period_id' => (int)$period->id,
+                'window_id' => (int)$wid,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            $chartsByWindow[(string)$wid] = $this->emptyCharts();
+        }
+    }
+
+    $buildWindowPayload = function (?ReportWindow $window) use ($chartsByWindow): ?array {
+        if (!$window) {
+            return null;
+        }
+
+        $charts = $chartsByWindow[(string)$window->id] ?? $this->emptyCharts();
+
+        return [
+            'window' => [
+                'id' => (int)$window->id,
+                'name' => (string)$window->name,
+                'tutor_type' => (string)$window->tutor_type,
+                'open_at' => (string)($window->open_at ?? ''),
+                'due_at' => (string)($window->due_at ?? ''),
+                'close_at' => (string)($window->close_at ?? ''),
+                'is_published' => (bool)$window->is_published,
+            ],
+            'charts' => $charts,
+            'aprobado' => (int)($charts['totalAprobado'] ?? 0),
+            'reprobado' => (int)($charts['totalReprobado'] ?? 0),
+            'sin_nota' => (int)($charts['totalSinNota'] ?? 0),
+            'evaluados' => (int)($charts['totalEvaluados'] ?? 0),
+            'estudiantes_unicos' => (int)($charts['totalEstudiantesUnicos'] ?? 0),
+        ];
+    };
+
+    $cutBundles = collect();
+    for ($i = 0; $i < $totalCuts; $i++) {
+        $r1 = $buildWindowPayload($r1Windows->get($i));
+        $r2 = $buildWindowPayload($r2Windows->get($i));
+        $r1Safe = is_array($r1) ? $r1 : [];
+        $r2Safe = is_array($r2) ? $r2 : [];
+
+        $cutBundles->push([
+            'cut_number' => $i + 1,
+            'r1' => $r1,
+            'r2' => $r2,
+            'totals' => [
+                'aprobado' => (int)(($r1Safe['aprobado'] ?? 0) + ($r2Safe['aprobado'] ?? 0)),
+                'reprobado' => (int)(($r1Safe['reprobado'] ?? 0) + ($r2Safe['reprobado'] ?? 0)),
+                'sin_nota' => (int)(($r1Safe['sin_nota'] ?? 0) + ($r2Safe['sin_nota'] ?? 0)),
+                'evaluados' => (int)(($r1Safe['evaluados'] ?? 0) + ($r2Safe['evaluados'] ?? 0)),
+                'estudiantes_unicos' => (int)(($r1Safe['estudiantes_unicos'] ?? 0) + ($r2Safe['estudiantes_unicos'] ?? 0)),
+            ],
+        ]);
+    }
+
+    $summaryRows = $cutBundles->map(function (array $bundle) {
+        $r1 = is_array($bundle['r1'] ?? null) ? $bundle['r1'] : [];
+        $r2 = is_array($bundle['r2'] ?? null) ? $bundle['r2'] : [];
+        $r1Window = is_array($r1['window'] ?? null) ? $r1['window'] : [];
+        $r2Window = is_array($r2['window'] ?? null) ? $r2['window'] : [];
+
+        return [
+            'cut_number' => (int)$bundle['cut_number'],
+            'r1_name' => (string)($r1Window['name'] ?? 'Sin entrega'),
+            'r1_evaluados' => (int)($r1['evaluados'] ?? 0),
+            'r1_aprobado' => (int)($r1['aprobado'] ?? 0),
+            'r2_name' => (string)($r2Window['name'] ?? 'Sin entrega'),
+            'r2_evaluados' => (int)($r2['evaluados'] ?? 0),
+            'r2_aprobado' => (int)($r2['aprobado'] ?? 0),
+            'total_evaluados' => (int)($bundle['totals']['evaluados'] ?? 0),
+        ];
+    })->values();
+
+    return response()->view('reports.period_charts_pdf', [
+        'period' => $period,
+        'windows' => $windows,
+        'cutBundles' => $cutBundles,
+        'summaryRows' => $summaryRows,
+        'totalCuts' => $totalCuts,
+        'windowsCountR1' => $r1Windows->count(),
+        'windowsCountR2' => $r2Windows->count(),
+        'windowsCountR1Total' => $r1WindowsAll->count(),
+        'windowsCountR2Total' => $r2WindowsAll->count(),
+        'generatedAt' => now()->format('Y-m-d H:i:s'),
+        'autoPrint' => $request->boolean('autoprint', true),
+    ]);
+}
+
+private function buildTreeForWindowIds(int $periodId, array $orderedWindowIds): array
+{
+    $orderedWindowIds = array_values(array_unique(array_map('intval', $orderedWindowIds)));
+    if ($orderedWindowIds === []) {
+        return [];
+    }
+
+    $baseAsistencias = fn() => DB::query()->fromSub(
+        $this->buildIncrementalAsistenciasQuery($periodId, $orderedWindowIds),
+        'a'
+    );
+
+    $rowsPerWindow = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+        ->leftJoin('tutors as t', 't.id', '=', 'a.tutor_id')
+        ->selectRaw("
+            a.report_window_id as window_id,
+
+            COALESCE(c.id, 0) as carrera_id,
+            COALESCE(c.nombre, a.programa_academico, 'Sin carrera') as carrera_name,
+
+            COALESCE(s.id, 0) as asignatura_id,
+            COALESCE(s.nombre, 'Sin asignatura') as asignatura_name,
+
+            a.tutor_id as tutor_id,
+            COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', a.tutor_id)) as tutor_name,
+
+            COUNT(DISTINCT TRIM(a.identificacion)) as estudiantes,
+            COUNT(*) as asistencias
+        ")
+        ->groupBy(
+            'a.report_window_id',
+            'c.id', 'c.nombre', 'a.programa_academico',
+            's.id', 's.nombre',
+            'a.tutor_id',
+            't.nombre', 't.apellido'
+        )
+        ->get();
+
+    $uniqueCarrera = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->selectRaw("COALESCE(c.id, 0) as carrera_id, COUNT(DISTINCT TRIM(a.identificacion)) as unique_estudiantes_total")
+        ->groupBy('c.id')
+        ->get()
+        ->keyBy('carrera_id');
+
+    $uniqueAsignatura = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+        ->selectRaw("
+            COALESCE(c.id, 0) as carrera_id,
+            COALESCE(s.id, 0) as asignatura_id,
+            COUNT(DISTINCT TRIM(a.identificacion)) as unique_estudiantes_total
+        ")
+        ->groupBy('c.id', 's.id')
+        ->get();
+
+    $uniqueAsignaturaMap = [];
+    foreach ($uniqueAsignatura as $u) {
+        $uniqueAsignaturaMap[((int)$u->carrera_id) . ':' . ((int)$u->asignatura_id)] = (int)$u->unique_estudiantes_total;
+    }
+
+    $uniqueTutor = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+        ->selectRaw("
+            COALESCE(c.id, 0) as carrera_id,
+            COALESCE(s.id, 0) as asignatura_id,
+            a.tutor_id as tutor_id,
+            COUNT(DISTINCT TRIM(a.identificacion)) as unique_estudiantes_total
+        ")
+        ->groupBy('c.id', 's.id', 'a.tutor_id')
+        ->get();
+
+    $uniqueTutorMap = [];
+    foreach ($uniqueTutor as $u) {
+        $uniqueTutorMap[((int)$u->carrera_id) . ':' . ((int)$u->asignatura_id) . ':' . ((int)$u->tutor_id)] = (int)$u->unique_estudiantes_total;
+    }
+
+    $uniqueAsisExpr = "CONCAT(COALESCE(a.grupo_id,0),'|',COALESCE(a.tutor_id,0),'|',TRIM(a.identificacion),'|',a.fecha)";
+
+    $uniqueAsisCarrera = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->selectRaw("
+            COALESCE(c.id, 0) as carrera_id,
+            COUNT(DISTINCT {$uniqueAsisExpr}) as unique_asistencias_total
+        ")
+        ->groupBy('c.id')
+        ->get()
+        ->keyBy('carrera_id');
+
+    $uniqueAsisAsignatura = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+        ->selectRaw("
+            COALESCE(c.id, 0) as carrera_id,
+            COALESCE(s.id, 0) as asignatura_id,
+            COUNT(DISTINCT {$uniqueAsisExpr}) as unique_asistencias_total
+        ")
+        ->groupBy('c.id', 's.id')
+        ->get();
+
+    $uniqueAsisAsignaturaMap = [];
+    foreach ($uniqueAsisAsignatura as $u) {
+        $uniqueAsisAsignaturaMap[((int)$u->carrera_id) . ':' . ((int)$u->asignatura_id)] = (int)$u->unique_asistencias_total;
+    }
+
+    $uniqueAsisTutor = $baseAsistencias()
+        ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+        ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
+        ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
+        ->selectRaw("
+            COALESCE(c.id, 0) as carrera_id,
+            COALESCE(s.id, 0) as asignatura_id,
+            a.tutor_id as tutor_id,
+            COUNT(DISTINCT {$uniqueAsisExpr}) as unique_asistencias_total
+        ")
+        ->groupBy('c.id', 's.id', 'a.tutor_id')
+        ->get();
+
+    $uniqueAsisTutorMap = [];
+    foreach ($uniqueAsisTutor as $u) {
+        $uniqueAsisTutorMap[((int)$u->carrera_id) . ':' . ((int)$u->asignatura_id) . ':' . ((int)$u->tutor_id)] = (int)$u->unique_asistencias_total;
+    }
+
+    $addCell = function (&$node, $wid, $est, $asis) {
+        $k = (string)$wid;
+        if (!isset($node['per_window'][$k])) {
+            $node['per_window'][$k] = ['estudiantes' => 0, 'asistencias' => 0];
+        }
+        $node['per_window'][$k]['estudiantes'] += (int)$est;
+        $node['per_window'][$k]['asistencias'] += (int)$asis;
+    };
+
+    $tree = [];
+    foreach ($rowsPerWindow as $r) {
+        $wid = (int)$r->window_id;
+
+        $cId = (int)$r->carrera_id;    $cName = (string)$r->carrera_name;
+        $aId = (int)$r->asignatura_id; $aName = (string)$r->asignatura_name;
+        $tId = (int)$r->tutor_id;      $tName = (string)$r->tutor_name;
+
+        $est = (int)$r->estudiantes;
+        $asis = (int)$r->asistencias;
+
+        if (!isset($tree[$cId])) {
+            $tree[$cId] = [
+                'id' => $cId,
+                'name' => $cName,
+                'per_window' => [],
+                'asignaturas' => [],
+                'unique_estudiantes_total' => (int)($uniqueCarrera[$cId]->unique_estudiantes_total ?? 0),
+                'unique_asistencias_total' => (int)($uniqueAsisCarrera[$cId]->unique_asistencias_total ?? 0),
+            ];
+        }
+        $addCell($tree[$cId], $wid, $est, $asis);
+
+        if (!isset($tree[$cId]['asignaturas'][$aId])) {
+            $keyA = $cId . ':' . $aId;
+            $tree[$cId]['asignaturas'][$aId] = [
+                'id' => $aId,
+                'name' => $aName,
+                'per_window' => [],
+                'tutores' => [],
+                'unique_estudiantes_total' => (int)($uniqueAsignaturaMap[$keyA] ?? 0),
+                'unique_asistencias_total' => (int)($uniqueAsisAsignaturaMap[$keyA] ?? 0),
+            ];
+        }
+        $addCell($tree[$cId]['asignaturas'][$aId], $wid, $est, $asis);
+
+        if (!isset($tree[$cId]['asignaturas'][$aId]['tutores'][$tId])) {
+            $keyT = $cId . ':' . $aId . ':' . $tId;
+            $tree[$cId]['asignaturas'][$aId]['tutores'][$tId] = [
+                'id' => $tId,
+                'name' => $tName,
+                'per_window' => [],
+                'unique_estudiantes_total' => (int)($uniqueTutorMap[$keyT] ?? 0),
+                'unique_asistencias_total' => (int)($uniqueAsisTutorMap[$keyT] ?? 0),
+            ];
+        }
+        $addCell($tree[$cId]['asignaturas'][$aId]['tutores'][$tId], $wid, $est, $asis);
+    }
+
+    $sumNodeAsis = function ($node) {
+        if (array_key_exists('unique_asistencias_total', $node)) {
+            return (int)($node['unique_asistencias_total'] ?? 0);
+        }
+
+        $sum = 0;
+        foreach (($node['per_window'] ?? []) as $cell) {
+            $sum += (int)($cell['asistencias'] ?? 0);
+        }
+        return $sum;
+    };
+    $nodeUnique = fn($node) => (int)($node['unique_estudiantes_total'] ?? 0);
+
+    $carreras = array_values($tree);
+    foreach ($carreras as &$c) {
+        $asigs = array_values($c['asignaturas']);
+        foreach ($asigs as &$a) {
+            $a['tutores'] = array_values($a['tutores']);
+            usort($a['tutores'], fn($x,$y) => ($nodeUnique($y) <=> $nodeUnique($x)) ?: ($sumNodeAsis($y) <=> $sumNodeAsis($x)));
+        }
+        unset($a);
+
+        usort($asigs, fn($x,$y) => ($nodeUnique($y) <=> $nodeUnique($x)) ?: ($sumNodeAsis($y) <=> $sumNodeAsis($x)));
+        $c['asignaturas'] = $asigs;
+    }
+    unset($c);
+
+    usort($carreras, fn($x,$y) => ($nodeUnique($y) <=> $nodeUnique($x)) ?: ($sumNodeAsis($y) <=> $sumNodeAsis($x)));
+
+    return $carreras;
+}
+
+private function buildWindowOrderCaseSql(string $column, array $orderedWindowIds): string
+{
+    $orderedWindowIds = array_values(array_unique(array_map('intval', $orderedWindowIds)));
+
+    if ($orderedWindowIds === []) {
+        return '(0)';
+    }
+
+    $chunks = [];
+    foreach ($orderedWindowIds as $index => $wid) {
+        $rank = $index + 1;
+        $chunks[] = "WHEN {$column} = {$wid} THEN {$rank}";
+    }
+
+    $fallback = count($orderedWindowIds) + 1000;
+    return "(CASE " . implode(' ', $chunks) . " ELSE {$fallback} END)";
+}
+
+private function buildIncrementalAsistenciasQuery(int $periodId, array $orderedWindowIds)
+{
+    $orderedWindowIds = array_values(array_unique(array_map('intval', $orderedWindowIds)));
+
+    $base = DB::table('asistencias as a')
+        ->where('a.period_id', $periodId);
+
+    if ($orderedWindowIds === []) {
+        return $base->whereRaw('1 = 0');
+    }
+
+    $base->whereIn('a.report_window_id', $orderedWindowIds);
+
+    if (count($orderedWindowIds) === 1) {
+        return $base;
+    }
+
+    $prevOrder = $this->buildWindowOrderCaseSql('prev.report_window_id', $orderedWindowIds);
+    $currOrder = $this->buildWindowOrderCaseSql('a.report_window_id', $orderedWindowIds);
+
+    return $base->whereNotExists(function ($q) use ($orderedWindowIds, $prevOrder, $currOrder) {
+        $q->selectRaw('1')
+            ->from('asistencias as prev')
+            ->whereColumn('prev.period_id', 'a.period_id')
+            ->whereIn('prev.report_window_id', $orderedWindowIds)
+            ->whereRaw("{$prevOrder} < {$currOrder}")
+            ->whereRaw('COALESCE(prev.tutor_id, 0) = COALESCE(a.tutor_id, 0)')
+            ->whereRaw('COALESCE(prev.grupo_id, 0) = COALESCE(a.grupo_id, 0)')
+            ->whereRaw('TRIM(prev.identificacion) = TRIM(a.identificacion)')
+            ->whereRaw('DATE(prev.fecha) = DATE(a.fecha)');
+    });
+}
+
 private function emptyCharts(): array
 {
     return [
@@ -592,94 +896,450 @@ private function emptyCharts(): array
         'porTutor'       => [],
         'totalAprobado'  => 0,
         'totalReprobado' => 0,
-        'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0],
-        'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0],
+        'totalEstudiantesUnicos' => 0,
+        'totalEvaluados' => 0,
+        'totalSinNota'   => 0,
+        'sexo'           => ['FEMENINO' => 0, 'MASCULINO' => 0, 'SIN_DATO' => 0],
+        'grupos'         => ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0, 'OTROS' => 0],
     ];
 }
 
 private function buildChartsForWindow(ReportPeriod $period, int $windowId, float $approvalMin = 3.0): array
 {
+    $orderedWindowIds = DB::table('report_windows')
+        ->where('period_id', $period->id)
+        ->orderBy('open_at')
+        ->orderBy('id')
+        ->pluck('id')
+        ->map(fn ($id) => (int) $id)
+        ->values();
+
+    $windowPosition = $orderedWindowIds->search($windowId);
+    $idsToEvaluate = $windowPosition === false
+        ? [$windowId]
+        : $orderedWindowIds->take($windowPosition + 1)->all();
+
+    $cacheKeyHash = md5(implode(',', $idsToEvaluate));
+
     return Cache::remember(
-        "rep_window_chart_period_{$period->id}_window_{$windowId}",
+        "rep_window_chart_v6_period_{$period->id}_window_{$windowId}_{$cacheKeyHash}",
         now()->addMinutes(10),
-        function () use ($period, $windowId, $approvalMin) {
-            $baseA = DB::table('asistencias as a')
-                ->where('a.period_id', $period->id)
+        function () use ($period, $windowId, $approvalMin, $idsToEvaluate) {
+            $baseA = DB::query()
+                ->fromSub($this->buildIncrementalAsistenciasQuery($period->id, $idsToEvaluate), 'a')
                 ->where('a.report_window_id', $windowId);
 
-            $notaExpr = "COALESCE(n.final, n.definitiva)";
-
-            $baseStudentMateria = (clone $baseA)
+            // ✅ InfinityFree: evita JOIN masivo asistencias<->notas (MAX_JOIN_SIZE).
+            //    Se calcula por etapas y en memoria.
+            $studentRows = (clone $baseA)
                 ->leftJoin('grupo_t as g', 'g.id', '=', 'a.grupo_id')
+                ->leftJoin('carreras as c', 'c.id', '=', 'g.carrera_id')
                 ->leftJoin('asignaturas as s', 's.id', '=', 'g.asignatura_id')
                 ->selectRaw("
                     TRIM(a.identificacion) as identificacion,
-                    COALESCE(NULLIF(TRIM(a.programa_academico), ''), 'Sin programa') as programa_key,
+                    TRIM(COALESCE(a.codigo_estudiantil, '')) as codigo_key,
+                    TRIM(COALESCE(a.nombres_del_estudiante, '')) as nombres_key,
+                    TRIM(COALESCE(a.apellidos_del_estudiante, '')) as apellidos_key,
+                    COALESCE(NULLIF(TRIM(c.nombre), ''), NULLIF(TRIM(a.programa_academico), ''), 'Sin programa') as programa_key,
                     a.tutor_id as tutor_id,
                     LOWER(TRIM(COALESCE(s.nombre, ''))) as materia_key
-                ");
-
-            $withNotasBase = DB::query()
-                ->fromSub($baseStudentMateria, 'x')
-                ->leftJoin('notas as n', function ($j) use ($period) {
-                    $j->on(DB::raw('TRIM(n.identificacion)'), '=', DB::raw('x.identificacion'))
-                        ->on(DB::raw('LOWER(TRIM(n.materia))'), '=', DB::raw('x.materia_key'))
-                        ->where('n.period_id', $period->id);
-                });
-
-            $studentPrograma = (clone $withNotasBase)
-                ->selectRaw("x.programa_key as label, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
-                ->groupBy('label', 'identificacion');
-
-            $aprobExprP  = "SUM(CASE WHEN p.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
-            $reprobExprP = "SUM(CASE WHEN p.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
-
-            $porPrograma = DB::query()
-                ->fromSub($studentPrograma, 'p')
-                ->selectRaw("p.label as label, $aprobExprP as APROBADO, $reprobExprP as REPROBADO")
-                ->groupBy('label')
-                ->orderByRaw("($aprobExprP + $reprobExprP) DESC")
-                ->get()
-                ->map(fn($r) => [
-                    'label' => (string)$r->label,
-                    'APROBADO' => (int)$r->APROBADO,
-                    'REPROBADO' => (int)$r->REPROBADO,
-                    'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
-                ])
-                ->values()
-                ->all();
-
-            $studentTutor = (clone $withNotasBase)
-                ->selectRaw("x.tutor_id as tutor_id, x.identificacion as identificacion, AVG($notaExpr) as avg_nota")
-                ->groupBy('tutor_id', 'identificacion');
-
-            $aprobExprT  = "SUM(CASE WHEN tt.avg_nota >= $approvalMin THEN 1 ELSE 0 END)";
-            $reprobExprT = "SUM(CASE WHEN tt.avg_nota <  $approvalMin THEN 1 ELSE 0 END)";
-
-            $porTutor = DB::query()
-                ->fromSub($studentTutor, 'tt')
-                ->leftJoin('tutors as t', 't.id', '=', 'tt.tutor_id')
-                ->selectRaw("
-                    COALESCE(NULLIF(TRIM(CONCAT(t.nombre,' ',t.apellido)), ''), CONCAT('Tutor #', tt.tutor_id)) as label,
-                    $aprobExprT as APROBADO,
-                    $reprobExprT as REPROBADO
                 ")
-                ->groupBy('label')
-                ->orderByRaw("($aprobExprT + $reprobExprT) DESC")
-                ->get()
-                ->map(fn($r) => [
-                    'label' => (string)$r->label,
-                    'APROBADO' => (int)$r->APROBADO,
-                    'REPROBADO' => (int)$r->REPROBADO,
-                    'total' => (int)$r->APROBADO + (int)$r->REPROBADO,
-                ])
-                ->values()
-                ->all();
+                ->groupBy(
+                    'a.identificacion',
+                    'a.codigo_estudiantil',
+                    'a.nombres_del_estudiante',
+                    'a.apellidos_del_estudiante',
+                    'c.nombre',
+                    'a.programa_academico',
+                    'a.tutor_id',
+                    's.nombre'
+                )
+                ->get();
 
-            $totalAprobado  = (int) array_sum(array_column($porPrograma, 'APROBADO'));
-            $totalReprobado = (int) array_sum(array_column($porPrograma, 'REPROBADO'));
+            $notaRows = DB::table('notas')
+                ->where('period_id', $period->id)
+                ->selectRaw("
+                    TRIM(identificacion) as identificacion,
+                    TRIM(COALESCE(codigo, '')) as codigo_key,
+                    TRIM(COALESCE(nombres, '')) as nombres_key,
+                    TRIM(COALESCE(apellidos, '')) as apellidos_key,
+                    COALESCE(NULLIF(TRIM(programa), ''), NULLIF(TRIM(ide_programa), '')) as programa_key,
+                    LOWER(TRIM(materia)) as materia_key,
+                    AVG(COALESCE(final, definitiva)) as avg_nota
+                ")
+                ->groupBy('identificacion', 'codigo', 'nombres', 'apellidos', 'programa', 'ide_programa', 'materia')
+                ->get();
 
-            $sexo = ['FEMENINO' => 0, 'MASCULINO' => 0];
+            $notasByStudentMateria = [];
+            $notasByStudentProgramMateria = [];
+            $notasAnyByStudent = [];
+            $notasByStudentProgramAny = [];
+            foreach ($notaRows as $n) {
+                $studentKeys = $this->buildStudentMatchKeys(
+                    $n->identificacion ?? '',
+                    $n->codigo_key ?? '',
+                    $n->nombres_key ?? '',
+                    $n->apellidos_key ?? ''
+                );
+                $materia = $this->normalizeChartText($n->materia_key ?? '');
+                $materiaVariants = $this->subjectKeyVariants($materia);
+                $programaNota = $this->normalizeChartText($n->programa_key ?? '');
+                $avg = $n->avg_nota;
+
+                if ($studentKeys === [] || $avg === null || $avg === '') {
+                    continue;
+                }
+
+                $notaFloat = (float)$avg;
+                foreach ($studentKeys as $studentKey) {
+                    $notasAnyByStudent[$studentKey][] = $notaFloat;
+                    if ($programaNota !== '') {
+                        $notasByStudentProgramAny[$studentKey][$programaNota][] = $notaFloat;
+                    }
+
+                    foreach ($materiaVariants as $materiaVariant) {
+                        $notasByStudentMateria[$studentKey][$materiaVariant][] = $notaFloat;
+
+                        if ($programaNota !== '') {
+                            $notasByStudentProgramMateria[$studentKey][$programaNota][$materiaVariant][] = $notaFloat;
+                        }
+                    }
+                }
+            }
+
+            $dedupeNotas = function (array $values): array {
+                if ($values === []) {
+                    return [];
+                }
+
+                $dedup = [];
+                foreach ($values as $nota) {
+                    $n = (float)$nota;
+                    $dedup[number_format($n, 6, '.', '')] = $n;
+                }
+
+                return array_values($dedup);
+            };
+
+            $pickSingleNota = function (array $values) use ($dedupeNotas): ?float {
+                $unique = $dedupeNotas($values);
+                if ($unique === []) {
+                    return null;
+                }
+
+                return (float)(array_sum($unique) / count($unique));
+            };
+
+            $programStudentNotas = [];
+            $tutorStudentNotas = [];
+            $studentsByProgram = [];
+            $studentsByTutor = [];
+            $studentsAll = [];
+            $studentNotasOverall = [];
+            $studentIdentityById = [];
+            $studentProgramsById = [];
+
+            foreach ($studentRows as $r) {
+                $ident = trim((string)($r->identificacion ?? ''));
+                $codigo = trim((string)($r->codigo_key ?? ''));
+                $nombres = trim((string)($r->nombres_key ?? ''));
+                $apellidos = trim((string)($r->apellidos_key ?? ''));
+                $programa = preg_replace('/\s+/', ' ', trim((string)($r->programa_key ?? 'Sin programa')));
+                $programa = $programa !== '' ? $programa : 'Sin programa';
+                $programaMatch = $this->normalizeChartText($programa);
+                $materia = $this->normalizeChartText($r->materia_key ?? '');
+                $materiaVariants = $this->subjectKeyVariants($materia);
+                $tutorId = (int)($r->tutor_id ?? 0);
+                $studentKeys = $this->buildStudentMatchKeys($ident, $codigo, $nombres, $apellidos);
+
+                if ($ident === '' || $studentKeys === []) {
+                    continue;
+                }
+
+                $studentsAll[$ident] = true;
+                $studentsByProgram[$programa][$ident] = true;
+                $studentsByTutor[$tutorId][$ident] = true;
+
+                if ($programaMatch !== '') {
+                    $studentProgramsById[$ident][$programaMatch] = true;
+                }
+
+                if (!isset($studentIdentityById[$ident])) {
+                    $studentIdentityById[$ident] = [
+                        'identificacion' => $ident,
+                        'codigo' => $codigo,
+                        'nombres' => $nombres,
+                        'apellidos' => $apellidos,
+                    ];
+                }
+
+                if ($materiaVariants === []) {
+                    continue;
+                }
+
+                $candidateNotas = [];
+                if ($programaMatch !== '') {
+                    foreach ($studentKeys as $studentKey) {
+                        $byProgram = $notasByStudentProgramMateria[$studentKey][$programaMatch] ?? [];
+                        if (!is_array($byProgram) || $byProgram === []) {
+                            continue;
+                        }
+
+                        foreach ($materiaVariants as $materiaVariant) {
+                            $vals = $byProgram[$materiaVariant] ?? [];
+                            if (!is_array($vals) || $vals === []) {
+                                continue;
+                            }
+
+                            $candidateNotas = array_merge($candidateNotas, $vals);
+                        }
+                    }
+                }
+
+                if ($candidateNotas === []) {
+                    foreach ($studentKeys as $studentKey) {
+                        $byMateria = $notasByStudentMateria[$studentKey] ?? [];
+                        if (!is_array($byMateria) || $byMateria === []) {
+                            continue;
+                        }
+
+                        foreach ($materiaVariants as $materiaVariant) {
+                            $vals = $byMateria[$materiaVariant] ?? [];
+                            if (!is_array($vals) || $vals === []) {
+                                continue;
+                            }
+
+                            $candidateNotas = array_merge($candidateNotas, $vals);
+                        }
+                    }
+                }
+
+                $nota = $pickSingleNota($candidateNotas);
+                if ($nota === null) {
+                    continue;
+                }
+
+                $programStudentNotas[$programa][$ident][] = $nota;
+                $tutorStudentNotas[$tutorId][$ident][] = $nota;
+                $studentNotasOverall[$ident][] = $nota;
+            }
+
+            $getFallbackNotas = function (string $studentId) use (
+                $studentIdentityById,
+                $studentProgramsById,
+                $notasByStudentProgramAny,
+                $notasAnyByStudent,
+                $dedupeNotas
+            ): array {
+                $identity = $studentIdentityById[$studentId] ?? [
+                    'identificacion' => $studentId,
+                    'codigo' => '',
+                    'nombres' => '',
+                    'apellidos' => '',
+                ];
+
+                $studentKeys = $this->buildStudentMatchKeys(
+                    $identity['identificacion'] ?? '',
+                    $identity['codigo'] ?? '',
+                    $identity['nombres'] ?? '',
+                    $identity['apellidos'] ?? ''
+                );
+                if ($studentKeys === []) {
+                    return [];
+                }
+
+                $merged = [];
+                $programs = array_keys($studentProgramsById[$studentId] ?? []);
+
+                foreach ($studentKeys as $studentKey) {
+                    foreach ($programs as $programaNorm) {
+                        $vals = $notasByStudentProgramAny[$studentKey][$programaNorm] ?? [];
+                        if (!is_array($vals) || $vals === []) {
+                            continue;
+                        }
+
+                        $merged = array_merge($merged, $vals);
+                    }
+                }
+
+                if ($merged === []) {
+                    foreach ($studentKeys as $studentKey) {
+                        $vals = $notasAnyByStudent[$studentKey] ?? [];
+                        if (!is_array($vals) || $vals === []) {
+                            continue;
+                        }
+
+                        $merged = array_merge($merged, $vals);
+                    }
+                }
+
+                return $dedupeNotas($merged);
+            };
+
+            foreach (array_keys($studentsAll) as $sid) {
+                if (is_array($studentNotasOverall[$sid] ?? null) && $studentNotasOverall[$sid] !== []) {
+                    continue;
+                }
+
+                $fallbackNotas = $getFallbackNotas((string)$sid);
+                if ($fallbackNotas !== []) {
+                    $studentNotasOverall[$sid] = $fallbackNotas;
+                }
+            }
+
+            foreach ($studentsByProgram as $programa => $studentSet) {
+                foreach (array_keys(is_array($studentSet) ? $studentSet : []) as $sid) {
+                    if (is_array($programStudentNotas[$programa][$sid] ?? null) && $programStudentNotas[$programa][$sid] !== []) {
+                        continue;
+                    }
+
+                    $fallbackNotas = $getFallbackNotas((string)$sid);
+                    if ($fallbackNotas !== []) {
+                        $programStudentNotas[$programa][$sid] = $fallbackNotas;
+                    }
+                }
+            }
+
+            foreach ($studentsByTutor as $tutorId => $studentSet) {
+                foreach (array_keys(is_array($studentSet) ? $studentSet : []) as $sid) {
+                    if (is_array($tutorStudentNotas[$tutorId][$sid] ?? null) && $tutorStudentNotas[$tutorId][$sid] !== []) {
+                        continue;
+                    }
+
+                    $fallbackNotas = $getFallbackNotas((string)$sid);
+                    if ($fallbackNotas !== []) {
+                        $tutorStudentNotas[$tutorId][$sid] = $fallbackNotas;
+                    }
+                }
+            }
+
+            $buildAprobReprobRows = function (array $bucketedNotas, array $studentsByLabel) use ($approvalMin): array {
+                $rows = [];
+
+                $labels = array_values(array_unique(array_merge(
+                    array_map('strval', array_keys($studentsByLabel)),
+                    array_map('strval', array_keys($bucketedNotas))
+                )));
+
+                foreach ($labels as $label) {
+                    $aprobado = 0;
+                    $reprobado = 0;
+                    $sinNota = 0;
+
+                    $studentSet = $studentsByLabel[$label] ?? [];
+                    $notasByStudent = $bucketedNotas[$label] ?? [];
+
+                    if (!is_array($studentSet)) {
+                        $studentSet = [];
+                    }
+                    if (!is_array($notasByStudent)) {
+                        $notasByStudent = [];
+                    }
+
+                    if ($studentSet === []) {
+                        foreach (array_keys($notasByStudent) as $sid) {
+                            $studentSet[(string)$sid] = true;
+                        }
+                    }
+
+                    foreach (array_keys($studentSet) as $studentId) {
+                        $notas = $notasByStudent[$studentId] ?? [];
+                        if (!is_array($notas) || $notas === []) {
+                            $sinNota++;
+                            continue;
+                        }
+
+                        $avg = array_sum($notas) / count($notas);
+                        if ($avg >= $approvalMin) {
+                            $aprobado++;
+                        } else {
+                            $reprobado++;
+                        }
+                    }
+
+                    $rows[] = [
+                        'label' => (string)$label,
+                        'APROBADO' => (int)$aprobado,
+                        'REPROBADO' => (int)$reprobado,
+                        'SIN_NOTA' => (int)$sinNota,
+                        'total' => (int)$aprobado + (int)$reprobado + (int)$sinNota,
+                    ];
+                }
+
+                usort($rows, fn($a, $b) => ($b['total'] <=> $a['total']) ?: strcmp((string)$a['label'], (string)$b['label']));
+                return $rows;
+            };
+
+            $porPrograma = $buildAprobReprobRows($programStudentNotas, $studentsByProgram);
+
+            $tutorIds = array_values(array_unique(array_map('intval', array_merge(
+                array_keys($tutorStudentNotas),
+                array_keys($studentsByTutor)
+            ))));
+            $tutorLabelById = [];
+            if ($tutorIds !== []) {
+                $tutorRows = DB::table('tutors')
+                    ->whereIn('id', $tutorIds)
+                    ->selectRaw("id, COALESCE(NULLIF(TRIM(CONCAT(nombre,' ',apellido)), ''), CONCAT('Tutor #', id)) as label")
+                    ->get();
+
+                foreach ($tutorRows as $tutor) {
+                    $tutorLabelById[(int)$tutor->id] = (string)$tutor->label;
+                }
+            }
+
+            $tutorBucketNotasByLabel = [];
+            foreach ($tutorStudentNotas as $tutorId => $studentsNotas) {
+                $label = $tutorLabelById[(int)$tutorId] ?? ('Tutor #' . (int)$tutorId);
+                if (!isset($tutorBucketNotasByLabel[$label])) {
+                    $tutorBucketNotasByLabel[$label] = [];
+                }
+
+                foreach ($studentsNotas as $ident => $notas) {
+                    $existing = $tutorBucketNotasByLabel[$label][$ident] ?? [];
+                    $tutorBucketNotasByLabel[$label][$ident] = array_merge(
+                        is_array($existing) ? $existing : [],
+                        is_array($notas) ? $notas : []
+                    );
+                }
+            }
+
+            $tutorStudentsByLabel = [];
+            foreach ($studentsByTutor as $tutorId => $studentSet) {
+                $label = $tutorLabelById[(int)$tutorId] ?? ('Tutor #' . (int)$tutorId);
+                if (!isset($tutorStudentsByLabel[$label])) {
+                    $tutorStudentsByLabel[$label] = [];
+                }
+
+                foreach (array_keys(is_array($studentSet) ? $studentSet : []) as $sid) {
+                    $tutorStudentsByLabel[$label][(string)$sid] = true;
+                }
+            }
+
+            $porTutor = $buildAprobReprobRows($tutorBucketNotasByLabel, $tutorStudentsByLabel);
+
+            $totalAprobado = 0;
+            $totalReprobado = 0;
+            $totalSinNota = 0;
+            foreach (array_keys($studentsAll) as $sid) {
+                $notas = $studentNotasOverall[$sid] ?? [];
+                if (!is_array($notas) || $notas === []) {
+                    $totalSinNota++;
+                    continue;
+                }
+
+                $avg = array_sum($notas) / count($notas);
+                if ($avg >= $approvalMin) {
+                    $totalAprobado++;
+                } else {
+                    $totalReprobado++;
+                }
+            }
+
+            $totalEvaluados = $totalAprobado + $totalReprobado;
+            $totalEstudiantesUnicos = count($studentsAll);
+
+            $sexo = ['FEMENINO' => 0, 'MASCULINO' => 0, 'SIN_DATO' => 0];
             if (Schema::hasColumn('asistencias', 'sexo')) {
                 $sexoPorEstudiante = (clone $baseA)
                     ->selectRaw("
@@ -703,10 +1363,11 @@ private function buildChartsForWindow(ReportPeriod $period, int $windowId, float
                 $sexo = [
                     'FEMENINO'  => (int)($sexoRows->firstWhere('label', 'FEMENINO')->total ?? 0),
                     'MASCULINO' => (int)($sexoRows->firstWhere('label', 'MASCULINO')->total ?? 0),
+                    'SIN_DATO'  => (int)($sexoRows->firstWhere('label', 'SIN_DATO')->total ?? 0),
                 ];
             }
 
-            $grupos = ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0];
+            $grupos = ['NINGUNO' => 0, 'AFRO' => 0, 'INDIGENA' => 0, 'OTROS' => 0];
             if (Schema::hasColumn('asistencias', 'grupo_priorizado')) {
                 $gpPorEstudiante = (clone $baseA)
                     ->selectRaw("
@@ -721,19 +1382,40 @@ private function buildChartsForWindow(ReportPeriod $period, int $windowId, float
                     ->groupBy('label')
                     ->get();
 
-                $grupos = [
-                    'NINGUNO'  => (int)($gpRows->firstWhere('label', 'NINGUNO')->total ?? 0),
-                    'AFRO'     => (int)($gpRows->firstWhere('label', 'AFRO')->total ?? 0),
-                    'INDIGENA' => (int)($gpRows->firstWhere('label', 'INDIGENA')->total ?? 0),
-                ];
+                foreach ($gpRows as $row) {
+                    $raw = trim((string)($row->label ?? ''));
+                    $total = (int)($row->total ?? 0);
+                    if ($total <= 0) {
+                        continue;
+                    }
 
-                $etnico = (int)(
-                    ($gpRows->firstWhere('label', 'ÉTNICO')->total ?? 0) +
-                    ($gpRows->firstWhere('label', 'ETNICO')->total ?? 0)
-                );
+                    $norm = Str::of($raw)
+                        ->ascii()
+                        ->upper()
+                        ->replaceMatches('/\s+/', ' ')
+                        ->trim()
+                        ->value();
 
-                if ($etnico > 0 && $grupos['INDIGENA'] === 0) {
-                    $grupos['INDIGENA'] = $etnico;
+                    if ($norm === '' || $norm === 'NINGUNO') {
+                        $grupos['NINGUNO'] += $total;
+                        continue;
+                    }
+
+                    if (str_contains($norm, 'AFRO')) {
+                        $grupos['AFRO'] += $total;
+                        continue;
+                    }
+
+                    if (
+                        str_contains($norm, 'INDIGENA') ||
+                        str_contains($norm, 'ETNICO') ||
+                        str_contains($norm, 'ETNIA')
+                    ) {
+                        $grupos['INDIGENA'] += $total;
+                        continue;
+                    }
+
+                    $grupos['OTROS'] += $total;
                 }
             }
 
@@ -742,11 +1424,126 @@ private function buildChartsForWindow(ReportPeriod $period, int $windowId, float
                 'porTutor'       => $porTutor,
                 'totalAprobado'  => $totalAprobado,
                 'totalReprobado' => $totalReprobado,
+                'totalEstudiantesUnicos' => $totalEstudiantesUnicos,
+                'totalEvaluados' => $totalEvaluados,
+                'totalSinNota'   => $totalSinNota,
                 'sexo'           => $sexo,
                 'grupos'         => $grupos,
             ];
         }
     );
+}
+
+private function normalizeChartText(mixed $value): string
+{
+    return Str::of((string) $value)
+        ->ascii()
+        ->lower()
+        ->replaceMatches('/[^a-z0-9]+/', ' ')
+        ->replaceMatches('/\s+/', ' ')
+        ->trim()
+        ->value();
+}
+
+private function studentIdentifierVariants(mixed $value): array
+{
+    return $this->identifierLooseVariants($value);
+}
+
+private function identifierLooseVariants(mixed $value): array
+{
+    $raw = trim((string)$value);
+    if ($raw === '') {
+        return [];
+    }
+
+    $variants = [
+        Str::of($raw)
+            ->ascii()
+            ->upper()
+            ->replaceMatches('/\s+/', '')
+            ->trim()
+            ->value(),
+    ];
+
+    $compactAlnum = preg_replace('/[^A-Z0-9]+/', '', (string)$variants[0]) ?? '';
+    if ($compactAlnum !== '') {
+        $variants[] = $compactAlnum;
+    }
+
+    if ($compactAlnum !== '' && preg_match('/^\d+$/', $compactAlnum) === 1) {
+        $variants[] = $compactAlnum;
+
+        $digitsNoLeading = ltrim($compactAlnum, '0');
+        if ($digitsNoLeading !== '') {
+            $variants[] = $digitsNoLeading;
+        }
+    }
+
+    $filtered = array_filter($variants, fn($item) => is_string($item) && trim($item) !== '');
+    return array_values(array_unique($filtered));
+}
+
+private function buildStudentMatchKeys(
+    mixed $identificacion,
+    mixed $codigo,
+    mixed $nombres,
+    mixed $apellidos
+): array {
+    $keys = [];
+
+    foreach ($this->identifierLooseVariants($identificacion) as $variant) {
+        $keys[] = 'ID:' . $variant;
+    }
+
+    foreach ($this->identifierLooseVariants($codigo) as $variant) {
+        $keys[] = 'COD:' . $variant;
+    }
+
+    $nameNormal = $this->normalizeChartText(trim((string)$nombres . ' ' . (string)$apellidos));
+    if ($nameNormal !== '') {
+        $keys[] = 'NAME:' . $nameNormal;
+    }
+
+    $nameInverse = $this->normalizeChartText(trim((string)$apellidos . ' ' . (string)$nombres));
+    if ($nameInverse !== '' && $nameInverse !== $nameNormal) {
+        $keys[] = 'NAME:' . $nameInverse;
+    }
+
+    return array_values(array_unique(array_filter($keys, fn($item) => is_string($item) && trim($item) !== '')));
+}
+
+private function subjectKeyVariants(mixed $value): array
+{
+    $normalized = $this->normalizeChartText($value);
+    if ($normalized === '') {
+        return [];
+    }
+
+    $variants = [$normalized];
+    $tokens = preg_split('/\s+/', $normalized) ?: [];
+
+    $singularTokens = [];
+    foreach ($tokens as $token) {
+        $token = trim((string)$token);
+        if ($token === '') {
+            continue;
+        }
+
+        // Captura diferencias comunes singular/plural (ej: "sistemas" -> "sistema").
+        if (preg_match('/^[a-z]{4,}s$/', $token) === 1) {
+            $singularTokens[] = substr($token, 0, -1);
+        } else {
+            $singularTokens[] = $token;
+        }
+    }
+
+    $singular = trim(implode(' ', $singularTokens));
+    if ($singular !== '' && $singular !== $normalized) {
+        $variants[] = $singular;
+    }
+
+    return array_values(array_unique($variants));
 }
 
 /**

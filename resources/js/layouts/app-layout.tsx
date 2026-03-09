@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { Loader } from '@/components/ui/loader';
 import { usePage } from '@inertiajs/react';
 import { TooltipProvider } from '@/components/ui/tooltip'; // ✅ importa el TooltipProvider
+import NotificationsAndAlerts from '@/components/notifications-and-alerts';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -25,6 +26,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
       <TooltipProvider> {/* ✅ solo una vez aquí */}
         <AppLayoutTemplate breadcrumbs={breadcrumbs} {...props}>
           <div className={`${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}>
+            <NotificationsAndAlerts className="mb-4" />
             {children}
           </div>
         </AppLayoutTemplate>

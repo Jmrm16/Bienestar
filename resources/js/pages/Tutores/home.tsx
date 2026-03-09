@@ -17,6 +17,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import NotificationsAndAlerts from "@/components/notifications-and-alerts";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -163,6 +171,34 @@ export default function TutorProfile({
     return params.get("tab") ?? "perfil";
   };
 
+  const resolveLatestWindowId = () => {
+    if (windowsAssigned.length === 0) return null;
+
+    const sorted = [...windowsAssigned].sort((a, b) => {
+      const aTime = a.open_at ? new Date(a.open_at).getTime() : 0;
+      const bTime = b.open_at ? new Date(b.open_at).getTime() : 0;
+      if (aTime !== bTime) return bTime - aTime;
+      return b.id - a.id;
+    });
+
+    return sorted[0]?.id ?? null;
+  };
+
+  const getInitialWindowId = () => {
+    const fallbackWindowId = resolveLatestWindowId();
+
+    if (typeof window === "undefined") return fallbackWindowId;
+
+    const params = new URLSearchParams(window.location.search);
+    const requestedWindowId = Number(params.get("window"));
+
+    if (Number.isFinite(requestedWindowId) && windowsAssigned.some((w) => w.id === requestedWindowId)) {
+      return requestedWindowId;
+    }
+
+    return fallbackWindowId;
+  };
+
   useEffect(() => {
     const y = sessionStorage.getItem("tutorHomeScrollY");
     if (y) {
@@ -172,6 +208,28 @@ export default function TutorProfile({
   }, []);
 
   const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [selectedWindowId, setSelectedWindowId] = useState<number | null>(getInitialWindowId);
+
+  useEffect(() => {
+    if (windowsAssigned.length === 0) {
+      if (selectedWindowId !== null) setSelectedWindowId(null);
+      return;
+    }
+
+    if (selectedWindowId !== null && windowsAssigned.some((w) => w.id === selectedWindowId)) {
+      return;
+    }
+
+    const latestWindowId = [...windowsAssigned]
+      .sort((a, b) => {
+        const aTime = a.open_at ? new Date(a.open_at).getTime() : 0;
+        const bTime = b.open_at ? new Date(b.open_at).getTime() : 0;
+        if (aTime !== bTime) return bTime - aTime;
+        return b.id - a.id;
+      })[0]?.id ?? null;
+
+    setSelectedWindowId(latestWindowId);
+  }, [windowsAssigned, selectedWindowId]);
 
   const getInitials = () => {
     return `${tutor.nombre?.charAt(0) || ""}${tutor.apellido?.charAt(0) || ""}`.toUpperCase() || "TU";
@@ -308,6 +366,8 @@ export default function TutorProfile({
 
       <TooltipProvider>
         <div className="flex flex-col gap-6 p-4 md:p-6 max-w-7xl mx-auto">
+          <NotificationsAndAlerts className="-mb-2" />
+
           {/* Header + métricas simples como en WindowsIndex */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -614,7 +674,8 @@ export default function TutorProfile({
               {/* Contenido Grupos */}
               <TabsContent value="grupos" className="space-y-6">
                 {(() => {
-                  const windowId = windowsAssigned?.[0]?.id ?? null;
+                  const windowId = selectedWindowId;
+                  const selectedWindow = windowsAssigned.find((w) => w.id === windowId) ?? null;
                   const hayGrupos = grupos.length > 0;
                   const hayOcasionales = ocasionales.length > 0;
                   const hayContenido = hayGrupos || hayOcasionales;
@@ -637,11 +698,45 @@ export default function TutorProfile({
                           )}
                         </div>
 
-                        <Button variant="outline">
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar Lista
-                        </Button>
+                        <div className="w-full sm:w-auto space-y-2">
+                          {windowsAssigned.length > 0 && (
+                            <div className="w-full sm:w-80">
+                              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                                Entrega activa para asistencias
+                              </label>
+                              <Select
+                                value={windowId !== null ? String(windowId) : undefined}
+                                onValueChange={(value) => setSelectedWindowId(Number(value))}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Selecciona una entrega" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {windowsAssigned.map((w) => (
+                                    <SelectItem key={w.id} value={String(w.id)}>
+                                      {w.name} • {w.period.code}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          <Button variant="outline" className="w-full sm:w-auto">
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar Lista
+                          </Button>
+                        </div>
                       </div>
+
+                      {selectedWindow && (
+                        <p className="text-xs text-muted-foreground">
+                          Mostrando asistencias de la entrega:{" "}
+                          <span className="font-semibold text-foreground">
+                            {selectedWindow.name} ({selectedWindow.period.code})
+                          </span>
+                        </p>
+                      )}
 
                       {!windowId ? (
                         <Card>
@@ -732,14 +827,17 @@ export default function TutorProfile({
                                       <Button
                                         size="sm"
                                         className="w-full"
-                                        onClick={() =>
+                                        onClick={() => {
+                                          const selectedId = windowId;
+                                          if (!selectedId) return;
+
                                           router.visit(
                                             route("portal.tutor.informes.asistencias.grupo", {
-                                              window: windowId,
+                                              window: selectedId,
                                               grupo: grupo.id,
-                                            }) + "?returnTab=grupos"
-                                          )
-                                        }
+                                            }) + `?returnTab=grupos&window=${encodeURIComponent(String(selectedId))}`
+                                          );
+                                        }}
                                       >
                                         <Eye className="h-3.5 w-3.5 mr-2" />
                                         Ver asistencias
@@ -797,14 +895,17 @@ export default function TutorProfile({
                                         size="sm"
                                         variant="outline"
                                         className="w-full"
-                                        onClick={() =>
+                                        onClick={() => {
+                                          const selectedId = windowId;
+                                          if (!selectedId) return;
+
                                           router.visit(
                                             route("portal.tutor.informes.asistencias.ocasionales", {
-                                              window: windowId,
+                                              window: selectedId,
                                               key: o.id,
-                                            }) + "?returnTab=grupos"
-                                          )
-                                        }
+                                            }) + `?returnTab=grupos&window=${encodeURIComponent(String(selectedId))}`
+                                          );
+                                        }}
                                       >
                                         <Eye className="h-3.5 w-3.5 mr-2" />
                                         Ver detalles

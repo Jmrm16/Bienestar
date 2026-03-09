@@ -120,3 +120,60 @@ it('imports the real admission excel layout and ignores score columns', function
         }
     }
 });
+
+it('imports rows when career comes as "INGENIERIA DE SISTEMA"', function () {
+    $this->actingAs(User::factory()->create());
+
+    $career = Carrera::create([
+        'nombre' => 'INGENIERIA DE SISTEMAS',
+        'codigo' => '124',
+    ]);
+
+    $subject = Asignatura::create([
+        'nombre' => 'ALGORITMO Y PROGRAMACION I',
+        'carrera_id' => $career->id,
+    ]);
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->fromArray([
+        ['RELACION ESTUDIANTE PRIMERA RESOLUCION'],
+        ['NOMBRE COMPLETO', 'DOCUMENTO', 'CODIGO', 'PROGRAMA ACADEMICO', 'ASIGNATURA', 'CORREO', 'TELEFONO'],
+        ['SANCHEZ LOPEZ RENZO DAMIAN', '1121528077', '1242210024', 'INGENIERIA DE SISTEMA', $subject->nombre, 'rdamiansanchez@uniguajira.edu.co', '3013210716'],
+    ]);
+
+    $filePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'tutores-r1-singular-' . Str::uuid() . '.xlsx';
+
+    try {
+        (new Xlsx($spreadsheet))->save($filePath);
+
+        $response = $this->post(route('tutores.import'), [
+            'archivo' => new UploadedFile(
+                $filePath,
+                '1. TUTORES PRIMERA RESOLUCION.xlsx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                null,
+                true
+            ),
+        ]);
+
+        $response->assertRedirect(route('tutores.index'));
+        $response->assertSessionHas('success');
+
+        $tutor = Tutor::query()
+            ->where('documento', '1121528077')
+            ->with('asignaturas')
+            ->first();
+
+        expect($tutor)->not->toBeNull();
+        expect($tutor->nombre)->toBe('SANCHEZ LOPEZ');
+        expect($tutor->apellido)->toBe('RENZO DAMIAN');
+        expect($tutor->carrera_id)->toBe($career->id);
+        expect($tutor->asignaturas->pluck('id')->all())
+            ->toEqualCanonicalizing([$subject->id]);
+    } finally {
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+    }
+});

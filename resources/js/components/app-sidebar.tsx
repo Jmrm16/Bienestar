@@ -100,16 +100,7 @@ const mainNavItems: NavItem[] = [
 
   },
   
-  {
-    title: 'Desarrollo Humano',
-    url : '/desarrollo-humano',
-    icon: PersonStanding
-  },
-  {
-    title: 'Promoción Socioeconómica',
-    url : '/promocion-socioeconomica',
-    icon: Receipt
-  }
+ 
 ];
 
 const footerNavItems: NavItem[] = [];

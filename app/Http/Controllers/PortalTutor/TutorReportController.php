@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Asistencia;
 use App\Models\AsistenciaOcasional;
 use App\Models\GrupoT;
+use App\Models\Nota;
 use App\Models\TutorReport;
 use App\Models\ReportWindow;
 use App\Models\Tutor;
@@ -53,15 +54,15 @@ class TutorReportController extends Controller
      * ✅ IMPORTAR ASISTENCIAS (HOJA 1 normal + HOJA 2 ocasionales)
      *
      * REGLA anti-duplicado (NORMAL):
-     * - Mismo periodo + mismo tutor + mismo grupo_id + mismo estudiante + misma fecha => NO insertar
-     * - NO importa el report_window_id para comparar
+     * - Mismo periodo + misma ventana + mismo tutor + mismo grupo_id + mismo estudiante + misma fecha => NO insertar
      *
      * ✅ MEJORA DESTINO (NORMAL):
-     * - El grupo se resuelve por (CODIGO_GRUPO + ASIGNATURA) del Excel, no solo por código.
-     * - Si no existe esa combinación para el tutor en el periodo => NO se sube esa fila.
+     * - Soporta códigos de grupo con variantes (A1 / 1A).
+     * - Permite resolver por asignatura cuando no hay código de grupo.
+     * - Aplica similitud de asignatura para tolerar errores leves de escritura.
      *
      * REGLA anti-duplicado (OCASIONALES):
-     * - Se guarda en asistencias_ocasionales con unique_key hash (period+tutor+ident+fecha+asignatura_texto+grupo_texto)
+     * - Se guarda en asistencias_ocasionales con unique_key hash (period+window+tutor+ident+fecha+asignatura_texto+grupo_texto)
      */
     public function import(Request $request, ReportWindow $window)
     {
@@ -83,12 +84,13 @@ class TutorReportController extends Controller
             ->with('asignatura:id,nombre')
             ->get();
 
-        // ✅ Mapa por (CODIGO|ASIGNATURA_NORMALIZADA) => GrupoT
-        $gruposPorCodigoAsignatura = $gruposTutor->keyBy(function ($g) {
-            $codigo = strtoupper(trim((string) $g->codigo));
-            $asig = $this->norm((string) (optional($g->asignatura)->nombre ?? ''));
-            return $codigo . '|' . $asig;
-        });
+        $gruposTutorData = $gruposTutor->map(function ($g) {
+            return [
+                'group' => $g,
+                'codigo_variants' => $this->groupCodeVariants((string) $g->codigo),
+                'asignatura_norm' => $this->norm((string) (optional($g->asignatura)->nombre ?? '')),
+            ];
+        })->values()->all();
 
         $archivo = $request->file('archivo');
 
@@ -219,18 +221,20 @@ class TutorReportController extends Controller
         // 1) IMPORTAR HOJA NORMAL
         // ===========================
         $importadasNormal = 0;
+        $marcadasNormal = 0;
+        $duplicadasNormal = 0;
 
         $hoja1 = $sheetNormal->toArray(null, true, true, true);
         $p1 = $parseSheet($hoja1);
 
-        // ✅ Para NORMAL exigimos GRUPO + ASIGNATURA
-        abort_unless($p1['colGrupo'], 422, 'No se detectó columna GRUPO en la hoja 1.');
+        // ✅ Para NORMAL exigimos ASIGNATURA; GRUPO queda opcional
         abort_unless($p1['colAsignatura'], 422, 'No se detectó columna ASIGNATURA en la hoja 1.');
 
-        // Anti-duplicado normal (entre ventanas): solo grupos del tutor en el periodo
+        // Anti-duplicado normal (por ventana): solo grupos del tutor en el periodo
         $grupoIds = $gruposTutor->pluck('id')->values();
 
         $existentesSet = Asistencia::where('period_id', $period->id)
+            ->where('report_window_id', $window->id)
             ->where('tutor_id', $tutor->id)
             ->whereIn('grupo_id', $grupoIds)
             ->get(['grupo_id', 'identificacion', 'fecha'])
@@ -253,20 +257,18 @@ class TutorReportController extends Controller
 
             $identificacionNorm = $this->normId($identificacionRaw);
 
-            // ✅ Resolver destino por (GRUPO + ASIGNATURA)
-            $codigoGrupo = strtoupper(trim((string) ($fila[$p1['colGrupo']] ?? '')));
-            $asignaturaExcel = $this->norm((string) ($fila[$p1['colAsignatura']] ?? ''));
+            $codigoGrupoRaw = $p1['colGrupo']
+                ? (string) ($fila[$p1['colGrupo']] ?? '')
+                : '';
+            $asignaturaExcelRaw = (string) ($fila[$p1['colAsignatura']] ?? '');
 
-            if ($codigoGrupo === '' || $asignaturaExcel === '') continue;
+            $grupo = $this->resolveTutorGroup(
+                $gruposTutorData,
+                $codigoGrupoRaw,
+                $asignaturaExcelRaw
+            );
 
-            $keyGrupo = $codigoGrupo . '|' . $asignaturaExcel;
-
-            if (!isset($gruposPorCodigoAsignatura[$keyGrupo])) {
-                // No pertenece al tutor o no coincide la asignatura con el grupo
-                continue;
-            }
-
-            $grupo = $gruposPorCodigoAsignatura[$keyGrupo];
+            if (!$grupo) continue;
 
             $codigo = trim((string) ($fila[$p1['colCodigo']] ?? ''));
             $programa = trim((string) ($fila[$p1['colPrograma']] ?? ''));
@@ -282,10 +284,14 @@ class TutorReportController extends Controller
                 if (is_string($cell) && trim(mb_strtolower($cell)) === 'x') $marcado = true;
 
                 if (!$marcado) continue;
+                $marcadasNormal++;
 
                 $key = $grupo->id . '|' . $identificacionNorm . '|' . $fecha;
 
-                if (isset($existentesSet[$key])) continue;
+                if (isset($existentesSet[$key])) {
+                    $duplicadasNormal++;
+                    continue;
+                }
 
                 Asistencia::create([
                     'grupo_id' => $grupo->id,
@@ -312,13 +318,16 @@ class TutorReportController extends Controller
         // 2) IMPORTAR HOJA OCASIONALES (si existe)
         // ===========================
         $importadasOcasionales = 0;
+        $marcadasOcasionales = 0;
+        $duplicadasOcasionales = 0;
 
         if ($sheetOcasional) {
             $hoja2 = $sheetOcasional->toArray(null, true, true, true);
             $p2 = $parseSheet($hoja2);
 
-            // Anti-duplicado ocasionales (por unique_key)
+            // Anti-duplicado ocasionales (por ventana)
             $existOca = AsistenciaOcasional::where('period_id', $period->id)
+                ->where('report_window_id', $window->id)
                 ->where('tutor_id', $tutor->id)
                 ->get(['unique_key'])
                 ->pluck('unique_key')
@@ -353,9 +362,11 @@ class TutorReportController extends Controller
                     if (is_string($cell) && trim(mb_strtolower($cell)) === 'x') $marcado = true;
 
                     if (!$marcado) continue;
+                    $marcadasOcasionales++;
 
                     $uk = sha1(
                         $period->id . '|' .
+                        $window->id . '|' .
                         $tutor->id . '|' .
                         $identificacionNorm . '|' .
                         $fecha . '|' .
@@ -363,7 +374,10 @@ class TutorReportController extends Controller
                         ($grupoTxt ?? '')
                     );
 
-                    if (isset($existOca[$uk])) continue;
+                    if (isset($existOca[$uk])) {
+                        $duplicadasOcasionales++;
+                        continue;
+                    }
 
                     AsistenciaOcasional::create([
                         'period_id' => $period->id,
@@ -410,8 +424,23 @@ class TutorReportController extends Controller
             ]
         );
 
-        $msg = "Importación lista. Normal: {$importadasNormal} nuevas.";
-        if ($sheetOcasional) $msg .= " Ocasionales: {$importadasOcasionales} nuevas.";
+        $msg = "Importación lista. Normal: {$importadasNormal} nuevas";
+        if ($marcadasNormal > 0) {
+            $msg .= ", {$duplicadasNormal} duplicadas";
+        }
+        $msg .= '.';
+
+        if ($sheetOcasional) {
+            $msg .= " Ocasionales: {$importadasOcasionales} nuevas";
+            if ($marcadasOcasionales > 0) {
+                $msg .= ", {$duplicadasOcasionales} duplicadas";
+            }
+            $msg .= '.';
+        }
+
+        if ($importadasNormal === 0 && (! $sheetOcasional || $importadasOcasionales === 0)) {
+            $msg .= " No había asistencias nuevas para registrar en esta entrega.";
+        }
 
         return redirect()
             ->route('portal.tutor.home', ['tab' => 'informes'])
@@ -440,31 +469,53 @@ class TutorReportController extends Controller
 
         $grupo->load('asignatura');
 
+        $windowsForTutor = collect($this->availableWindowsForTutor($tutor, $window));
+        $windowIds = $windowsForTutor
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+
+        if ($windowIds === []) {
+            $windowIds = [(int) $window->id];
+        }
+
         $asistencias = Asistencia::where('grupo_id', $grupo->id)
             ->where('period_id', $period->id)
-            ->where('report_window_id', $window->id)
+            ->whereIn('report_window_id', $windowIds)
             ->where('tutor_id', $tutor->id)
             ->orderBy('apellidos_del_estudiante')
             ->orderBy('nombres_del_estudiante')
             ->orderBy('fecha')
             ->get();
 
-        $notas = \App\Models\Nota::where('period_id', $period->id)
-            ->get()
-            ->keyBy(fn ($n) => trim($n->identificacion) . '|' . mb_strtolower(trim($n->materia)));
+        $notasIndexes = $this->buildNotasIndexes(
+            Nota::where('period_id', $period->id)
+                ->get(['id', 'identificacion', 'materia', 'grupo', 'nota_1', 'nota_2', 'nota_3', 'definitiva', 'final', 'updated_at'])
+        );
 
-        $materiaGrupo = mb_strtolower(trim(optional($grupo->asignatura)->nombre ?? ''));
+        $materiaGrupoLabel = trim((string) (optional($grupo->asignatura)->nombre ?? ''));
+        $materiaGrupoNorm = $this->norm($materiaGrupoLabel);
+        $grupoCodigo = (string) ($grupo->codigo ?? '');
 
         $resultado = $asistencias
-            ->groupBy(fn ($a) => trim($a->identificacion))
-            ->map(function ($items, $identificacion) use ($notas, $materiaGrupo) {
+            ->groupBy(fn ($a) => $this->normId((string) $a->identificacion))
+            ->map(function ($items) use ($notasIndexes, $materiaGrupoNorm, $materiaGrupoLabel, $grupoCodigo) {
                 $first = $items->first();
 
-                $key = trim($identificacion) . '|' . $materiaGrupo;
-                $nota = $notas->get($key);
+                $nota = $this->resolveNotaFromIndexes(
+                    $notasIndexes,
+                    (string) $first->identificacion,
+                    $materiaGrupoNorm,
+                    $grupoCodigo
+                );
 
                 $fechas = $items->pluck('fecha')
                     ->map(fn ($f) => (string) $f)
+                    ->filter(fn ($f) => $f !== '')
+                    ->unique()
+                    ->sort()
                     ->values()
                     ->all();
 
@@ -473,10 +524,10 @@ class TutorReportController extends Controller
                     'estudiante' => trim($first->nombres_del_estudiante . ' ' . $first->apellidos_del_estudiante),
                     'codigo' => $first->codigo_estudiantil,
                     'programa' => $first->programa_academico,
-                    'materia' => $materiaGrupo ? strtoupper($materiaGrupo) : null,
+                    'materia' => $materiaGrupoLabel !== '' ? $materiaGrupoLabel : null,
                     'sexo' => $first->sexo,
                     'grupo_priorizado' => $first->grupo_priorizado ?: '—',
-                    'total_asistencias' => (int) $items->count(),
+                    'total_asistencias' => (int) count($fechas),
                     'fecha' => implode(', ', $fechas),
                     'fechas' => $fechas,
                     'nota_1' => $nota?->nota_1,
@@ -493,6 +544,7 @@ class TutorReportController extends Controller
                 'id' => $window->id,
                 'name' => $window->name,
             ],
+            'windows' => $windowsForTutor->values()->all(),
             'grupo' => [
                 'id' => $grupo->id,
                 'nombre' => $grupo->nombre,
@@ -517,8 +569,20 @@ class TutorReportController extends Controller
         $period = $window->period;
         abort_unless($period, 403);
 
+        $windowsForTutor = collect($this->availableWindowsForTutor($tutor, $window));
+        $windowIds = $windowsForTutor
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+
+        if ($windowIds === []) {
+            $windowIds = [(int) $window->id];
+        }
+
         $ocasionales = AsistenciaOcasional::where('period_id', $period->id)
-            ->where('report_window_id', $window->id)
+            ->whereIn('report_window_id', $windowIds)
             ->where('tutor_id', $tutor->id)
             ->orderBy('apellidos_del_estudiante')
             ->orderBy('nombres_del_estudiante')
@@ -527,27 +591,33 @@ class TutorReportController extends Controller
             ->orderBy('fecha')
             ->get();
 
-        $notas = \App\Models\Nota::where('period_id', $period->id)
-            ->get()
-            ->keyBy(fn ($n) => trim($n->identificacion) . '|' . mb_strtolower(trim($n->materia)));
+        $notasIndexes = $this->buildNotasIndexes(
+            Nota::where('period_id', $period->id)
+                ->get(['id', 'identificacion', 'materia', 'grupo', 'nota_1', 'nota_2', 'nota_3', 'definitiva', 'final', 'updated_at'])
+        );
 
         $resultado = $ocasionales
             ->groupBy(function ($a) {
-                $ident = trim((string) $a->identificacion);
-                $asig  = mb_strtolower(trim((string) ($a->asignatura_texto ?? '')));
-                $grp   = mb_strtolower(trim((string) ($a->grupo_texto ?? '')));
+                $ident = $this->normId((string) $a->identificacion);
+                $asig  = $this->norm((string) ($a->asignatura_texto ?? ''));
+                $grp   = $this->norm((string) ($a->grupo_texto ?? ''));
                 return $ident . '|' . $asig . '|' . $grp;
             })
-            ->map(function ($items) use ($notas) {
+            ->map(function ($items) use ($notasIndexes) {
                 $first = $items->first();
 
-                $ident = trim((string) $first->identificacion);
-                $materiaKey = mb_strtolower(trim((string) ($first->asignatura_texto ?? '')));
-                $notaKey = $ident . '|' . $materiaKey;
-                $nota = $notas->get($notaKey);
+                $nota = $this->resolveNotaFromIndexes(
+                    $notasIndexes,
+                    (string) $first->identificacion,
+                    (string) ($first->asignatura_texto ?? ''),
+                    (string) ($first->grupo_texto ?? '')
+                );
 
                 $fechas = $items->pluck('fecha')
                     ->map(fn ($f) => (string) $f)
+                    ->filter(fn ($f) => $f !== '')
+                    ->unique()
+                    ->sort()
                     ->values()
                     ->all();
 
@@ -562,7 +632,7 @@ class TutorReportController extends Controller
                     'asignatura_texto' => $first->asignatura_texto,
                     'grupo_texto' => $first->grupo_texto,
 
-                    'total_asistencias' => (int) $items->count(),
+                    'total_asistencias' => (int) count($fechas),
                     'fecha' => implode(', ', $fechas),
                     'fechas' => $fechas,
 
@@ -580,6 +650,7 @@ class TutorReportController extends Controller
                 'id' => $window->id,
                 'name' => $window->name,
             ],
+            'windows' => $windowsForTutor->values()->all(),
             'asistencias' => $resultado,
         ]);
     }
@@ -663,6 +734,310 @@ class TutorReportController extends Controller
             if (str_contains($this->norm((string) $cell), $needle)) $last = (string) $col;
         }
         return $last;
+    }
+
+    private function availableWindowsForTutor(Tutor $tutor, ReportWindow $currentWindow)
+    {
+        $windows = ReportWindow::query()
+            ->join('tutor_reports as tr', 'tr.window_id', '=', 'report_windows.id')
+            ->where('tr.tutor_id', $tutor->id)
+            ->where('report_windows.period_id', $currentWindow->period_id)
+            ->where('report_windows.is_published', true)
+            ->distinct()
+            ->orderBy('report_windows.open_at')
+            ->orderBy('report_windows.id')
+            ->get([
+                'report_windows.id',
+                'report_windows.name',
+            ]);
+
+        if ($windows->isEmpty()) {
+            $query = ReportWindow::query()
+            ->where('period_id', $currentWindow->period_id)
+            ->where('is_published', true);
+
+            $tutorType = trim((string) ($tutor->tipo_resolucion ?? ''));
+            if ($tutorType !== '') {
+                $query->where('tutor_type', $tutorType);
+            }
+
+            $windows = $query
+                ->orderBy('open_at')
+                ->orderBy('id')
+                ->get(['id', 'name']);
+        }
+
+        if ($windows->isEmpty()) {
+            $windows = collect([$currentWindow]);
+        }
+
+        return $windows
+            ->map(fn ($w) => [
+                'id' => (int) $w->id,
+                'name' => (string) $w->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function resolveTutorGroup(array $gruposTutorData, string $codigoGrupoRaw, string $asignaturaRaw): ?GrupoT
+    {
+        $codigoVariants = $this->groupCodeVariants($codigoGrupoRaw);
+        $asignaturaNorm = $this->norm($asignaturaRaw);
+
+        if ($codigoVariants === [] && $asignaturaNorm === '') {
+            return null;
+        }
+
+        $codeMatched = [];
+        if ($codigoVariants !== []) {
+            foreach ($gruposTutorData as $item) {
+                if ($this->codeVariantsIntersect($codigoVariants, $item['codigo_variants'] ?? [])) {
+                    $codeMatched[] = $item;
+                }
+            }
+        }
+
+        if ($codeMatched !== [] && $asignaturaNorm !== '') {
+            $exact = array_values(array_filter(
+                $codeMatched,
+                fn ($item) => ($item['asignatura_norm'] ?? '') === $asignaturaNorm
+            ));
+
+            if (count($exact) === 1) {
+                return $exact[0]['group'];
+            }
+        }
+
+        if ($codeMatched !== []) {
+            if ($asignaturaNorm === '') {
+                return count($codeMatched) === 1 ? $codeMatched[0]['group'] : null;
+            }
+
+            $bestByCode = $this->pickBestByAsignatura($codeMatched, $asignaturaNorm, 0.74, 0.08);
+            if ($bestByCode) {
+                return $bestByCode;
+            }
+        }
+
+        if ($asignaturaNorm !== '') {
+            $exactAsig = array_values(array_filter(
+                $gruposTutorData,
+                fn ($item) => ($item['asignatura_norm'] ?? '') === $asignaturaNorm
+            ));
+
+            if (count($exactAsig) === 1) {
+                return $exactAsig[0]['group'];
+            }
+
+            return $this->pickBestByAsignatura($gruposTutorData, $asignaturaNorm, 0.90, 0.10);
+        }
+
+        return null;
+    }
+
+    private function pickBestByAsignatura(array $items, string $asignaturaNorm, float $minScore, float $minGap): ?GrupoT
+    {
+        $scored = [];
+
+        foreach ($items as $item) {
+            $score = $this->subjectSimilarity($asignaturaNorm, (string) ($item['asignatura_norm'] ?? ''));
+            if ($score <= 0) {
+                continue;
+            }
+
+            $scored[] = [
+                'group' => $item['group'],
+                'score' => $score,
+            ];
+        }
+
+        if ($scored === []) {
+            return null;
+        }
+
+        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+        $best = $scored[0];
+        if ($best['score'] < $minScore) {
+            return null;
+        }
+
+        $second = $scored[1] ?? null;
+        if ($second && (($best['score'] - $second['score']) < $minGap)) {
+            return null;
+        }
+
+        return $best['group'];
+    }
+
+    private function normalizeGroupCode(string $code): string
+    {
+        return preg_replace('/[^0-9A-Z]/', '', $this->norm($code));
+    }
+
+    private function groupCodeVariants(string $code): array
+    {
+        $norm = $this->normalizeGroupCode($code);
+        if ($norm === '') {
+            return [];
+        }
+
+        $variants = [$norm];
+
+        $withoutPrefix = preg_replace('/^(GRUPO|GRP|GPO|GR)/', '', $norm);
+        if ($withoutPrefix !== '' && $withoutPrefix !== $norm) {
+            $variants[] = $withoutPrefix;
+        }
+
+        foreach (array_values(array_unique($variants)) as $base) {
+            $letters = preg_replace('/[^A-Z]/', '', $base);
+            $digits = preg_replace('/[^0-9]/', '', $base);
+
+            if ($letters !== '' && $digits !== '') {
+                $variants[] = $letters . $digits;
+                $variants[] = $digits . $letters;
+            }
+        }
+
+        return array_values(array_unique(array_filter($variants)));
+    }
+
+    private function codeVariantsIntersect(array $left, array $right): bool
+    {
+        if ($left === [] || $right === []) {
+            return false;
+        }
+
+        foreach ($left as $value) {
+            if (in_array($value, $right, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function subjectSimilarity(string $left, string $right): float
+    {
+        if ($left === '' || $right === '') {
+            return 0.0;
+        }
+
+        if ($left === $right) {
+            return 1.0;
+        }
+
+        $maxLen = max(strlen($left), strlen($right));
+        if ($maxLen === 0) {
+            return 0.0;
+        }
+
+        $distance = levenshtein($left, $right);
+        $distanceScore = max(0.0, 1 - ($distance / $maxLen));
+
+        $tokenScore = $this->tokenOverlapScore($left, $right);
+
+        if (str_contains($left, $right) || str_contains($right, $left)) {
+            $ratio = min(strlen($left), strlen($right)) / $maxLen;
+            $tokenScore = max($tokenScore, max(0.86, $ratio));
+        }
+
+        return max(0.0, min(1.0, max($distanceScore, $tokenScore)));
+    }
+
+    private function tokenOverlapScore(string $left, string $right): float
+    {
+        $leftTokens = array_values(array_unique(array_filter(
+            explode(' ', $left),
+            fn ($token) => strlen($token) > 1
+        )));
+        $rightTokens = array_values(array_unique(array_filter(
+            explode(' ', $right),
+            fn ($token) => strlen($token) > 1
+        )));
+
+        if ($leftTokens === [] || $rightTokens === []) {
+            return 0.0;
+        }
+
+        $intersection = count(array_intersect($leftTokens, $rightTokens));
+        return $intersection / max(count($leftTokens), count($rightTokens));
+    }
+
+    private function buildNotasIndexes($notas): array
+    {
+        $byMateria = [];
+        $byMateriaGrupo = [];
+
+        foreach ($notas as $nota) {
+            $materiaKey = $this->notaMateriaKey(
+                (string) $nota->identificacion,
+                (string) $nota->materia
+            );
+
+            if ($materiaKey === '') {
+                continue;
+            }
+
+            $byMateria[$materiaKey][] = $nota;
+
+            foreach ($this->groupCodeVariants((string) ($nota->grupo ?? '')) as $grupoNorm) {
+                $byMateriaGrupo[$materiaKey . '|' . $grupoNorm][] = $nota;
+            }
+        }
+
+        return [
+            'by_materia' => $byMateria,
+            'by_materia_grupo' => $byMateriaGrupo,
+        ];
+    }
+
+    private function resolveNotaFromIndexes(array $indexes, string $identificacion, string $materia, string $grupoRaw = ''): ?Nota
+    {
+        $materiaKey = $this->notaMateriaKey($identificacion, $materia);
+        if ($materiaKey === '') {
+            return null;
+        }
+
+        $grupoVariants = $this->groupCodeVariants($grupoRaw);
+
+        foreach ($grupoVariants as $grupoNorm) {
+            $exactByGroup = $indexes['by_materia_grupo'][$materiaKey . '|' . $grupoNorm] ?? [];
+            if (count($exactByGroup) === 1) {
+                return $exactByGroup[0];
+            }
+        }
+
+        $byMateria = $indexes['by_materia'][$materiaKey] ?? [];
+        if (count($byMateria) === 1) {
+            return $byMateria[0];
+        }
+
+        if ($grupoVariants !== [] && $byMateria !== []) {
+            $filtered = array_values(array_filter($byMateria, function (Nota $nota) use ($grupoVariants) {
+                $notaGroupVariants = $this->groupCodeVariants((string) ($nota->grupo ?? ''));
+                return $this->codeVariantsIntersect($grupoVariants, $notaGroupVariants);
+            }));
+
+            if (count($filtered) === 1) {
+                return $filtered[0];
+            }
+        }
+
+        return null;
+    }
+
+    private function notaMateriaKey(string $identificacion, string $materia): string
+    {
+        $identNorm = $this->normId($identificacion);
+        $materiaNorm = $this->norm($materia);
+
+        if ($identNorm === '' || $materiaNorm === '') {
+            return '';
+        }
+
+        return $identNorm . '|' . $materiaNorm;
     }
 
     private function guessSexo(array $fila): ?string

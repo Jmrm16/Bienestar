@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\PortalTutor;
 
 use App\Http\Controllers\Controller;
+use App\Models\Asistencia;
 use App\Models\ReportPeriod;
 use App\Models\Tutor;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,7 @@ class TutorDashboardController extends Controller
             ->with([
                 'carrera:id,nombre',
                 'asignaturas:id,nombre',
+                'periodResolutions:id,period_id,tutor_id,tipo_resolucion',
             ])
             ->select([
                 'id',
@@ -81,16 +83,10 @@ class TutorDashboardController extends Controller
                     'nombre' => $a->nombre,
                 ])
                 ->values(),
-            'tipo_resolucion'  => $tutor->tipo_resolucion ?? 'R1',
         ];
 
         /* -------------------------------------------------------
-         | 4) Tipo de resolución
-         ------------------------------------------------------- */
-        $tutorType = $payloadTutor['tipo_resolucion'] ?? 'R1';
-
-        /* -------------------------------------------------------
-         | 5) PERÍODOS + VENTANAS vigentes
+         | 4) PERÍODOS + VENTANAS vigentes
          ------------------------------------------------------- */
         $today = Carbon::today();
 
@@ -99,11 +95,8 @@ class TutorDashboardController extends Controller
             ->whereDate('starts_at', '<=', $today)
             ->whereDate('ends_at', '>=', $today)
             ->with([
-                'windows' => function ($q) use ($tutorType, $tutor, $today) {
+                'windows' => function ($q) use ($tutor) {
                     $q->where('is_published', true)
-                      ->where('tutor_type', $tutorType)
-                      ->whereDate('open_at', '<=', $today)
-                      ->whereDate('close_at', '>=', $today)
                       ->orderBy('open_at')
                       ->with([
                           'tutorReports' => function ($qr) use ($tutor) {
@@ -122,13 +115,60 @@ class TutorDashboardController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        $resolutionMap = $tutor->periodResolutions
+            ->whereIn('period_id', $periods->pluck('id'))
+            ->mapWithKeys(fn ($resolution) => [
+                (int) $resolution->period_id => $resolution->tipo_resolucion,
+            ])
+            ->all();
+
+        $windowIdsWithAttendancesByPeriod = Asistencia::query()
+            ->where('tutor_id', $tutor->id)
+            ->whereIn('period_id', $periods->pluck('id'))
+            ->whereNotNull('report_window_id')
+            ->select(['period_id', 'report_window_id'])
+            ->distinct()
+            ->get()
+            ->groupBy('period_id')
+            ->map(fn ($rows) => $rows->pluck('report_window_id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all())
+            ->all();
+
+        $windowIdsWithOcasionalesByPeriod = AsistenciaOcasional::query()
+            ->where('tutor_id', $tutor->id)
+            ->whereIn('period_id', $periods->pluck('id'))
+            ->whereNotNull('report_window_id')
+            ->select(['period_id', 'report_window_id'])
+            ->distinct()
+            ->get()
+            ->groupBy('period_id')
+            ->map(fn ($rows) => $rows->pluck('report_window_id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all())
+            ->all();
+
         /* -------------------------------------------------------
-         | 6) Aplanar ventanas asignadas
+         | 5) Aplanar ventanas asignadas
          ------------------------------------------------------- */
         $windowsAssigned = [];
 
         foreach ($periods as $p) {
-            foreach ($p->windows as $w) {
+            $periodResolution = $resolutionMap[(int) $p->id] ?? $tutor->resolutionForPeriod((int) $p->id);
+            $windowIdsWithData = array_values(array_unique(array_merge(
+                $windowIdsWithAttendancesByPeriod[(int) $p->id] ?? [],
+                $windowIdsWithOcasionalesByPeriod[(int) $p->id] ?? []
+            )));
+
+            $windowsForTutor = $p->windows->filter(function ($window) use ($periodResolution, $windowIdsWithData) {
+                return $window->tutorReports->isNotEmpty()
+                    || in_array((int) $window->id, $windowIdsWithData, true)
+                    || ($periodResolution !== null && (string) $window->tutor_type === $periodResolution);
+            });
+
+            foreach ($windowsForTutor as $w) {
                 $myReport = optional($w->tutorReports->first());
 
                 $windowsAssigned[] = [
@@ -158,7 +198,7 @@ class TutorDashboardController extends Controller
         }
 
         /* -------------------------------------------------------
-         | 7) Estadísticas
+         | 6) Estadísticas
          ------------------------------------------------------- */
         $stats = [
             'total_windows' => count($windowsAssigned),
@@ -171,7 +211,7 @@ class TutorDashboardController extends Controller
         ];
 
         /* -------------------------------------------------------
-         | 8) GRUPOS asignados vigentes
+         | 7) GRUPOS asignados vigentes
          ------------------------------------------------------- */
         $gruposAsignados = $tutor->grupos()
             ->whereHas('periodo', function ($q) use ($today) {
@@ -192,6 +232,7 @@ class TutorDashboardController extends Controller
                     'codigo'     => $g->codigo,
                     'docente'    => $g->docente,
                     'periodo'    => [
+                        'id'         => $g->periodo->id,
                         'code'       => $g->periodo->code,
                         'starts_at'  => $g->periodo->starts_at,
                         'ends_at'    => $g->periodo->ends_at,
@@ -204,11 +245,13 @@ class TutorDashboardController extends Controller
             ->values();
 
         /* -------------------------------------------------------
-         | ✅ 9) ASISTENCIAS OCASIONALES (para mostrar en "Mis grupos")
+         | ✅ 8) ASISTENCIAS OCASIONALES (para mostrar en "Mis grupos")
          |    - Las agrupamos por Asignatura + Grupo_texto
          |    - Usamos el periodo vigente (si hay)
          ------------------------------------------------------- */
-        $activePeriodId = collect($windowsAssigned)->first()['period']['id'] ?? null;
+        $activePeriodId = collect($windowsAssigned)->first()['period']['id']
+            ?? collect($gruposAsignados)->first()['periodo']['id']
+            ?? null;
         $activeWindowId = collect($windowsAssigned)->first()['id'] ?? null;
 
         $ocasionales = collect();
@@ -239,7 +282,7 @@ class TutorDashboardController extends Controller
         }
 
         /* -------------------------------------------------------
-         | 10) Render Inertia
+         | 9) Render Inertia
          ------------------------------------------------------- */
         return Inertia::render('Tutores/home', [
             'tutor'           => $payloadTutor,

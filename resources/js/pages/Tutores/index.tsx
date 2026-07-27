@@ -1,126 +1,98 @@
-import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
-import AgregarTutor from '@/pages/Tutores/AgregaTutor';
-import AgregarAsignatura from '@/pages/Asignaturas/AgregarAsignatura';
-import AgregarGrupo from '@/pages/Tutores/AgregarGrupo';
-import TablaTutor from '@/pages/Tutores/TablaTutor';
-import TablaAsignatura from '@/pages/Asignaturas/TablaAsignatura';
-import TablaGrupo from '@/pages/Tutores/TablaGrupos';
-import AgregarCarrera from '@/pages/Tutores/AgregarCarrera';
-import TablaCarreras from '@/pages/Tutores/TablaCarreras';
-import { MetricCard } from '@/components/component/MetricCard';
-import { Cpu, HardDrive, Wifi } from 'lucide-react';
-
-import { motion } from 'framer-motion';
+import { MetricCard } from '@/components/shared/metric-card';
+import { PageContainer, PageHeader, SectionHeader } from '@/components/shared/page-shell';
+import TablaTutor from '@/pages/Tutores/components/tables/TablaTutor';
+import { BookOpen, GraduationCap, UserCheck, Users } from 'lucide-react';
 
 // Tipos
 interface Asignatura {
-  id: number;
-  nombre: string;
-  codigo: string;
-  docente: string;
+    id: number;
+    nombre: string;
+    codigo: string;
+    docente: string;
 }
 
 interface Tutor {
-  id: number;
-  nombre: string;
-  apellido: string;
-  grupos: number;
-  asignaturas: Asignatura[];
+    id: number;
+    nombre: string;
+    apellido: string;
+    grupos: number;
+    asignaturas: Asignatura[];
 }
 
 type Carrera = {
-  id: number;
-  nombre: string;
+    id: number;
+    nombre: string;
 };
 
-type Grupo = {
-  id: number;
-  nombre: string;
-  codigo: string;
-  carrera: Carrera;
+type Periodo = {
+    id: number;
+    code: string;
+    name: string;
+    is_active: boolean;
 };
 
 interface Props {
-  tutores: Tutor[];
-  asignaturas: Asignatura[];
-  carreras: Carrera[];
-  totalTutores: number;
-  grupos: Grupo[];        // ✅ ahora incluido
-  gruposT: Grupo[];       // ✅ ahora incluido
+    tutores: Tutor[];
+    asignaturas: Asignatura[];
+    carreras: Carrera[];
+    periodos: Periodo[];
 }
 
 // Migas de pan
 const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Registro',
-    href: '/Registro',
-  },
+    {
+        title: 'Registro',
+        href: '/Registro',
+    },
 ];
 
-export default function Index({
-  tutores,
-  asignaturas,
-  carreras,
-  grupos,
-  gruposT,
-}: Props) {
-  const [grupoSeleccionado, setGrupoSeleccionado] = useState<any | null>(null);
+export default function Index({ tutores, asignaturas, carreras, periodos }: Props) {
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Tutores" />
+            <PageContainer>
+                <PageHeader
+                    eyebrow="Permanencia y graduación"
+                    title="Tutores"
+                    description="Administra tutores, asignaturas, carreras y disponibilidad académica."
+                    icon={Users}
+                />
 
-  return (
-    <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Dashboard" />
-      <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard title="Tutores" value={tutores.length} icon={Users} color="blue" detail={`${tutores.length} registrados`} />
+                    <MetricCard
+                        title="Asignaturas"
+                        value={asignaturas.length}
+                        icon={BookOpen}
+                        color="purple"
+                        detail={`${asignaturas.length} registradas`}
+                    />
+                    <MetricCard
+                        title="Tutores disponibles"
+                        value={tutores.length}
+                        icon={UserCheck}
+                        color="blue"
+                        detail={`${tutores.length} disponibles`}
+                    />
+                    <MetricCard
+                        title="Carreras"
+                        value={carreras.length}
+                        icon={GraduationCap}
+                        color="cyan"
+                        detail={`${carreras.length} registradas`}
+                    />
+                </div>
 
-        {/* Métricas principales */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
-          <MetricCard
-            title="Tutores"
-            value={tutores.length}
-            icon={Cpu}
-            color="cyan"
-            detail={`${tutores.length} registrados`}
-          />
-          <MetricCard
-            title="Asignaturas"
-            value={asignaturas.length}
-            icon={HardDrive}
-            color="purple"
-            detail={`${asignaturas.length} registradas`}
-          />
-          <MetricCard
-            title="Tutores disponibles"
-            value={tutores.length}
-            icon={Wifi}
-            color="blue"
-            detail={`${tutores.length} disponibles`}
-          />
-          <MetricCard
-            title="Carreras"
-            value={carreras.length}
-            icon={Cpu}
-            color="cyan"
-            detail={`${carreras.length} registradas`}
-          />
-        </div>
-
-        {/* Tutores */}
-        <div className="p-6">      
-        
-          <TablaTutor />
-        </div>
-
-        {/* Asignaturas */}
-
-        {/* Grupos */}
-
-        {/* Carreras */}
-        
-      </div>
-    </AppLayout>
-  );
+                <section className="space-y-4">
+                    <SectionHeader title="Directorio de tutores" description="Filtra el listado y gestiona la información académica de cada tutor." />
+                    <TablaTutor />
+                </section>
+            </PageContainer>
+        </AppLayout>
+    );
 }

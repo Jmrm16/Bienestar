@@ -3,11 +3,11 @@ import { Head } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import { type BreadcrumbItem } from "@/types";
 
-import type { Patient, Carrera } from "../componets/types";
-import { AreaHeader } from "../componets/AreaHeader";
-import { PatientsSection } from "../componets/PatientsSection";
-import ClinicalPanel from "./ClinicalPanel";
-import EnfermeriaPanel from "./EnfermeriaPanel";
+import type { Patient, Carrera } from "../components/types";
+import { AreaHeader } from "../components/AreaHeader";
+import { PatientsSection } from "../components/PatientsSection";
+import ClinicalPanel from "../components/panels/ClinicalPanel";
+import EnfermeriaPanel from "../components/panels/EnfermeriaPanel";
 
 import {
   HeartPulse,
@@ -175,3 +175,4 @@ export default function AreaPage({
     </AppLayout>
   );
 }
+

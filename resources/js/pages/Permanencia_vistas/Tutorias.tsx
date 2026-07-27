@@ -1,8 +1,8 @@
 import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import HeaderComponent from '@/../js/components/component/header-component';
-import FooterComponent from '@/../js/components/component/footer-component';
-import HeaderpermaComponent from './headerperma';
+import HeaderComponent from '@/components/marketing/header';
+import FooterComponent from '@/components/marketing/footer';
+import HeaderpermaComponent from './components/header';
 import {
   Card,
   CardContent,
@@ -288,3 +288,5 @@ export default function Tutorias() {
     </>
   );
 }
+
+

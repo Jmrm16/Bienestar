@@ -20,6 +20,11 @@ class ReportPeriod extends Model
   public function grupos() {
     return $this->hasMany(GrupoT::class, 'period_id');
   }
+
+  public function tutorResolutions() {
+    return $this->hasMany(TutorPeriodResolution::class, 'period_id');
+  }
+
   public function notas()
 {
     return $this->hasMany(Nota::class, 'period_id');

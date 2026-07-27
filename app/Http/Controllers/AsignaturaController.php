@@ -89,7 +89,9 @@ public function show(Asignatura $asignatura)
 
     $tutores = Tutor::whereHas('asignaturas', function ($q) use ($asignatura) {
         $q->where('asignatura_id', $asignatura->id);
-    })->get();
+    })
+        ->with('periodResolutions:id,period_id,tutor_id,tipo_resolucion')
+        ->get();
 
     return Inertia::render('Asignaturas/ShowAsignatura', [
         'asignatura' => $asignatura,

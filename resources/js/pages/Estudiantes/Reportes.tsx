@@ -4,8 +4,8 @@ import { type BreadcrumbItem } from "@/types";
 import React, { useMemo } from "react";
 import { ArrowLeft, BarChart3, Calendar, FileText } from "lucide-react";
 
-import EstudiantesReportPanel from "@/pages/Estudiantes/EstudiantesReportPanel";
-import { MetricCard } from "@/components/component/MetricCard";
+import EstudiantesReportPanel from "@/pages/Estudiantes/components/reports/EstudiantesReportPanel";
+import { MetricCard } from "@/components/shared/metric-card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { EstudianteRow } from "./TablaGrupos";
+import type { EstudianteRow } from "./components/tables/TablaEstudiantes";
 
 type Period = { id: number; code: string; name?: string | null };
 type ReturnFilters = { q: string; servicio: string; trimestre: string; page: number };
@@ -138,3 +138,6 @@ export default function EstudiantesReportes() {
     </AppLayout>
   );
 }
+
+
+

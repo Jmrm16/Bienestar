@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import EditorCultura from "./EditorCultura";
+import EditorCultura from "./components/EditorCultura";
 import { ArrowLeft } from "lucide-react";
 import { type OutputData } from "@editorjs/editorjs";
 

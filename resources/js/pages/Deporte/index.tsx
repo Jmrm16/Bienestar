@@ -1,223 +1,124 @@
-import { Head, router } from "@inertiajs/react";
-import AppLayout from "@/layouts/app-layout";
-import { type BreadcrumbItem } from "@/types";
-import { MetricCard } from "@/components/component/MetricCard";
-import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { Activity, ArrowRight, Trophy, Users, Volleyball } from "lucide-react";
-import { getAreaStyle } from "./components/area-styles";
+import { MetricCard } from '@/components/shared/metric-card';
+import { PageContainer, PageHeader, SectionHeader } from '@/components/shared/page-shell';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
+import { Head, Link } from '@inertiajs/react';
+import { Activity, ArrowRight, Clock3, MapPin, Trophy, Users, Volleyball } from 'lucide-react';
+import { getAreaStyle } from './components/area-styles';
 
 type SportArea = {
-  key: string;
-  title: string;
-  card_subtitle?: string | null;
-  description: string;
-  href: string;
-  location: string;
-  schedule: string;
-  coach: string;
-  capacity: number;
-  registered: number;
-  status: string;
-  focus: string;
-  services: string[];
-  requirements: string[];
-  kind: "servicio" | "disciplina";
+    key: string;
+    title: string;
+    card_subtitle?: string | null;
+    description: string;
+    href: string;
+    location: string;
+    schedule: string;
+    coach: string;
+    capacity: number;
+    registered: number;
+    status: string;
+    focus: string;
+    services: string[];
+    requirements: string[];
+    kind: 'servicio' | 'disciplina';
 };
 
 type Stats = {
-  offers: number;
-  disciplines: number;
-  services: number;
-  free_time_policy: string;
+    offers: number;
+    disciplines: number;
+    services: number;
+    free_time_policy: string;
 };
 
 type Props = {
-  moduleDescription: string;
-  areas: SportArea[];
-  stats: Stats;
+    moduleDescription: string;
+    areas: SportArea[];
+    stats: Stats;
 };
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: "Deporte", href: "/deportes" }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Deporte', href: '/deportes' }];
 
-export default function DeporteIndex({
-  moduleDescription,
-  areas,
-  stats,
-}: Props) {
-  const go = (href: string) => router.visit(href);
+export default function DeporteIndex({ moduleDescription, areas, stats }: Props) {
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Deporte | Bienestar Universitario" />
 
-  return (
-    <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Deporte | Bienestar Universitario" />
+            <PageContainer>
+                <PageHeader eyebrow="Bienestar universitario" title="Deporte" description={moduleDescription} icon={Volleyball} />
 
-      <div className="flex h-full flex-grow flex-col gap-6 rounded-xl p-4">
-        <Card className="rounded-2xl border-none bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 text-white shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-white/15 p-3 backdrop-blur">
-                    <Volleyball className="h-7 w-7" />
-                  </div>
-                  <div>
-                    <div className="text-sm uppercase tracking-[0.2em] text-white/70">
-                      Bienestar universitario
-                    </div>
-                    <h1 className="text-3xl font-semibold tracking-tight">
-                      Modulo de Deporte
-                    </h1>
-                  </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard title="Ofertas activas" value={stats.offers} icon={Volleyball} color="blue" detail="Catálogo actual del área" />
+                    <MetricCard title="Disciplinas" value={stats.disciplines} icon={Users} color="cyan" detail="Procesos deportivos disponibles" />
+                    <MetricCard title="Servicios" value={stats.services} icon={Trophy} color="purple" detail="Servicios de apoyo deportivo" />
+                    <MetricCard
+                        title="Práctica libre"
+                        value={stats.free_time_policy}
+                        icon={Activity}
+                        color="green"
+                        detail="Tiempo máximo de préstamo"
+                    />
                 </div>
-                <p className="max-w-3xl text-sm text-white/85">
-                  {moduleDescription}
-                </p>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm text-white/85">
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-                  <div className="text-white/70">Ofertas</div>
-                  <div className="mt-1 text-2xl font-semibold">
-                    {stats.offers}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-4">
-                  <div className="text-white/70">Prestamo libre</div>
-                  <div className="mt-1 text-2xl font-semibold">
-                    {stats.free_time_policy}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-50">
-              Panorama del area
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Vista general del catalogo deportivo disponible en la sede.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-            <MetricCard
-              title="Ofertas activas"
-              value={stats.offers}
-              icon={Volleyball}
-              color="green"
-              detail="Catalogo actual del area"
-            />
-            <MetricCard
-              title="Disciplinas"
-              value={stats.disciplines}
-              icon={Users}
-              color="blue"
-              detail="Procesos deportivos listados"
-            />
-            <MetricCard
-              title="Servicios"
-              value={stats.services}
-              icon={Trophy}
-              color="cyan"
-              detail="Prestaciones de apoyo al deporte"
-            />
-            <MetricCard
-              title="Practica libre"
-              value={stats.free_time_policy}
-              icon={Activity}
-              color="purple"
-              detail="Tiempo maximo para prestamo"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-50">
-              Oferta por disciplina
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Cada tarjeta resume una oferta y conserva una identidad visual
-              propia.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {areas.map((area, idx) => {
-            const style = getAreaStyle(area.key);
-            const Icon = style.icon;
-
-            return (
-              <motion.button
-                key={area.key}
-                onClick={() => go(area.href)}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className={`group relative overflow-hidden rounded-3xl border p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${style.shell}`}
-              >
-                <div
-                  className={`absolute -right-8 -top-8 h-28 w-28 rounded-full blur-2xl ${style.glow}`}
+                <SectionHeader
+                    title="Oferta por disciplina"
+                    description="Selecciona una disciplina o servicio para consultar y gestionar su información."
                 />
 
-                <div className="flex items-start justify-between gap-4">
-                  <div className={`rounded-2xl border p-3 ${style.iconWrap}`}>
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-medium ${style.badge}`}>
-                    {area.kind === "servicio" ? "Servicio" : "Disciplina"}
-                  </span>
-                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {areas.map((area) => {
+                        const style = getAreaStyle(area.key);
+                        const Icon = style.icon;
 
-                <div className="relative mt-5">
-                  {area.card_subtitle ? (
-                    <div className={`mb-2 text-[11px] font-medium uppercase tracking-[0.22em] ${style.action}`}>
-                      {area.card_subtitle}
-                    </div>
-                  ) : null}
-                  <h2 className={`text-lg font-semibold tracking-tight ${style.copy}`}>
-                    {area.title}
-                  </h2>
-                  <p className={`mt-2 line-clamp-2 min-h-[3rem] text-sm ${style.subcopy}`}>
-                    {area.description}
-                  </p>
-                </div>
+                        return (
+                            <Card key={area.key} className="group hover:bg-muted/20 gap-0 py-0 transition-colors">
+                                <CardContent className="flex h-full flex-col p-5">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="bg-primary/10 text-primary rounded-lg p-2.5">
+                                            <Icon className="h-5 w-5" />
+                                        </div>
+                                        <span className="bg-muted text-muted-foreground rounded-md px-2 py-1 text-xs font-medium">
+                                            {area.kind === 'servicio' ? 'Servicio' : 'Disciplina'}
+                                        </span>
+                                    </div>
 
-                <div className={`mt-4 rounded-3xl border p-4 ${style.focusPanel}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.22em] ${style.subcopy}`}>
-                    Enfoque
-                  </div>
-                  <div className={`mt-1 text-sm font-medium leading-6 ${style.copy}`}>
-                    {area.focus}
-                  </div>
-                </div>
+                                    <div className="mt-4">
+                                        {area.card_subtitle ? (
+                                            <div className="text-muted-foreground mb-1 text-xs font-medium">{area.card_subtitle}</div>
+                                        ) : null}
+                                        <h2 className="text-base font-semibold tracking-tight">{area.title}</h2>
+                                        <p className="text-muted-foreground mt-2 line-clamp-2 min-h-10 text-sm leading-5">{area.description}</p>
+                                    </div>
 
-                {area.services.length > 0 ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {area.services.slice(0, 2).map((item) => (
-                      <span
-                        key={item}
-                        className={`rounded-full border px-2.5 py-1 text-xs backdrop-blur ${style.chip}`}
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                                    <div className="text-muted-foreground mt-5 grid gap-2 border-t pt-4 text-xs">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="size-3.5" />
+                                            <span className="truncate">{area.location}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Clock3 className="size-3.5" />
+                                            <span className="truncate">{area.schedule}</span>
+                                        </div>
+                                    </div>
 
-                <div className={`mt-5 flex items-center justify-between text-sm font-medium ${style.action}`}>
-                  <span>Ver informacion</span>
-                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                                    <Button
+                                        asChild
+                                        variant="ghost"
+                                        className="text-primary hover:text-primary/80 mt-3 justify-between px-0 hover:bg-transparent"
+                                    >
+                                        <Link href={area.href}>
+                                            Ver información
+                                            <ArrowRight className="size-4 transition group-hover:translate-x-1" />
+                                        </Link>
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-    </AppLayout>
-  );
+            </PageContainer>
+        </AppLayout>
+    );
 }

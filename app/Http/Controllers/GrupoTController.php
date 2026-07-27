@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Asignatura;
 use App\Models\Carrera;
 use App\Models\GrupoT;
-use App\Models\Tutor;
 use App\Models\ReportPeriod;
+use App\Models\Tutor;
+use App\Models\TutorPeriodResolution;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Schema;
@@ -130,6 +131,7 @@ class GrupoTController extends Controller
     {
         $request->validate([
             'tutor_id' => 'required|exists:tutors,id',
+            'tipo_resolucion' => 'required|in:R1,R2',
         ]);
 
         $grupo = GrupoT::findOrFail($grupoId);
@@ -161,6 +163,13 @@ class GrupoTController extends Controller
                 'tutor' => '❌ El tutor no dicta esta asignatura.'
             ]);
         }
+
+        $this->resolvePeriodResolutionForTutor(
+            $tutor->id,
+            $grupo->period_id,
+            $request->input('tipo_resolucion'),
+            $tutor->tipo_resolucion
+        );
 
         // 🔥 Rol del tutor
         $rol = $grupo->tutores()->count() === 0 ? 'principal' : 'secundario';
@@ -555,7 +564,14 @@ class GrupoTController extends Controller
     {
         $tutors = [];
 
-        foreach (Tutor::query()->with('asignaturas:id')->get(['id', 'nombre', 'apellido', 'carrera_id']) as $tutor) {
+        foreach (
+            Tutor::query()
+                ->with([
+                    'asignaturas:id',
+                    'periodResolutions:id,period_id,tutor_id,tipo_resolucion',
+                ])
+                ->get(['id', 'nombre', 'apellido', 'carrera_id', 'tipo_resolucion']) as $tutor
+        ) {
             $fullName = trim($tutor->nombre . ' ' . $tutor->apellido);
 
             $tutors[] = [
@@ -564,6 +580,12 @@ class GrupoTController extends Controller
                 'norm' => $this->normalizeImportText($fullName),
                 'tokens' => $this->personTokens($fullName),
                 'carrera_id' => $tutor->carrera_id,
+                'legacy_resolution' => $tutor->tipo_resolucion,
+                'period_resolutions' => $tutor->periodResolutions
+                    ->mapWithKeys(fn (TutorPeriodResolution $resolution) => [
+                        (int) $resolution->period_id => $resolution->tipo_resolucion,
+                    ])
+                    ->all(),
                 'subject_ids' => $tutor->asignaturas->pluck('id')->map(fn ($id) => (int) $id)->all(),
             ];
         }
@@ -600,6 +622,23 @@ class GrupoTController extends Controller
                 continue;
             }
 
+            try {
+                $this->resolvePeriodResolutionForTutor(
+                    (int) $match['id'],
+                    (int) $group->period_id,
+                    $match['period_resolutions'][(int) $group->period_id] ?? null,
+                    $match['legacy_resolution'] ?? null
+                );
+            } catch (ValidationException $exception) {
+                $errors[] = sprintf(
+                    'Hoja "%s", fila %s: %s',
+                    $sheetTitle,
+                    $rowIndex,
+                    $exception->validator->errors()->first()
+                );
+                continue;
+            }
+
             $alreadyAttached = $group->tutores()
                 ->wherePivot('period_id', $group->period_id)
                 ->where('tutors.id', $match['id'])
@@ -624,6 +663,53 @@ class GrupoTController extends Controller
         }
 
         return $assigned;
+    }
+
+    private function resolvePeriodResolutionForTutor(
+        int $tutorId,
+        int $periodId,
+        ?string $requestedResolution = null,
+        ?string $legacyResolution = null
+    ): string {
+        $existing = TutorPeriodResolution::query()
+            ->where('period_id', $periodId)
+            ->where('tutor_id', $tutorId)
+            ->first();
+
+        $requestedResolution = $this->normalizeResolution($requestedResolution);
+        $legacyResolution = $this->normalizeResolution($legacyResolution);
+
+        if ($existing) {
+            if ($requestedResolution !== null && $existing->tipo_resolucion !== $requestedResolution) {
+                throw ValidationException::withMessages([
+                    'tipo_resolucion' => "El tutor ya tiene la resolución {$existing->tipo_resolucion} en este período.",
+                ]);
+            }
+
+            return $existing->tipo_resolucion;
+        }
+
+        $resolution = $requestedResolution ?? $legacyResolution;
+        if ($resolution === null) {
+            throw ValidationException::withMessages([
+                'tipo_resolucion' => 'Debes definir la resolución del tutor para este período antes de asignarlo.',
+            ]);
+        }
+
+        TutorPeriodResolution::create([
+            'period_id' => $periodId,
+            'tutor_id' => $tutorId,
+            'tipo_resolucion' => $resolution,
+        ]);
+
+        return $resolution;
+    }
+
+    private function normalizeResolution(?string $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return in_array($normalized, ['R1', 'R2'], true) ? $normalized : null;
     }
 
     private function splitTutorImportCell(string $value): array

@@ -137,8 +137,10 @@ class DashboardController extends Controller
         )
             ->groupBy('fecha')
             ->orderBy('fecha', 'desc')
-            ->take(7)
-            ->get();
+            ->take(30)
+            ->get()
+            ->reverse()
+            ->values();
     }
 
     private function countTable(string $table): int

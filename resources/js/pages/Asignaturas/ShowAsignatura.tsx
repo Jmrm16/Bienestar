@@ -3,9 +3,9 @@ import { Head, router } from '@inertiajs/react'
 import { Asignatura, Grupo, Carrera, Tutor } from '@/types'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import AgregarGrupo from '@/pages/Tutores/AgregarGrupo'
-import ImportarGruposDialog from '@/pages/Tutores/ImportarGruposDialog'
-import TablaGrupo from '@/pages/Tutores/TablaGrupos'
+import AgregarGrupo from '@/pages/Tutores/components/dialogs/AgregarGrupo'
+import ImportarGruposDialog from '@/pages/Tutores/components/dialogs/ImportarGruposDialog'
+import TablaGrupo from '@/pages/Tutores/components/tables/TablaGrupos'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 
@@ -70,3 +70,4 @@ export default function ShowAsignatura({ asignatura, tutores }: Props) {
     </AppLayout>
   )
 }
+

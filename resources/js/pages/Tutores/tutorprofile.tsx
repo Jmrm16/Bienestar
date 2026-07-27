@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { MetricCard } from "@/components/component/MetricCard";
+import { MetricCard } from "@/components/shared/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +50,6 @@ type TutorGrupo = {
 type Tutor = {
   id: number;
   codigo?: string | null;
-  tipo_resolucion?: "R1" | "R2" | null;
   nombre: string;
   apellido: string;
   tipo_documento: string;
@@ -64,6 +63,11 @@ type Tutor = {
   activo?: boolean;
   carrera?: { id: number; nombre: string } | null;
   asignaturas: Asignatura[];
+  period_resolutions?: {
+    period_id: number;
+    tipo_resolucion: "R1" | "R2";
+    period?: { id: number; code: string; name?: string | null } | null;
+  }[];
   grupos: TutorGrupo[];
 };
 
@@ -177,8 +181,18 @@ export default function TutorProfile({ tutor, resumen }: Props) {
               <p className="font-medium">{textOrDash(tutor.codigo)}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Resolucion</p>
-              <p className="font-medium">{textOrDash(tutor.tipo_resolucion)}</p>
+              <p className="text-sm text-muted-foreground">Resoluciones por periodo</p>
+              {tutor.period_resolutions && tutor.period_resolutions.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {tutor.period_resolutions.map((resolution) => (
+                    <Badge key={`${resolution.period_id}-${resolution.tipo_resolucion}`} variant="secondary">
+                      {resolution.period?.code ?? `Periodo #${resolution.period_id}`}: {resolution.tipo_resolucion}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-medium">—</p>
+              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Estado</p>
@@ -317,3 +331,4 @@ export default function TutorProfile({ tutor, resumen }: Props) {
     </AppLayout>
   );
 }
+

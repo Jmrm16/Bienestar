@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,9 +13,16 @@ import {
   Cell,
 } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /* =========================
    TIPOS
@@ -106,15 +113,15 @@ function PieBlock({
   const validRows = rows.filter((r) => (r.value ?? 0) > 0);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
+    <Card className="gap-0">
+      <CardHeader className="gap-2 pb-0">
         <SectionTitle
           title={windowName ? `${title} - ${windowName}` : title}
           right={<Badge variant="secondary">Total: {formatInt(total)}</Badge>}
         />
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-4">
         {validRows.length > 0 ? (
           <>
             <div style={{ width: "100%", height }}>
@@ -152,7 +159,9 @@ function PieBlock({
               {validRows.map((r) => (
                 <div
                   key={r.label}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/50"
+                  className={cn(
+                    "flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2"
+                  )}
                 >
                   <span className="text-muted-foreground">{r.label}</span>
                   <span className="font-semibold">{formatInt(r.value)}</span>
@@ -192,15 +201,15 @@ function BarBlock({
   const hasSinNota = validRows.some((r) => (r.SIN_NOTA ?? 0) > 0);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
+    <Card className="gap-0">
+      <CardHeader className="gap-2 pb-0">
         <SectionTitle
           title={windowName ? `${title} - ${windowName}` : title}
           right={<Badge variant="secondary">Registros: {formatInt(total)}</Badge>}
         />
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-4">
         {validRows.length > 0 ? (
           <div style={{ width: "100%", height }}>
             <ResponsiveContainer>
@@ -268,14 +277,18 @@ function BarBlock({
    COMPONENTE PRINCIPAL
 ========================= */
 
-export default function ReportCharts({
+function ReportCharts({
   data,
   topTutores = 30,
   windowName,
+  scopeLabel = "corte seleccionado",
+  detailContent,
 }: {
   data?: ReportChartsData;
   topTutores?: number;
   windowName?: string;
+  scopeLabel?: string;
+  detailContent?: React.ReactNode;
 }) {
   const safe: ReportChartsData = useMemo(
     () =>
@@ -368,17 +381,20 @@ export default function ReportCharts({
 
   if (!hasData) {
     return (
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
+      <Card className="gap-0 border-dashed">
+        <CardHeader className="gap-1 pb-0">
           <CardTitle className="text-base">
             {windowName ? `Gráficos - ${windowName}` : "Gráficos"}
           </CardTitle>
+          <CardDescription>
+            Todavía no hay información suficiente para construir gráficos en esta selección.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="pt-4 text-sm text-muted-foreground">
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p>No hay datos para graficar en este corte.</p>
+            <p>No hay datos para graficar en la selección actual.</p>
             <p className="mt-2 text-xs text-muted-foreground">
-              Selecciona otro corte o verifica que hayan asistencias registradas.
+              Selecciona otro corte o combina otras entregas para comparar resultados.
             </p>
           </div>
         </CardContent>
@@ -389,25 +405,29 @@ export default function ReportCharts({
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="shadow-sm">
-          <CardContent className="pt-6">
-            <p className="text-xs text-muted-foreground">Estudiantes únicos del corte</p>
+        <Card className="gap-0">
+          <CardContent className="space-y-1 pt-6">
+            <p className="text-xs text-muted-foreground">
+              Estudiantes únicos del {scopeLabel}
+            </p>
             <p className="text-2xl font-semibold">{formatInt(totalEstudiantesUnicos)}</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm">
-          <CardContent className="pt-6">
+        <Card className="gap-0">
+          <CardContent className="space-y-1 pt-6">
             <p className="text-xs text-muted-foreground">Estudiantes evaluados (con nota)</p>
             <p className="text-2xl font-semibold">{formatInt(totalEvaluados)}</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm">
-          <CardContent className="pt-6">
+        <Card className="gap-0">
+          <CardContent className="space-y-1 pt-6">
             <p className="text-xs text-muted-foreground">Estudiantes sin nota</p>
             <p className="text-2xl font-semibold">{formatInt(totalSinNota)}</p>
           </CardContent>
         </Card>
       </div>
+
+      {detailContent ? <div>{detailContent}</div> : null}
 
       {/* Fila 1 */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -421,12 +441,12 @@ export default function ReportCharts({
           />
         </div>
 
-        <PieBlock title="Totales del corte" rows={totalesRows} windowName={windowName} />
+        <PieBlock title={`Totales del ${scopeLabel}`} rows={totalesRows} windowName={windowName} />
       </div>
 
       {/* Fila 2 */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
+      <Card className="gap-0">
+        <CardHeader className="gap-2 pb-0">
           <SectionTitle
             title={`Aprobado vs Reprobado por Tutor (Top ${topTutores})${
               windowName ? ` - ${windowName}` : ""
@@ -435,7 +455,7 @@ export default function ReportCharts({
           />
         </CardHeader>
 
-        <CardContent className="pt-0">
+        <CardContent className="pt-4">
           {porTutor.some((r) => r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) > 0) ? (
             <ScrollArea className="w-full rounded-md border">
               <div className="min-w-[900px] p-1">
@@ -487,3 +507,8 @@ export default function ReportCharts({
     </div>
   );
 }
+
+const MemoizedReportCharts = memo(ReportCharts);
+MemoizedReportCharts.displayName = "ReportCharts";
+
+export default MemoizedReportCharts;

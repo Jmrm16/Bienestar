@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -106,6 +107,7 @@ type GrupoOcasional = {
 type WindowDTO = {
   id: number;
   name: string;
+  tutor_type: "R1" | "R2";
   instructions?: string;
   description?: string;
   open_at: string | null;
@@ -676,6 +678,7 @@ export default function TutorProfile({
                 {(() => {
                   const windowId = selectedWindowId;
                   const selectedWindow = windowsAssigned.find((w) => w.id === windowId) ?? null;
+                  const canViewAttendances = windowId !== null;
                   const hayGrupos = grupos.length > 0;
                   const hayOcasionales = ocasionales.length > 0;
                   const hayContenido = hayGrupos || hayOcasionales;
@@ -702,7 +705,7 @@ export default function TutorProfile({
                           {windowsAssigned.length > 0 && (
                             <div className="w-full sm:w-80">
                               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                                Entrega activa para asistencias
+                                Entrega disponible para consultar asistencias
                               </label>
                               <Select
                                 value={windowId !== null ? String(windowId) : undefined}
@@ -714,7 +717,7 @@ export default function TutorProfile({
                                 <SelectContent>
                                   {windowsAssigned.map((w) => (
                                     <SelectItem key={w.id} value={String(w.id)}>
-                                      {w.name} • {w.period.code}
+                                      {w.name} • {w.tutor_type} • {w.period.code}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -733,27 +736,12 @@ export default function TutorProfile({
                         <p className="text-xs text-muted-foreground">
                           Mostrando asistencias de la entrega:{" "}
                           <span className="font-semibold text-foreground">
-                            {selectedWindow.name} ({selectedWindow.period.code})
+                            {selectedWindow.name} ({selectedWindow.tutor_type} - {selectedWindow.period.code})
                           </span>
                         </p>
                       )}
 
-                      {!windowId ? (
-                        <Card>
-                          <CardContent className="p-12 text-center">
-                            <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                              <FileText className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <h4 className="text-lg font-semibold text-foreground mb-2">
-                              No tienes una ventana de informe asignada
-                            </h4>
-                            <p className="text-muted-foreground max-w-md mx-auto">
-                              Para ver asistencias, primero debe existir una ventana de informe
-                              asignada en el período.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ) : !hayContenido ? (
+                      {!hayContenido ? (
                         <Card>
                           <CardContent className="p-12 text-center">
                             <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -773,6 +761,19 @@ export default function TutorProfile({
                         </Card>
                       ) : (
                         <div className="space-y-6">
+                          {!canViewAttendances && (
+                            <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>Ya puedes ver tus grupos</AlertTitle>
+                              <AlertDescription>
+                                Tus grupos y asistencias ocasionales ya estan visibles. Para abrir
+                                el detalle de asistencias por grupo, hace falta que exista una
+                                entrega publicada para tu resolución o que el admin haya cargado
+                                asistencias en una entrega de este período.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+
                           {/* Grupos asignados */}
                           {hayGrupos && (
                             <div>
@@ -827,6 +828,7 @@ export default function TutorProfile({
                                       <Button
                                         size="sm"
                                         className="w-full"
+                                        disabled={!canViewAttendances}
                                         onClick={() => {
                                           const selectedId = windowId;
                                           if (!selectedId) return;
@@ -840,7 +842,7 @@ export default function TutorProfile({
                                         }}
                                       >
                                         <Eye className="h-3.5 w-3.5 mr-2" />
-                                        Ver asistencias
+                                        {canViewAttendances ? "Ver asistencias" : "Entrega pendiente"}
                                       </Button>
                                     </CardFooter>
                                   </Card>
@@ -895,6 +897,7 @@ export default function TutorProfile({
                                         size="sm"
                                         variant="outline"
                                         className="w-full"
+                                        disabled={!canViewAttendances}
                                         onClick={() => {
                                           const selectedId = windowId;
                                           if (!selectedId) return;
@@ -908,7 +911,7 @@ export default function TutorProfile({
                                         }}
                                       >
                                         <Eye className="h-3.5 w-3.5 mr-2" />
-                                        Ver detalles
+                                        {canViewAttendances ? "Ver detalles" : "Entrega pendiente"}
                                       </Button>
                                     </CardFooter>
                                   </Card>

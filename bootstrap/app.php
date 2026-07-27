@@ -5,6 +5,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -15,6 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->encryptCookies(except: ['appearance']);
+
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->is('portal-tutores') || $request->is('portal-tutores/*')) {
+                return '/portal-tutores/login';
+            }
+
+            return '/login';
+        });
 
         $middleware->web(append: [
             HandleAppearance::class,

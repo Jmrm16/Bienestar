@@ -3,7 +3,7 @@ import { Head, router } from "@inertiajs/react";
 import { type BreadcrumbItem } from "@/types";
 import { ArrowLeft, BookOpen, GraduationCap, Users } from "lucide-react";
 
-import { MetricCard } from "@/components/component/MetricCard";
+import { MetricCard } from "@/components/shared/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -403,3 +403,4 @@ export default function Show({
     </AppLayout>
   );
 }
+

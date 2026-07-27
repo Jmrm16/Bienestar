@@ -1,47 +1,28 @@
-import React from "react";
-import { Head, router } from "@inertiajs/react";
-import AppLayout from "@/layouts/app-layout";
-import { type BreadcrumbItem } from "@/types";
+import { EmptyModule, PageContainer, PageHeader } from '@/components/shared/page-shell';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/react';
+import { HandCoins } from 'lucide-react';
 
-import { MetricCard } from "@/components/component/MetricCard";
-import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import {
-  Stethoscope,
-  HeartPulse,
-  Smile,
-  Apple,
-  Dumbbell,
-  Activity,
-  Sparkles,
-  ArrowRight,
-} from "lucide-react";
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Promoción Socioeconómica', href: '/promocion-socioeconomica' }];
 
-type SaludArea = {
-  key: string;
-  title: string;
-  description: string;
-  href: string;
-  icon: any;
-};
-
-const breadcrumbs: BreadcrumbItem[] = [
- 
-  { title: "Promoción Socioeconómica", href: "/promocion-socioeconomica" },
-];
-
-
-
-export default function DeporteIndex() {
-  const go = (href: string) => router.visit(href);
-
-  return (
-    <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Promoción Socioeconómica | Bienestar Universitario" />
-
-      
-
-   
-    </AppLayout>
-  );
+export default function PromocionIndex() {
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Promoción Socioeconómica | Bienestar Universitario" />
+            <PageContainer>
+                <PageHeader
+                    eyebrow="Bienestar universitario"
+                    title="Promoción socioeconómica"
+                    description="Espacio para administrar apoyos, convocatorias y seguimiento socioeconómico."
+                    icon={HandCoins}
+                />
+                <EmptyModule
+                    title="Módulo en preparación"
+                    description="Las herramientas operativas de promoción socioeconómica se mostrarán aquí cuando estén disponibles."
+                    icon={HandCoins}
+                />
+            </PageContainer>
+        </AppLayout>
+    );
 }

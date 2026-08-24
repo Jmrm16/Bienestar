@@ -1,69 +1,72 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 
+import { MetricCard } from '@/components/shared/metric-card';
+import { PageContainer, PageHeader, SectionHeader } from '@/components/shared/page-shell';
 import AppLayout from '@/layouts/app-layout';
-import { MetricCard } from '@/components/component/MetricCard';
-import AgregarCarrera from './AgregarCarrera';
-import TablaCarreras from './TablaCarreras';
-import { Cpu } from 'lucide-react';
+import { type BreadcrumbItem } from '@/types';
+import { GraduationCap } from 'lucide-react';
+import AgregarCarrera from './components/dialogs/AgregarCarrera';
+import TablaCarreras from './components/tables/TablaCarreras';
 
 // Tipos
 type Carrera = {
-  id: number;
-  nombre: string;
-  codigo: string;
+    id: number;
+    nombre: string;
+    codigo: string;
 };
 
 type Paginator<T> = {
-  data: T[];
-  total?: number;
+    data: T[];
+    total?: number;
 };
 
 type Props = {
-  carreras?: Carrera[] | Paginator<Carrera>;
+    carreras?: Carrera[] | Paginator<Carrera>;
 };
+
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Carreras', href: '/carreras' }];
 
 // 👉 util para normalizar a lista
 function toList<T>(maybe: T[] | Paginator<T> | undefined): T[] {
-  if (!maybe) return [];
-  return Array.isArray(maybe) ? maybe : (maybe.data ?? []);
+    if (!maybe) return [];
+    return Array.isArray(maybe) ? maybe : (maybe.data ?? []);
 }
 // 👉 util para contar
 function toCount<T>(maybe: T[] | Paginator<T> | undefined): number {
-  if (!maybe) return 0;
-  return Array.isArray(maybe) ? maybe.length : (maybe.total ?? (maybe.data?.length ?? 0));
+    if (!maybe) return 0;
+    return Array.isArray(maybe) ? maybe.length : (maybe.total ?? maybe.data?.length ?? 0);
 }
 
 export default function Index(props: Props) {
-  const carrerasList = toList(props.carreras);
-  const totalCarreras = toCount(props.carreras);
+    const carrerasList = toList(props.carreras);
+    const totalCarreras = toCount(props.carreras);
 
-  return (
-    <AppLayout>
-      <Head title="Carreras" />
-      <div className="flex flex-col gap-4 rounded-xl p-4 h-full flex-grow">
-        {/* Métricas principales */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
-          <MetricCard
-            title="Carreras"
-            value={totalCarreras}
-            icon={Cpu}
-            color="blue"
-            detail={`${carrerasList.length} en esta página`}
-          />
-        </div>
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Carreras" />
+            <PageContainer>
+                <PageHeader
+                    title="Carreras"
+                    description="Gestiona el catálogo de programas académicos y sus códigos."
+                    icon={GraduationCap}
+                    actions={<AgregarCarrera />}
+                />
 
-        {/* Carreras */}
-        <div className="p-6">
-          <p className="mb-4" style={{ fontSize: '30px', fontWeight: 'bold' }}>
-            Carreras
-          </p>
-          <div className="flex space-x-4 mb-4">
-            <AgregarCarrera />
-          </div>
-          <TablaCarreras />
-        </div>
-      </div>
-    </AppLayout>
-  );
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard
+                        title="Carreras"
+                        value={totalCarreras}
+                        icon={GraduationCap}
+                        color="blue"
+                        detail={`${carrerasList.length} en esta página`}
+                    />
+                </div>
+
+                <section className="space-y-4">
+                    <SectionHeader title="Carreras registradas" description="Programas disponibles para asignación en los módulos académicos." />
+                    <TablaCarreras />
+                </section>
+            </PageContainer>
+        </AppLayout>
+    );
 }

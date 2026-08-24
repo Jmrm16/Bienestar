@@ -9,12 +9,18 @@ import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createRoot, type Root } from "react-dom/client";
 import { initializeTheme } from "./hooks/use-appearance";
 import { Toaster } from "sonner";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Loader } from "@/components/ui/loader";
 
-declare global {
+type InertiaRootElement = HTMLElement & {
+  __inertiaRoot?: Root;
+};
 
-}
+type InertiaStartEventDetail = {
+  visit?: {
+    prefetch?: boolean;
+  };
+};
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
 const pages = import.meta.glob("./pages/**/*.tsx");
@@ -80,23 +86,46 @@ createInertiaApp({
   resolve: resolveInertiaPage,
   setup({ el, App, props }) {
     // ✅ Evita crear múltiples roots en HMR / re-renders
-    const anyEl = el as any;
-    const root: Root = anyEl.__inertiaRoot ?? (anyEl.__inertiaRoot = createRoot(el));
+    const rootElement = el as InertiaRootElement;
+    const root: Root =
+      rootElement.__inertiaRoot ?? (rootElement.__inertiaRoot = createRoot(el));
 
     // ✅ Loader global (no hace falta crear container extra)
     const LoaderWrapper = () => {
       const [loading, setLoading] = useState(false);
+      const showTimerRef = useRef<number | null>(null);
 
       useEffect(() => {
-        const handleStart = (event: any) => {
-          if (!event?.detail?.visit?.prefetch) setLoading(true);
+        const clearPendingTimer = () => {
+          if (showTimerRef.current !== null) {
+            window.clearTimeout(showTimerRef.current);
+            showTimerRef.current = null;
+          }
         };
-        const handleFinish = () => setLoading(false);
+
+        const handleStart = (event: Event) => {
+          const detail = (event as CustomEvent<InertiaStartEventDetail>).detail;
+
+          if (detail?.visit?.prefetch) {
+            return;
+          }
+
+          clearPendingTimer();
+          showTimerRef.current = window.setTimeout(() => {
+            setLoading(true);
+            showTimerRef.current = null;
+          }, 140);
+        };
+        const handleFinish = () => {
+          clearPendingTimer();
+          setLoading(false);
+        };
 
         window.addEventListener("inertia:start", handleStart);
         window.addEventListener("inertia:finish", handleFinish);
 
         return () => {
+          clearPendingTimer();
           window.removeEventListener("inertia:start", handleStart);
           window.removeEventListener("inertia:finish", handleFinish);
         };

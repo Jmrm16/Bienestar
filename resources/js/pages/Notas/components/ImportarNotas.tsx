@@ -1,55 +1,55 @@
-import React from "react";
-import { useForm } from "@inertiajs/react";
-import { UploadCloud } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useForm } from '@inertiajs/react';
+import { Loader2, UploadCloud } from 'lucide-react';
+import React from 'react';
 
 export default function ImportarNotas() {
-  const { data, setData, post, processing, errors } = useForm<{
-    archivo: File | null;
-  }>({
-    archivo: null,
-  });
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post("/notas/importar", {
-      forceFormData: true,
-      preserveScroll: true,
+    const { setData, post, processing, errors } = useForm<{
+        archivo: File | null;
+    }>({
+        archivo: null,
     });
-  };
 
-  return (
-    <form
-      onSubmit={submit}
-      className="rounded-xl border bg-white p-6 shadow-sm flex flex-col gap-4"
-    >
-      <h2 className="text-lg font-semibold flex items-center gap-2">
-        <UploadCloud className="w-5 h-5" />
-        Importar notas desde Excel
-      </h2>
+    const submit = (event: React.FormEvent) => {
+        event.preventDefault();
+        post('/notas/importar', {
+            forceFormData: true,
+            preserveScroll: true,
+        });
+    };
 
-      <p className="text-sm text-muted-foreground">
-        Sube el archivo Excel oficial con las notas académicas.
-      </p>
+    return (
+        <Card className="gap-0">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                    <UploadCloud className="size-4" />
+                    Importar notas
+                </CardTitle>
+                <CardDescription>Carga el archivo Excel oficial con los registros académicos.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={submit} className="flex flex-col gap-4 md:flex-row md:items-end">
+                    <div className="flex-1 space-y-2">
+                        <Label htmlFor="notas-file">Archivo Excel</Label>
+                        <Input
+                            id="notas-file"
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={(event) => setData('archivo', event.target.files?.[0] || null)}
+                            required
+                        />
+                        {errors.archivo ? <p className="text-destructive text-sm">{errors.archivo}</p> : null}
+                    </div>
 
-      <input
-        type="file"
-        accept=".xlsx,.xls"
-        onChange={(e) => setData("archivo", e.target.files?.[0] || null)}
-        className="block w-full text-sm"
-        required
-      />
-
-      {errors.archivo && (
-        <p className="text-sm text-red-600">{errors.archivo}</p>
-      )}
-
-      <button
-        type="submit"
-        disabled={processing}
-        className="w-fit px-4 py-2 rounded-lg bg-black text-white text-sm hover:opacity-90 disabled:opacity-50"
-      >
-        {processing ? "Importando..." : "Importar notas"}
-      </button>
-    </form>
-  );
+                    <Button type="submit" disabled={processing}>
+                        {processing ? <Loader2 className="size-4 animate-spin" /> : <UploadCloud className="size-4" />}
+                        {processing ? 'Importando...' : 'Importar notas'}
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
+    );
 }

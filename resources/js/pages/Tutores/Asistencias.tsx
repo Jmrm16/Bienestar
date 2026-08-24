@@ -66,6 +66,7 @@ interface Asistencia {
 
 interface Props {
   window: { id: number; name: string };
+  windows?: Array<{ id: number; name: string }>;
   grupo: {
     id: number;
     nombre: string;
@@ -439,7 +440,7 @@ function FechasDialog({
    COMPONENTE PRINCIPAL
 ========================= */
 
-export default function Asistencias({ window: reportWindow, grupo, asistencias  }: Props) {
+export default function Asistencias({ window: reportWindow, windows = [], grupo, asistencias  }: Props) {
   const [q, setQ] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table"); // Cambiado a "grid" para coincidir con defaultValue
   const [fechasDialog, setFechasDialog] = useState<{
@@ -521,10 +522,15 @@ export default function Asistencias({ window: reportWindow, grupo, asistencias  
 
     const params = new URLSearchParams(window.location.search);
     const returnTab = params.get("returnTab") || "grupos";
+    const returnWindow = params.get("window") || String(reportWindow.id);
 
-    router.visit(route("portal.tutor.home") + `?tab=${encodeURIComponent(returnTab)}`, {
+    router.visit(
+      route("portal.tutor.home") +
+        `?tab=${encodeURIComponent(returnTab)}&window=${encodeURIComponent(returnWindow)}`,
+      {
       preserveScroll: true, // por si acaso
-    });
+      }
+    );
   };
 
   const openFechasModal = (student: Asistencia) => {
@@ -537,9 +543,11 @@ export default function Asistencias({ window: reportWindow, grupo, asistencias  
     });
   };
 
+  const availableWindows = windows.length > 0 ? windows : [reportWindow];
+
   return (
     <>
-      <Head title={`Asistencias - ${grupo.nombre}`} />
+      <Head title={`Asistencias (Consolidado) - ${grupo.nombre}`} />
 
       <FechasDialog
         open={fechasDialog.open}
@@ -577,8 +585,21 @@ export default function Asistencias({ window: reportWindow, grupo, asistencias  
                 <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
                   <div className="flex items-center gap-1.5 rounded-lg bg-muted px-2 md:px-3 py-1 dark:bg-slate-800/50 min-w-0">
                     <Calendar className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground dark:text-slate-400 shrink-0" />
-                    <span className="text-foreground dark:text-slate-300 truncate">{reportWindow.name}</span>
+                    <span className="text-foreground dark:text-slate-300 truncate">
+                      {availableWindows.length > 1
+                        ? `Todas las entregas (${availableWindows.length})`
+                        : (availableWindows[0]?.name ?? reportWindow.name)}
+                    </span>
                   </div>
+                  {availableWindows.length > 1 && (
+                    <div className="flex flex-wrap gap-1">
+                      {availableWindows.map((w) => (
+                        <Badge key={w.id} variant="outline" className="text-[10px] md:text-xs">
+                          {w.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5 rounded-lg bg-muted px-2 md:px-3 py-1 dark:bg-slate-800/50 min-w-0">
                     <Users className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground dark:text-slate-400 shrink-0" />
                     <span className="text-foreground dark:text-slate-300 truncate">{grupo.nombre}</span>

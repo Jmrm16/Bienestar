@@ -1,0 +1,456 @@
+{
+    "duplicates": [
+        {
+            "identificacion": 1121535625,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Juan Daniel Anaya Sáenz",
+                    "tutor_id": 37,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "Mauro Jose Lozano Chavez",
+                    "tutor_id": 12,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "Samuel Santiago Bonivento Ramirez",
+                    "tutor_id": 18,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1134170701,
+            "carreras": [
+                "CONTADURIA PUBLICA",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorelis Julianys Sierra Calderón",
+                    "tutor_id": 24,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "CONTADURIA PUBLICA",
+                    "tutor": "Rosa octavia Ripoll freyle",
+                    "tutor_id": 13,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1121530500,
+            "carreras": [
+                "CONTADURIA PUBLICA",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorelis Julianys Sierra Calderón",
+                    "tutor_id": 24,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "CONTADURIA PUBLICA",
+                    "tutor": "Rosa octavia Ripoll freyle",
+                    "tutor_id": 13,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1085172845,
+            "carreras": [
+                "CONTADURIA PUBLICA",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorelis Julianys Sierra Calderón",
+                    "tutor_id": 24,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "CONTADURIA PUBLICA",
+                    "tutor": "Rosa octavia Ripoll freyle",
+                    "tutor_id": 13,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1007596895,
+            "carreras": [
+                "CONTADURIA PUBLICA",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorelis Julianys Sierra Calderón",
+                    "tutor_id": 24,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "CONTADURIA PUBLICA",
+                    "tutor": "Rosa octavia Ripoll freyle",
+                    "tutor_id": 13,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1121534458,
+            "carreras": [
+                "CONTADURIA PUBLICA",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorelis Julianys Sierra Calderón",
+                    "tutor_id": 24,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "CONTADURIA PUBLICA",
+                    "tutor": "Rosa octavia Ripoll freyle",
+                    "tutor_id": 13,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1134170409,
+            "carreras": [
+                "CONTADURIA PUBLICA",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorelis Julianys Sierra Calderón",
+                    "tutor_id": 24,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "CONTADURIA PUBLICA",
+                    "tutor": "Rosa octavia Ripoll freyle",
+                    "tutor_id": 13,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1006744967,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorge Saúl Peñaloza Lora",
+                    "tutor_id": 28,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "Lauren Vanesa Blanchar Oviedo",
+                    "tutor_id": 9,
+                    "window": "Primer informe",
+                    "resolucion": "R1",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1124001543,
+            "carreras": [
+                "ADMINISTRACION DE EMPRESAS",
+                "INGENIERIA DE SISTEMAS"
+            ],
+            "rows": [
+                {
+                    "carrera": "ADMINISTRACION DE EMPRESAS",
+                    "tutor": "Jhojaneth Sicacha Romero",
+                    "tutor_id": 6,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "ocasional"
+                },
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "Jhojaneth Sicacha Romero",
+                    "tutor_id": 6,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1121536158,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "JUAN ROJAS HERNANDEZ",
+                    "tutor_id": 63,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "ocasional"
+                },
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorge Saúl Peñaloza Lora",
+                    "tutor_id": 28,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1124096225,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "JUAN ROJAS HERNANDEZ",
+                    "tutor_id": 63,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorge Saúl Peñaloza Lora",
+                    "tutor_id": 28,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        },
+        {
+            "identificacion": 1237690028,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS",
+                "TRABAJO SOCIAL"
+            ],
+            "rows": [
+                {
+                    "carrera": "INGENIERIA DE SISTEMAS",
+                    "tutor": "JUAN ROJAS HERNANDEZ",
+                    "tutor_id": 63,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                },
+                {
+                    "carrera": "TRABAJO SOCIAL",
+                    "tutor": "Jorge Saúl Peñaloza Lora",
+                    "tutor_id": 28,
+                    "window": "Primer informe",
+                    "resolucion": "R2",
+                    "origen": "normal"
+                }
+            ]
+        }
+    ],
+    "tutors": [
+        {
+            "tutor_id": 24,
+            "tutor": "Jorelis Julianys Sierra Calderón",
+            "resoluciones": [
+                "R1"
+            ],
+            "total_estudiantes_duplicados": 6,
+            "carreras": [
+                "TRABAJO SOCIAL"
+            ],
+            "estudiantes": [
+                1134170701,
+                1121530500,
+                1085172845,
+                1007596895,
+                1121534458,
+                1134170409
+            ]
+        },
+        {
+            "tutor_id": 13,
+            "tutor": "Rosa octavia Ripoll freyle",
+            "resoluciones": [
+                "R2"
+            ],
+            "total_estudiantes_duplicados": 6,
+            "carreras": [
+                "CONTADURIA PUBLICA"
+            ],
+            "estudiantes": [
+                1134170701,
+                1121530500,
+                1085172845,
+                1007596895,
+                1121534458,
+                1134170409
+            ]
+        },
+        {
+            "tutor_id": 28,
+            "tutor": "Jorge Saúl Peñaloza Lora",
+            "resoluciones": [
+                "R2"
+            ],
+            "total_estudiantes_duplicados": 4,
+            "carreras": [
+                "TRABAJO SOCIAL"
+            ],
+            "estudiantes": [
+                1006744967,
+                1121536158,
+                1124096225,
+                1237690028
+            ]
+        },
+        {
+            "tutor_id": 63,
+            "tutor": "JUAN ROJAS HERNANDEZ",
+            "resoluciones": [
+                "R2"
+            ],
+            "total_estudiantes_duplicados": 3,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS"
+            ],
+            "estudiantes": [
+                1121536158,
+                1124096225,
+                1237690028
+            ]
+        },
+        {
+            "tutor_id": 6,
+            "tutor": "Jhojaneth Sicacha Romero",
+            "resoluciones": [
+                "R2"
+            ],
+            "total_estudiantes_duplicados": 1,
+            "carreras": [
+                "ADMINISTRACION DE EMPRESAS",
+                "INGENIERIA DE SISTEMAS"
+            ],
+            "estudiantes": [
+                1124001543
+            ]
+        },
+        {
+            "tutor_id": 37,
+            "tutor": "Juan Daniel Anaya Sáenz",
+            "resoluciones": [
+                "R2"
+            ],
+            "total_estudiantes_duplicados": 1,
+            "carreras": [
+                "TRABAJO SOCIAL"
+            ],
+            "estudiantes": [
+                1121535625
+            ]
+        },
+        {
+            "tutor_id": 9,
+            "tutor": "Lauren Vanesa Blanchar Oviedo",
+            "resoluciones": [
+                "R1"
+            ],
+            "total_estudiantes_duplicados": 1,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS"
+            ],
+            "estudiantes": [
+                1006744967
+            ]
+        },
+        {
+            "tutor_id": 12,
+            "tutor": "Mauro Jose Lozano Chavez",
+            "resoluciones": [
+                "R1"
+            ],
+            "total_estudiantes_duplicados": 1,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS"
+            ],
+            "estudiantes": [
+                1121535625
+            ]
+        },
+        {
+            "tutor_id": 18,
+            "tutor": "Samuel Santiago Bonivento Ramirez",
+            "resoluciones": [
+                "R2"
+            ],
+            "total_estudiantes_duplicados": 1,
+            "carreras": [
+                "INGENIERIA DE SISTEMAS"
+            ],
+            "estudiantes": [
+                1121535625
+            ]
+        }
+    ]
+}

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,9 +13,16 @@ import {
   Cell,
 } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /* =========================
    TIPOS
@@ -25,6 +32,7 @@ type AprobReprobRow = {
   label: string;
   APROBADO: number;
   REPROBADO: number;
+  SIN_NOTA?: number;
   total?: number;
 };
 
@@ -38,15 +46,18 @@ export type ReportChartsData = {
   porTutor: AprobReprobRow[];
   totalAprobado: number;
   totalReprobado: number;
-  sexo: { FEMENINO: number; MASCULINO: number };
-  grupos: { NINGUNO: number; AFRO: number; INDIGENA: number };
+  totalEstudiantesUnicos?: number;
+  totalEvaluados?: number;
+  totalSinNota?: number;
+  sexo: { FEMENINO: number; MASCULINO: number; SIN_DATO?: number };
+  grupos: { NINGUNO: number; AFRO: number; INDIGENA: number; OTROS?: number };
 };
 
 /* =========================
    HELPERS
 ========================= */
 
-function formatInt(n: any) {
+function formatInt(n: unknown) {
   const x = Number(n ?? 0);
   return Number.isFinite(x) ? x.toLocaleString("es-CO") : "0";
 }
@@ -56,7 +67,7 @@ const PIE_COLORS = ["#2563eb", "#f97316", "#16a34a", "#a855f7", "#0ea5e9"];
 function DefaultTooltip() {
   return (
     <Tooltip
-      formatter={(value: any, name: any) => [formatInt(value), String(name)]}
+      formatter={(value: unknown, name: unknown) => [formatInt(value), String(name)]}
       labelFormatter={(label) => String(label)}
       contentStyle={{
         backgroundColor: "hsl(var(--popover))",
@@ -102,15 +113,15 @@ function PieBlock({
   const validRows = rows.filter((r) => (r.value ?? 0) > 0);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
+    <Card className="gap-0">
+      <CardHeader className="gap-2 pb-0">
         <SectionTitle
           title={windowName ? `${title} - ${windowName}` : title}
           right={<Badge variant="secondary">Total: {formatInt(total)}</Badge>}
         />
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-4">
         {validRows.length > 0 ? (
           <>
             <div style={{ width: "100%", height }}>
@@ -148,7 +159,9 @@ function PieBlock({
               {validRows.map((r) => (
                 <div
                   key={r.label}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 bg-muted/50"
+                  className={cn(
+                    "flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2"
+                  )}
                 >
                   <span className="text-muted-foreground">{r.label}</span>
                   <span className="font-semibold">{formatInt(r.value)}</span>
@@ -180,22 +193,23 @@ function BarBlock({
   windowName?: string;
 }) {
   const total = rows.reduce(
-    (acc, r) => acc + (r.total ?? r.APROBADO + r.REPROBADO),
+    (acc, r) => acc + (r.total ?? r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0)),
     0
   );
 
-  const validRows = rows.filter((r) => r.APROBADO + r.REPROBADO > 0);
+  const validRows = rows.filter((r) => r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) > 0);
+  const hasSinNota = validRows.some((r) => (r.SIN_NOTA ?? 0) > 0);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
+    <Card className="gap-0">
+      <CardHeader className="gap-2 pb-0">
         <SectionTitle
           title={windowName ? `${title} - ${windowName}` : title}
           right={<Badge variant="secondary">Registros: {formatInt(total)}</Badge>}
         />
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-4">
         {validRows.length > 0 ? (
           <div style={{ width: "100%", height }}>
             <ResponsiveContainer>
@@ -238,6 +252,14 @@ function BarBlock({
                   fill="#f97316"
                   radius={[4, 4, 0, 0]}
                 />
+                {hasSinNota ? (
+                  <Bar
+                    dataKey="SIN_NOTA"
+                    name="Sin nota"
+                    fill="#6b7280"
+                    radius={[4, 4, 0, 0]}
+                  />
+                ) : null}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -255,14 +277,18 @@ function BarBlock({
    COMPONENTE PRINCIPAL
 ========================= */
 
-export default function ReportCharts({
+function ReportCharts({
   data,
   topTutores = 30,
   windowName,
+  scopeLabel = "corte seleccionado",
+  detailContent,
 }: {
   data?: ReportChartsData;
   topTutores?: number;
   windowName?: string;
+  scopeLabel?: string;
+  detailContent?: React.ReactNode;
 }) {
   const safe: ReportChartsData = useMemo(
     () =>
@@ -271,37 +297,56 @@ export default function ReportCharts({
         porTutor: [],
         totalAprobado: 0,
         totalReprobado: 0,
-        sexo: { FEMENINO: 0, MASCULINO: 0 },
-        grupos: { NINGUNO: 0, AFRO: 0, INDIGENA: 0 },
+        totalEstudiantesUnicos: 0,
+        totalEvaluados: 0,
+        totalSinNota: 0,
+        sexo: { FEMENINO: 0, MASCULINO: 0, SIN_DATO: 0 },
+        grupos: { NINGUNO: 0, AFRO: 0, INDIGENA: 0, OTROS: 0 },
       },
     [data]
   );
 
+  const totalEvaluados = Math.max(
+    0,
+    Number((safe.totalEvaluados ?? safe.totalAprobado + safe.totalReprobado) || 0)
+  );
+  const totalSinNota = Math.max(
+    0,
+    Number((safe.totalSinNota ?? (safe.totalEstudiantesUnicos ?? 0) - totalEvaluados) || 0)
+  );
+  const totalEstudiantesUnicos = Math.max(
+    0,
+    Number((safe.totalEstudiantesUnicos ?? totalEvaluados + totalSinNota) || 0)
+  );
+
   const porPrograma = useMemo(() => {
     return [...(safe.porPrograma ?? [])]
-      .map((r) => ({ ...r, total: r.total ?? r.APROBADO + r.REPROBADO }))
+      .map((r) => ({ ...r, total: r.total ?? r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) }))
       .sort((a, b) => (b.total ?? 0) - (a.total ?? 0));
   }, [safe.porPrograma]);
 
   const porTutor = useMemo(() => {
     return [...(safe.porTutor ?? [])]
-      .map((r) => ({ ...r, total: r.total ?? r.APROBADO + r.REPROBADO }))
+      .map((r) => ({ ...r, total: r.total ?? r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) }))
       .sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
       .slice(0, Math.max(1, topTutores));
   }, [safe.porTutor, topTutores]);
 
   const totalesRows: SimpleCountRow[] = useMemo(
-    () => [
-      { label: "Aprobado", value: safe.totalAprobado ?? 0 },
-      { label: "Reprobado", value: safe.totalReprobado ?? 0 },
-    ],
-    [safe.totalAprobado, safe.totalReprobado]
+    () =>
+      [
+        { label: "Aprobado", value: safe.totalAprobado ?? 0 },
+        { label: "Reprobado", value: safe.totalReprobado ?? 0 },
+        { label: "Sin nota", value: totalSinNota },
+      ].filter((row) => row.value > 0),
+    [safe.totalAprobado, safe.totalReprobado, totalSinNota]
   );
 
   const sexoRows: SimpleCountRow[] = useMemo(
     () => [
       { label: "Femenino", value: safe.sexo?.FEMENINO ?? 0 },
       { label: "Masculino", value: safe.sexo?.MASCULINO ?? 0 },
+      { label: "Sin dato", value: safe.sexo?.SIN_DATO ?? 0 },
     ],
     [safe.sexo]
   );
@@ -311,37 +356,45 @@ export default function ReportCharts({
       { label: "Ninguno", value: safe.grupos?.NINGUNO ?? 0 },
       { label: "Afro", value: safe.grupos?.AFRO ?? 0 },
       { label: "Indígena", value: safe.grupos?.INDIGENA ?? 0 },
+      { label: "Otros", value: safe.grupos?.OTROS ?? 0 },
     ],
     [safe.grupos]
   );
 
   const hasData = useMemo(() => {
     return (
-      porPrograma.some((r) => r.APROBADO + r.REPROBADO > 0) ||
-      porTutor.some((r) => r.APROBADO + r.REPROBADO > 0) ||
+      porPrograma.some((r) => r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) > 0) ||
+      porTutor.some((r) => r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) > 0) ||
       (safe.totalAprobado ?? 0) > 0 ||
       (safe.totalReprobado ?? 0) > 0 ||
+      totalEstudiantesUnicos > 0 ||
+      totalSinNota > 0 ||
       (safe.sexo?.FEMENINO ?? 0) > 0 ||
       (safe.sexo?.MASCULINO ?? 0) > 0 ||
+      (safe.sexo?.SIN_DATO ?? 0) > 0 ||
       (safe.grupos?.NINGUNO ?? 0) > 0 ||
       (safe.grupos?.AFRO ?? 0) > 0 ||
-      (safe.grupos?.INDIGENA ?? 0) > 0
+      (safe.grupos?.INDIGENA ?? 0) > 0 ||
+      (safe.grupos?.OTROS ?? 0) > 0
     );
-  }, [porPrograma, porTutor, safe]);
+  }, [porPrograma, porTutor, safe, totalEstudiantesUnicos, totalSinNota]);
 
   if (!hasData) {
     return (
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
+      <Card className="gap-0 border-dashed">
+        <CardHeader className="gap-1 pb-0">
           <CardTitle className="text-base">
             {windowName ? `Gráficos - ${windowName}` : "Gráficos"}
           </CardTitle>
+          <CardDescription>
+            Todavía no hay información suficiente para construir gráficos en esta selección.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="pt-4 text-sm text-muted-foreground">
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p>No hay datos para graficar en este corte.</p>
+            <p>No hay datos para graficar en la selección actual.</p>
             <p className="mt-2 text-xs text-muted-foreground">
-              Selecciona otro corte o verifica que hayan asistencias registradas.
+              Selecciona otro corte o combina otras entregas para comparar resultados.
             </p>
           </div>
         </CardContent>
@@ -351,6 +404,31 @@ export default function ReportCharts({
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="gap-0">
+          <CardContent className="space-y-1 pt-6">
+            <p className="text-xs text-muted-foreground">
+              Estudiantes únicos del {scopeLabel}
+            </p>
+            <p className="text-2xl font-semibold">{formatInt(totalEstudiantesUnicos)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0">
+          <CardContent className="space-y-1 pt-6">
+            <p className="text-xs text-muted-foreground">Estudiantes evaluados (con nota)</p>
+            <p className="text-2xl font-semibold">{formatInt(totalEvaluados)}</p>
+          </CardContent>
+        </Card>
+        <Card className="gap-0">
+          <CardContent className="space-y-1 pt-6">
+            <p className="text-xs text-muted-foreground">Estudiantes sin nota</p>
+            <p className="text-2xl font-semibold">{formatInt(totalSinNota)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {detailContent ? <div>{detailContent}</div> : null}
+
       {/* Fila 1 */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -363,12 +441,12 @@ export default function ReportCharts({
           />
         </div>
 
-        <PieBlock title="Totales del corte" rows={totalesRows} windowName={windowName} />
+        <PieBlock title={`Totales del ${scopeLabel}`} rows={totalesRows} windowName={windowName} />
       </div>
 
       {/* Fila 2 */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
+      <Card className="gap-0">
+        <CardHeader className="gap-2 pb-0">
           <SectionTitle
             title={`Aprobado vs Reprobado por Tutor (Top ${topTutores})${
               windowName ? ` - ${windowName}` : ""
@@ -377,8 +455,8 @@ export default function ReportCharts({
           />
         </CardHeader>
 
-        <CardContent className="pt-0">
-          {porTutor.some((r) => r.APROBADO + r.REPROBADO > 0) ? (
+        <CardContent className="pt-4">
+          {porTutor.some((r) => r.APROBADO + r.REPROBADO + (r.SIN_NOTA ?? 0) > 0) ? (
             <ScrollArea className="w-full rounded-md border">
               <div className="min-w-[900px] p-1">
                 <div style={{ width: "100%", height: 420 }}>
@@ -405,6 +483,9 @@ export default function ReportCharts({
                       <Legend wrapperStyle={{ fontSize: "12px", color: "hsl(var(--foreground))" }} />
                       <Bar dataKey="APROBADO" name="Aprobado" fill="#2563eb" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="REPROBADO" name="Reprobado" fill="#f97316" radius={[4, 4, 0, 0]} />
+                      {porTutor.some((r) => (r.SIN_NOTA ?? 0) > 0) ? (
+                        <Bar dataKey="SIN_NOTA" name="Sin nota" fill="#6b7280" radius={[4, 4, 0, 0]} />
+                      ) : null}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -426,3 +507,8 @@ export default function ReportCharts({
     </div>
   );
 }
+
+const MemoizedReportCharts = memo(ReportCharts);
+MemoizedReportCharts.displayName = "ReportCharts";
+
+export default MemoizedReportCharts;

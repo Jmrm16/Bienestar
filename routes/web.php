@@ -73,6 +73,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('tutores', TutorController::class)->except(['create', 'edit']);
     Route::post('/tutores/importar-excel', [TutorController::class, 'import'])
         ->name('tutores.import');
+    Route::post('/tutores/importar-resoluciones-periodo', [TutorController::class, 'importPeriodResolutions'])
+        ->name('tutores.import.period_resolutions');
     Route::get('/tutores/{tutor}/perfil', [TutorController::class, 'perfil'])->name('tutores.perfil');
 
     /*
@@ -82,6 +84,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | ⚠️ IMPORTANTE: NO repetir asignaturas.show porque ya viene con resource.
     */
     Route::resource('asignaturas', AsignaturaController::class)->except(['create', 'edit']);
+    Route::post('/asignaturas/importar-excel', [AsignaturaController::class, 'import'])
+        ->name('asignaturas.import');
 
     /*
     |--------------------------------------------------------------------------
@@ -105,6 +109,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::resource('grupost', GrupoTController::class)->except(['create', 'edit']);
+    Route::post('/grupost/importar-excel', [GrupoTController::class, 'import'])
+        ->name('grupost.import');
 
     Route::post('/grupost/{grupo}/asignar-tutor', [GrupoTController::class, 'asignarTutor'])
         ->name('grupost.asignar-tutor');
@@ -163,16 +169,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/periodos/{period}', [ReportController::class, 'periodsDestroy'])->name('periods.destroy');
 
         Route::get('/periodos/{period}/entregas', [ReportController::class, 'windowsIndex'])->name('windows.index');
+        Route::get('/periodos/{period}/entregas/charts/aggregate', [ReportController::class, 'windowChartsAggregate'])->name('windows.charts.aggregate');
+        Route::get('/periodos/{period}/entregas/insights/aggregate', [ReportController::class, 'windowInsightsAggregate'])->name('windows.insights.aggregate');
         Route::get('/periodos/{period}/entregas/{window}/charts', [ReportController::class, 'windowCharts'])->name('windows.charts');
+        Route::get('/periodos/{period}/entregas/importar-asistencias/progreso', [ReportController::class, 'bulkImportTutorAttendancesProgress'])
+            ->name('windows.bulk_import.progress');
         Route::post('/periodos/{period}/entregas', [ReportController::class, 'windowsStore'])->name('windows.store');
         Route::put('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsUpdate'])->name('windows.update');
+        Route::delete('/periodos/{period}/entregas/{window}/datos', [ReportController::class, 'windowsClearData'])->name('windows.clear_data');
         Route::delete('/periodos/{period}/entregas/{window}', [ReportController::class, 'windowsDestroy'])->name('windows.destroy');
 
         Route::post('/periodos/{period}/entregas/{window}/assign-all', [ReportController::class, 'windowsAssignAll'])
             ->name('windows.assign_all');
+        Route::post('/periodos/{period}/entregas/importar-asistencias', [ReportController::class, 'bulkImportTutorAttendances'])
+            ->name('windows.bulk_import');
         
 Route::get('/periodos/{period}/export-charts', [ReportController::class, 'exportChartsExcel'])
     ->name('period.export_charts');
+Route::get('/periodos/{period}/export-pdf', [ReportController::class, 'exportChartsPdf'])
+    ->name('period.export_pdf');
 
  
     });

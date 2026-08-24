@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asistencia;
 use App\Models\GrupoT;
 use App\Models\Nota;
+use App\Services\StudentProfileResolver;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Inertia\Inertia;
@@ -53,6 +54,7 @@ class AsistenciaImportController extends Controller
         $archivo = $request->file('archivo');
 
         $grupo = GrupoT::findOrFail($grupoId);
+        $studentProfileResolver = app(StudentProfileResolver::class);
 
         // Si en tu diseño el grupo trae period_id directo:
         if (!$grupo->period_id) {
@@ -247,18 +249,39 @@ class AsistenciaImportController extends Controller
         foreach ($hoja as $index => $fila) {
             if ((int)$index < $startDataRow) continue;
 
-            $nombres = trim((string)($fila[$colNombres] ?? ''));
-            if ($nombres === '') continue; // fila vacía
-
-            $apellidos = trim((string)($fila[$colApellidos] ?? ''));
             $identificacion = trim((string)($fila[$colIdentificacion] ?? ''));
             if ($identificacion === '') { $skippedDatosInvalidos++; continue; }
+            $codigoExcel = $colCodigo ? trim((string)($fila[$colCodigo] ?? '')) : '';
+            $studentProfile = $studentProfileResolver->resolveIdentityForPeriod(
+                $periodId,
+                $identificacion,
+                $codigoExcel,
+                trim((string)($fila[$colNombres] ?? '')),
+                trim((string)($fila[$colApellidos] ?? ''))
+            );
+            $identificacionFinal = $this->preferText(
+                $this->normalizeIdentificacion((string)($studentProfile['identificacion'] ?? '')),
+                $identificacion
+            );
 
-            $codigoEst = $colCodigo ? trim((string)($fila[$colCodigo] ?? '')) : null;
-            $programa = $colPrograma ? trim((string)($fila[$colPrograma] ?? '')) : null;
+            $nombres = $this->preferText($studentProfile['nombres'] ?? '', trim((string)($fila[$colNombres] ?? '')));
+            $apellidos = $this->preferText($studentProfile['apellidos'] ?? '', trim((string)($fila[$colApellidos] ?? '')));
+            if ($nombres === '' && $apellidos === '') { $skippedDatosInvalidos++; continue; }
+
+            $codigoEst = $this->preferText(
+                $studentProfile['codigo'] ?? '',
+                $codigoExcel
+            );
+            $programa = $this->preferText(
+                $colPrograma ? trim((string)($fila[$colPrograma] ?? '')) : '',
+                $studentProfile['programa'] ?? ''
+            );
 
             // Sexo (si no se detectó en header, igual respetamos el patrón H/I del formato)
-            $sexo = (!empty($fila[$colSexoF ?? 'H']) ? 'F' : (!empty($fila[$colSexoM ?? 'I']) ? 'M' : 'Otro'));
+            $sexo = $this->preferSexo(
+                !empty($fila[$colSexoF ?? 'H']) ? 'F' : (!empty($fila[$colSexoM ?? 'I']) ? 'M' : 'Otro'),
+                $studentProfile['sexo'] ?? ''
+            );
 
             // Priorizados
             $priorizados = [];
@@ -267,7 +290,10 @@ class AsistenciaImportController extends Controller
             if (!empty($fila[$colVictima])) $priorizados[] = 'Víctima de conflicto armado';
             if (!empty($fila[$colLgtbi])) $priorizados[] = 'LGTBIQ+';
             if (!empty($fila[$colFrontera])) $priorizados[] = 'Habitante de frontera';
-            $grupoPriorizado = $priorizados ? implode(', ', $priorizados) : null;
+            $grupoPriorizado = $this->preferText(
+                $priorizados ? implode(', ', $priorizados) : '',
+                $studentProfile['grupo_priorizado'] ?? ''
+            );
 
             $tieneAlguna = false;
 
@@ -295,7 +321,7 @@ class AsistenciaImportController extends Controller
                 $where = [
                     'grupo_id' => $grupoId,
                     'period_id' => $periodId,
-                    'identificacion' => $identificacion,
+                    'identificacion' => $identificacionFinal,
                     'fecha' => $fecha,
                 ];
 
@@ -309,7 +335,7 @@ class AsistenciaImportController extends Controller
                     'codigo_estudiantil' => $codigoEst ?: null,
                     'programa_academico' => $programa ?: null,
                     'sexo' => $sexo,
-                    'grupo_priorizado' => $grupoPriorizado,
+                    'grupo_priorizado' => $grupoPriorizado ?: null,
                     'horas' => 1,
                 ];
 
@@ -443,6 +469,31 @@ class AsistenciaImportController extends Controller
     private function normalizeIdentificacion(string $value): string
     {
         return preg_replace('/[^0-9a-z]/i', '', $this->normalizeText($value));
+    }
+
+    private function preferText(?string $primary, ?string $fallback): string
+    {
+        $primaryText = trim((string) ($primary ?? ''));
+        if ($primaryText !== '') {
+            return $primaryText;
+        }
+
+        return trim((string) ($fallback ?? ''));
+    }
+
+    private function preferSexo(?string $primary, ?string $fallback): string
+    {
+        $primaryText = trim((string) ($primary ?? ''));
+        if ($primaryText !== '' && ! in_array(mb_strtoupper($primaryText), ['OTRO', 'OTRA'], true)) {
+            return $primaryText;
+        }
+
+        $fallbackText = trim((string) ($fallback ?? ''));
+        if ($fallbackText !== '') {
+            return $fallbackText;
+        }
+
+        return $primaryText !== '' ? $primaryText : 'Otro';
     }
 
     private function normalizeText(string $value): string

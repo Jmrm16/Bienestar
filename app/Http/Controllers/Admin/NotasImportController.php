@@ -12,11 +12,103 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class NotasImportController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = trim((string) $request->query('q', ''));
+        $studentResults = [];
+        $matchedRowsCount = 0;
+
+        if ($search !== '') {
+            $rows = Nota::query()
+                ->select([
+                    'id',
+                    'codigo',
+                    'apellidos',
+                    'nombres',
+                    'identificacion',
+                    'programa',
+                    'materia',
+                    'grupo',
+                    'nota_1',
+                    'nota_2',
+                    'nota_3',
+                    'definitiva',
+                    'habilitacion',
+                    'final',
+                    'anio',
+                    'periodo',
+                ])
+                ->where(function ($query) use ($search) {
+                    $like = '%' . $search . '%';
+
+                    $query->where('identificacion', 'like', $like)
+                        ->orWhere('codigo', 'like', $like)
+                        ->orWhere('nombres', 'like', $like)
+                        ->orWhere('apellidos', 'like', $like)
+                        ->orWhere(DB::raw("CONCAT(nombres, ' ', apellidos)"), 'like', $like)
+                        ->orWhere(DB::raw("CONCAT(apellidos, ' ', nombres)"), 'like', $like);
+                })
+                ->orderBy('apellidos')
+                ->orderBy('nombres')
+                ->orderByDesc('anio')
+                ->orderByDesc('periodo')
+                ->orderBy('materia')
+                ->limit(800)
+                ->get();
+
+            $matchedRowsCount = $rows->count();
+
+            $studentResults = $rows
+                ->groupBy(function (Nota $nota) {
+                    $identificacion = trim((string) $nota->identificacion);
+                    $codigo = trim((string) ($nota->codigo ?? ''));
+
+                    return ($identificacion !== '' ? $identificacion : 'SIN-ID') . '|' . ($codigo !== '' ? $codigo : 'SIN-CODIGO');
+                })
+                ->map(function ($group) {
+                    /** @var Nota $first */
+                    $first = $group->first();
+
+                    return [
+                        'id' => $first->id,
+                        'codigo' => (string) ($first->codigo ?? ''),
+                        'apellidos' => (string) $first->apellidos,
+                        'nombres' => (string) $first->nombres,
+                        'identificacion' => (string) $first->identificacion,
+                        'programa' => (string) ($first->programa ?? ''),
+                        'materias' => $group->map(function (Nota $nota) {
+                            return [
+                                'id' => $nota->id,
+                                'materia' => (string) ($nota->materia ?? ''),
+                                'grupo' => (string) ($nota->grupo ?? ''),
+                                'nota_1' => $nota->nota_1,
+                                'nota_2' => $nota->nota_2,
+                                'nota_3' => $nota->nota_3,
+                                'definitiva' => $nota->definitiva,
+                                'habilitacion' => $nota->habilitacion,
+                                'final' => $nota->final,
+                                'anio' => (int) $nota->anio,
+                                'periodo' => (string) $nota->periodo,
+                            ];
+                        })->values()->all(),
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
         return inertia('Notas/Index', [
             'notas' => [],
             'totalNotas' => Nota::count(),
+            'totalEstudiantes' => Nota::query()
+                ->whereNotNull('identificacion')
+                ->where('identificacion', '!=', '')
+                ->distinct()
+                ->count('identificacion'),
+            'search' => $search,
+            'studentResults' => $studentResults,
+            'studentResultCount' => count($studentResults),
+            'matchedRowsCount' => $matchedRowsCount,
         ]);
     }
 

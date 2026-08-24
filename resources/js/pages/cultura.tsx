@@ -1,9 +1,9 @@
 import { Head, Link, usePage } from "@inertiajs/react";
 import { useEffect, useMemo } from "react";
-import HeaderComponent from "@/components/component/header-component";
-import FooterComponent from "@/components/component/footer-component";
-import HeaderpermaComponent from "./Cultura_vistas/headerperma";
-import HeroCarousel from "./Cultura_vistas/HeroCarousel "; // ← FIX: sin espacio al final
+import HeaderComponent from "@/components/marketing/header";
+import FooterComponent from "@/components/marketing/footer";
+import HeaderpermaComponent from "./Cultura_vistas/components/header";
+import HeroCarousel from "./Cultura_vistas/components/hero-carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveCulturaImageUrl } from "@/lib/cultura-media";
 import {
@@ -391,3 +391,5 @@ export default function Cultura() {
     </>
   );
 }
+
+

@@ -3,7 +3,7 @@ import { Head, router } from "@inertiajs/react";
 import { type BreadcrumbItem } from "@/types";
 import { ArrowLeft, BookOpen, GraduationCap, Users } from "lucide-react";
 
-import { MetricCard } from "@/components/component/MetricCard";
+import { MetricCard } from "@/components/shared/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,9 +83,18 @@ type Nota = {
   habilitacion?: number | string | null;
 };
 
+type ReturnFilters = {
+  period_id: number;
+  q: string;
+  servicio: string;
+  trimestre: string;
+  page: number;
+};
+
 type Props = {
   estudiante: Estudiante;
   return_period_id: number;
+  return_filters?: ReturnFilters;
   grupos: Grupo[];
   notas: Nota[];
 };
@@ -120,7 +129,13 @@ const formatNota = (value?: number | string | null) => {
   }).format(parsed);
 };
 
-export default function Show({ estudiante, return_period_id, grupos = [], notas = [] }: Props) {
+export default function Show({
+  estudiante,
+  return_period_id,
+  return_filters,
+  grupos = [],
+  notas = [],
+}: Props) {
   const breadcrumbs: BreadcrumbItem[] = [
     { title: "Estudiantes", href: "/estudiantes" },
     { title: textOrDash(estudiante.nombre_completo), href: `/estudiantes/${estudiante.id}` },
@@ -139,9 +154,17 @@ export default function Show({ estudiante, return_period_id, grupos = [], notas 
   );
 
   const goBack = () => {
+    const returnPeriodId = Number(return_filters?.period_id || return_period_id || estudiante.period_id) || estudiante.period_id;
+
     router.get(
       route("estudiantes.index"),
-      { period_id: return_period_id || estudiante.period_id },
+      {
+        period_id: returnPeriodId || undefined,
+        q: return_filters?.q || undefined,
+        servicio: return_filters?.servicio || undefined,
+        trimestre: return_filters?.trimestre || undefined,
+        page: (return_filters?.page ?? 1) > 1 ? return_filters?.page : undefined,
+      },
       { preserveScroll: true, preserveState: true },
     );
   };
@@ -380,3 +403,4 @@ export default function Show({ estudiante, return_period_id, grupos = [], notas 
     </AppLayout>
   );
 }
+

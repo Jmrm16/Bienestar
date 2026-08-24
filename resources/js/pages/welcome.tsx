@@ -1,24 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import HeaderComponent from '@/../js/components/component/header-component';
-import FooterComponent from '@/../js/components/component/footer-component';
+import HeaderComponent from '@/components/marketing/header';
+import FooterComponent from '@/components/marketing/footer';
 import { resolveCulturaImageUrl } from '@/lib/cultura-media';
-
-type JQueryCollectionLike = {
-  owlCarousel?: (options?: Record<string, unknown>) => void;
-  trigger: (eventName: string) => void;
-};
-
-type JQueryLike = ((selector: string) => JQueryCollectionLike) & {
-  fn?: {
-    owlCarousel?: unknown;
-  };
-};
-
-declare global {
-
-}
 
 interface Cultura {
   id: number;
@@ -85,8 +70,10 @@ export default function Welcome() {
 
   useEffect(() => {
     const init = () => {
-      if (window.$?.fn?.owlCarousel) {
-        window.$('.hero-slider').owlCarousel({
+      const jquery = window.$;
+
+      if (jquery?.fn?.owlCarousel) {
+        jquery('.hero-slider').owlCarousel?.({
           loop: true,
           nav: false,
           dots: true,
@@ -104,8 +91,10 @@ export default function Welcome() {
     };
     init();
     return () => {
-      if (window.$?.fn?.owlCarousel) {
-        window.$('.hero-slider').trigger('destroy.owl.carousel');
+      const jquery = window.$;
+
+      if (jquery?.fn?.owlCarousel) {
+        jquery('.hero-slider').trigger('destroy.owl.carousel');
       }
     };
   }, []);
@@ -246,3 +235,4 @@ export default function Welcome() {
     </>
   );
 }
+

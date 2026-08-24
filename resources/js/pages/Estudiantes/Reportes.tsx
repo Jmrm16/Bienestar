@@ -4,8 +4,8 @@ import { type BreadcrumbItem } from "@/types";
 import React, { useMemo } from "react";
 import { ArrowLeft, BarChart3, Calendar, FileText } from "lucide-react";
 
-import EstudiantesReportPanel from "@/pages/Estudiantes/EstudiantesReportPanel";
-import { MetricCard } from "@/components/component/MetricCard";
+import EstudiantesReportPanel from "@/pages/Estudiantes/components/reports/EstudiantesReportPanel";
+import { MetricCard } from "@/components/shared/metric-card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,9 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { EstudianteRow } from "./TablaGrupos";
+import type { EstudianteRow } from "./components/tables/TablaEstudiantes";
 
 type Period = { id: number; code: string; name?: string | null };
+type ReturnFilters = { q: string; servicio: string; trimestre: string; page: number };
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: "Estudiantes", href: "/estudiantes" },
@@ -26,10 +27,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function EstudiantesReportes() {
-  const { periods = [], selected_period_id = 0, rows = [] } = usePage().props as unknown as {
+  const { periods = [], selected_period_id = 0, rows = [], return_filters = { q: "", servicio: "", trimestre: "", page: 1 } } = usePage().props as unknown as {
     periods?: Period[];
     selected_period_id?: number;
     rows?: EstudianteRow[];
+    return_filters?: ReturnFilters;
   };
 
   const periodId = Number(selected_period_id) || 0;
@@ -47,7 +49,13 @@ export default function EstudiantesReportes() {
   const onChangePeriod = (value: string) => {
     router.get(
       route("estudiantes.reportes"),
-      { period_id: Number(value) },
+      {
+        period_id: Number(value),
+        q: return_filters.q || undefined,
+        servicio: return_filters.servicio || undefined,
+        trimestre: return_filters.trimestre || undefined,
+        page: return_filters.page > 1 ? return_filters.page : undefined,
+      },
       { preserveScroll: true, preserveState: true },
     );
   };
@@ -69,7 +77,13 @@ export default function EstudiantesReportes() {
             variant="outline"
             className="gap-2"
             onClick={() =>
-              router.get(route("estudiantes.index"), { period_id: periodId || undefined })
+              router.get(route("estudiantes.index"), {
+                period_id: periodId || undefined,
+                q: return_filters.q || undefined,
+                servicio: return_filters.servicio || undefined,
+                trimestre: return_filters.trimestre || undefined,
+                page: return_filters.page > 1 ? return_filters.page : undefined,
+              })
             }
           >
             <ArrowLeft className="h-4 w-4" />
@@ -124,3 +138,6 @@ export default function EstudiantesReportes() {
     </AppLayout>
   );
 }
+
+
+

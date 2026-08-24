@@ -1,378 +1,207 @@
-import { useMemo, useState } from "react";
-import { router } from "@inertiajs/react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MetricCard } from "@/components/component/MetricCard";
-import {
-  Download,
-  Plus,
-  RotateCcw,
-  Search,
-  UserCheck,
-  Users,
-  UserRound,
-} from "lucide-react";
-import { getAreaStyle } from "./area-styles";
-import { ParticipantDialog } from "./ParticipantDialog";
-import type { ParticipantFormValues } from "./ParticipantForm";
-import {
-  getParticipantEstamentoBadgeClass,
-  getParticipantStateBadgeClass,
-  PARTICIPANT_ESTAMENTOS,
-  PARTICIPANT_STATES,
-} from "./participant-badges";
-import { ParticipantsTable } from "./ParticipantsTable";
-import type { Carrera, ParticipantStats, SportParticipant } from "./types";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { router } from '@inertiajs/react';
+import { Download, Plus, RotateCcw, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { PARTICIPANT_ESTAMENTOS, PARTICIPANT_STATES } from './participant-badges';
+import { ParticipantDialog } from './ParticipantDialog';
+import type { ParticipantFormValues } from './ParticipantForm';
+import { ParticipantsTable } from './ParticipantsTable';
+import type { Carrera, ParticipantStats, SportParticipant } from './types';
 
 function payloadFromForm(values: ParticipantFormValues) {
-  return {
-    ...values,
-    carrera_id: values.carrera_id === "none" ? null : Number(values.carrera_id),
-    fecha_ingreso: values.fecha_ingreso || null,
-    telefono: values.telefono || null,
-    correo: values.correo || null,
-    semestre: values.semestre || null,
-    observaciones: values.observaciones || null,
-  };
+    return {
+        ...values,
+        carrera_id: values.carrera_id === 'none' ? null : Number(values.carrera_id),
+        fecha_ingreso: values.fecha_ingreso || null,
+        telefono: values.telefono || null,
+        correo: values.correo || null,
+        semestre: values.semestre || null,
+        observaciones: values.observaciones || null,
+    };
 }
 
 export function ParticipantsSection({
-  sportKey,
-  sportTitle,
-  participants,
-  carreras,
-  stats,
+    sportKey,
+    sportTitle,
+    participants,
+    carreras,
+    stats,
 }: {
-  sportKey: string;
-  sportTitle: string;
-  participants: SportParticipant[];
-  carreras: Carrera[];
-  stats: ParticipantStats;
+    sportKey: string;
+    sportTitle: string;
+    participants: SportParticipant[];
+    carreras: Carrera[];
+    stats: ParticipantStats;
 }) {
-  const [q, setQ] = useState("");
-  const [stateFilter, setStateFilter] = useState<string>("Todos");
-  const [estamentoFilter, setEstamentoFilter] = useState<string>("Todos");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<SportParticipant | null>(null);
-  const style = getAreaStyle(sportKey);
-  const Icon = style.icon;
-  const hasActiveFilters =
-    q.trim().length > 0 ||
-    stateFilter !== "Todos" ||
-    estamentoFilter !== "Todos";
+    const [q, setQ] = useState('');
+    const [stateFilter, setStateFilter] = useState('Todos');
+    const [estamentoFilter, setEstamentoFilter] = useState('Todos');
+    const [createOpen, setCreateOpen] = useState(false);
+    const [editing, setEditing] = useState<SportParticipant | null>(null);
 
-  const searchedParticipants = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return participants.filter((participant) => {
-      if (!term) return true;
+    const hasActiveFilters = q.trim().length > 0 || stateFilter !== 'Todos' || estamentoFilter !== 'Todos';
 
-      const fullName = `${participant.nombres} ${participant.apellidos}`.toLowerCase();
+    const filtered = useMemo(() => {
+        const term = q.trim().toLowerCase();
 
-      return (
-        participant.documento.toLowerCase().includes(term) ||
-        fullName.includes(term) ||
-        participant.estamento.toLowerCase().includes(term) ||
-        participant.estado.toLowerCase().includes(term) ||
-        (participant.carrera_nombre ?? "").toLowerCase().includes(term)
-      );
-    });
-  }, [participants, q]);
+        return participants
+            .filter((participant) => {
+                if (!term) return true;
 
-  const stateScopedParticipants = useMemo(() => {
-    return searchedParticipants.filter((participant) =>
-      estamentoFilter === "Todos"
-        ? true
-        : participant.estamento === estamentoFilter
-    );
-  }, [searchedParticipants, estamentoFilter]);
+                const fullName = `${participant.nombres} ${participant.apellidos}`.toLowerCase();
 
-  const estamentoScopedParticipants = useMemo(() => {
-    return searchedParticipants.filter((participant) =>
-      stateFilter === "Todos" ? true : participant.estado === stateFilter
-    );
-  }, [searchedParticipants, stateFilter]);
+                return (
+                    participant.documento.toLowerCase().includes(term) ||
+                    fullName.includes(term) ||
+                    participant.estamento.toLowerCase().includes(term) ||
+                    participant.estado.toLowerCase().includes(term) ||
+                    (participant.carrera_nombre ?? '').toLowerCase().includes(term)
+                );
+            })
+            .filter((participant) => (stateFilter === 'Todos' ? true : participant.estado === stateFilter))
+            .filter((participant) => (estamentoFilter === 'Todos' ? true : participant.estamento === estamentoFilter));
+    }, [participants, q, stateFilter, estamentoFilter]);
 
-  const stateCounts = useMemo(() => {
-    return PARTICIPANT_STATES.reduce<Record<string, number>>((acc, state) => {
-      acc[state] = stateScopedParticipants.filter(
-        (participant) => participant.estado === state
-      ).length;
-      return acc;
-    }, {});
-  }, [stateScopedParticipants]);
+    const createParticipant = (values: ParticipantFormValues) => {
+        router.post(`/deportes/${sportKey}/participantes`, payloadFromForm(values), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setCreateOpen(false);
+                setQ('');
+            },
+        });
+    };
 
-  const estamentoCounts = useMemo(() => {
-    return PARTICIPANT_ESTAMENTOS.reduce<Record<string, number>>(
-      (acc, estamento) => {
-        acc[estamento] = estamentoScopedParticipants.filter(
-          (participant) => participant.estamento === estamento
-        ).length;
-        return acc;
-      },
-      {}
-    );
-  }, [estamentoScopedParticipants]);
+    const updateParticipant = (values: ParticipantFormValues) => {
+        if (!editing) return;
 
-  const filtered = useMemo(() => {
-    return searchedParticipants
-      .filter((participant) =>
-        stateFilter === "Todos" ? true : participant.estado === stateFilter
-      )
-      .filter((participant) =>
-        estamentoFilter === "Todos"
-          ? true
-          : participant.estamento === estamentoFilter
-      );
-  }, [searchedParticipants, stateFilter, estamentoFilter]);
+        router.post(
+            `/deportes/${sportKey}/participantes/${editing.id}`,
+            {
+                _method: 'put',
+                ...payloadFromForm(values),
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => setEditing(null),
+            },
+        );
+    };
 
-  const createParticipant = (values: ParticipantFormValues) => {
-    router.post(
-      `/deportes/${sportKey}/participantes`,
-      payloadFromForm(values),
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          setCreateOpen(false);
-          setQ("");
-        },
-      }
-    );
-  };
+    const deleteParticipant = (participant: SportParticipant) => {
+        const confirmed = window.confirm(`Vas a eliminar a ${participant.nombres} ${participant.apellidos} de ${sportTitle}.`);
 
-  const updateParticipant = (values: ParticipantFormValues) => {
-    if (!editing) return;
+        if (!confirmed) return;
 
-    router.post(
-      `/deportes/${sportKey}/participantes/${editing.id}`,
-      {
-        _method: "put",
-        ...payloadFromForm(values),
-      },
-      {
-        preserveScroll: true,
-        onSuccess: () => {
-          setEditing(null);
-        },
-      }
-    );
-  };
+        router.delete(`/deportes/${sportKey}/participantes/${participant.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (editing?.id === participant.id) setEditing(null);
+            },
+        });
+    };
 
-  const deleteParticipant = (participant: SportParticipant) => {
-    const confirmed = window.confirm(
-      `Vas a eliminar a ${participant.nombres} ${participant.apellidos} de ${sportTitle}.`
-    );
+    const clearFilters = () => {
+        setQ('');
+        setStateFilter('Todos');
+        setEstamentoFilter('Todos');
+    };
 
-    if (!confirmed) return;
-
-    router.delete(`/deportes/${sportKey}/participantes/${participant.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-        if (editing?.id === participant.id) {
-          setEditing(null);
-        }
-      },
-    });
-  };
-
-  const clearFilters = () => {
-    setQ("");
-    setStateFilter("Todos");
-    setEstamentoFilter("Todos");
-  };
-
-  return (
-    <Card className={`rounded-3xl border ${style.softCard}`}>
-      <CardContent className="space-y-6 p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className={`rounded-2xl p-2 ${style.softIcon}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className={`text-lg font-semibold tracking-tight ${style.copy}`}>
-                  Participantes
-                </h2>
-                <p className={`text-xs uppercase tracking-[0.18em] ${style.subcopy}`}>
-                  Gestion por disciplina
-                </p>
-              </div>
+    return (
+        <section className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1">
+                    <h2 className="text-lg font-semibold tracking-tight">Participantes</h2>
+                    <p className="text-muted-foreground text-sm">
+                        {stats.total} registrados · {stats.active} activos · {stats.students} estudiantes
+                    </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="outline">
+                        <a href={`/deportes/${sportKey}/participantes/export`}>
+                            <Download className="size-4" />
+                            Exportar CSV
+                        </a>
+                    </Button>
+                    <Button onClick={() => setCreateOpen(true)}>
+                        <Plus className="size-4" />
+                        Agregar participante
+                    </Button>
+                </div>
             </div>
-            <p className={`text-sm ${style.subcopy}`}>
-              Registra, actualiza y consulta las personas vinculadas a esta
-              disciplina para control e informes.
-            </p>
-          </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" className={style.badge}>
-              <a href={`/deportes/${sportKey}/participantes/export`}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar CSV
-              </a>
-            </Button>
-            <Button
-              onClick={() => setCreateOpen(true)}
-              className={`${style.hero} border-0 hover:opacity-90`}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar participante
-            </Button>
-          </div>
-        </div>
+            <Card className="gap-0">
+                <CardHeader className="border-b">
+                    <CardTitle className="text-base">Directorio de participantes</CardTitle>
+                    <CardDescription>
+                        {filtered.length} de {participants.length} registros visibles.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-5">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_220px_220px_auto]">
+                        <div className="relative">
+                            <Search className="text-muted-foreground absolute top-2.5 left-3 size-4" />
+                            <Input
+                                value={q}
+                                onChange={(event) => setQ(event.target.value)}
+                                placeholder="Buscar por documento, nombre o carrera"
+                                className="pl-9"
+                            />
+                        </div>
 
-        <div className={`rounded-3xl border p-4 ${style.emphasisPanel}`}>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-sm font-medium">Control e informes</div>
-              <p className={`text-sm ${style.subcopy}`}>
-                Usa esta seccion para consolidar los registros de {sportTitle.toLowerCase()} y exportar reportes cuando lo necesites.
-              </p>
-            </div>
-            <span className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${style.badge}`}>
-              Seguimiento activo
-            </span>
-          </div>
-        </div>
+                        <Select value={stateFilter} onValueChange={setStateFilter}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Estado" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Todos">Todos los estados</SelectItem>
+                                {PARTICIPANT_STATES.map((state) => (
+                                    <SelectItem key={state} value={state}>
+                                        {state}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <MetricCard
-            title="Registrados"
-            value={stats.total}
-            icon={Users}
-            color="green"
-            detail="Personas vinculadas"
-          />
-          <MetricCard
-            title="Activos"
-            value={stats.active}
-            icon={UserCheck}
-            color="blue"
-            detail="Participantes vigentes"
-          />
-          <MetricCard
-            title="Estudiantes"
-            value={stats.students}
-            icon={UserRound}
-            color="cyan"
-            detail="Estamento estudiantil"
-          />
-        </div>
+                        <Select value={estamentoFilter} onValueChange={setEstamentoFilter}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Estamento" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Todos">Todos los estamentos</SelectItem>
+                                {PARTICIPANT_ESTAMENTOS.map((estamento) => (
+                                    <SelectItem key={estamento} value={estamento}>
+                                        {estamento}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-        <div className="relative">
-          <Search className={`absolute left-3 top-2.5 h-4 w-4 ${style.action}`} />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por documento, nombre, estamento, estado o carrera..."
-            className={`pl-9 ${style.emphasisPanel} ${style.copy} placeholder:text-slate-500 dark:placeholder:text-slate-400`}
-          />
-        </div>
+                        <Button type="button" variant="ghost" disabled={!hasActiveFilters} onClick={clearFilters}>
+                            <RotateCcw className="size-4" />
+                            Limpiar
+                        </Button>
+                    </div>
 
-        {hasActiveFilters ? (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              className={style.badge}
-              onClick={clearFilters}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Limpiar filtros
-            </Button>
-          </div>
-        ) : null}
+                    <ParticipantsTable rows={filtered} onEdit={setEditing} onDelete={deleteParticipant} />
+                </CardContent>
+            </Card>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className={stateFilter === "Todos" ? style.badge : undefined}
-            onClick={() => setStateFilter("Todos")}
-          >
-            {`Todos (${stateScopedParticipants.length})`}
-          </Button>
-          {PARTICIPANT_STATES.map((state) => (
-            <button
-              key={state}
-              type="button"
-              onClick={() => setStateFilter(state)}
-              className="inline-flex"
-            >
-              <Badge
-                variant="outline"
-                className={`${getParticipantStateBadgeClass(state)} ${
-                  stateFilter === state
-                    ? "ring-2 ring-offset-2 ring-offset-background dark:ring-offset-slate-950"
-                    : ""
-                }`}
-              >
-                {`${state} (${stateCounts[state] ?? 0})`}
-              </Badge>
-            </button>
-          ))}
-        </div>
+            <ParticipantDialog open={createOpen} onOpenChange={setCreateOpen} onSubmit={createParticipant} carreras={carreras} mode="create" />
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className={estamentoFilter === "Todos" ? style.badge : undefined}
-            onClick={() => setEstamentoFilter("Todos")}
-          >
-            {`Todos los estamentos (${estamentoScopedParticipants.length})`}
-          </Button>
-          {PARTICIPANT_ESTAMENTOS.map((estamento) => (
-            <button
-              key={estamento}
-              type="button"
-              onClick={() => setEstamentoFilter(estamento)}
-              className="inline-flex"
-            >
-              <Badge
-                variant="outline"
-                className={`${getParticipantEstamentoBadgeClass(estamento)} ${
-                  estamentoFilter === estamento
-                    ? "ring-2 ring-offset-2 ring-offset-background dark:ring-offset-slate-950"
-                    : ""
-                }`}
-              >
-                {`${estamento} (${estamentoCounts[estamento] ?? 0})`}
-              </Badge>
-            </button>
-          ))}
-        </div>
-
-        <ParticipantsTable
-          rows={filtered}
-          onEdit={setEditing}
-          onDelete={deleteParticipant}
-          style={style}
-        />
-      </CardContent>
-
-      <ParticipantDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSubmit={createParticipant}
-        carreras={carreras}
-        mode="create"
-        sportKey={sportKey}
-      />
-
-      <ParticipantDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null);
-        }}
-        onSubmit={updateParticipant}
-        carreras={carreras}
-        participant={editing}
-        mode="edit"
-        sportKey={sportKey}
-      />
-    </Card>
-  );
+            <ParticipantDialog
+                open={editing !== null}
+                onOpenChange={(open) => {
+                    if (!open) setEditing(null);
+                }}
+                onSubmit={updateParticipant}
+                carreras={carreras}
+                participant={editing}
+                mode="edit"
+            />
+        </section>
+    );
 }

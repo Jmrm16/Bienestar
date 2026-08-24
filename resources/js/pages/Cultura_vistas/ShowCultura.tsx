@@ -1,9 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
-import HeaderComponent from '@/components/component/header-component';
-import FooterComponent from '@/components/component/footer-component';
+import HeaderComponent from '@/components/marketing/header';
+import FooterComponent from '@/components/marketing/footer';
 import { Cultura } from '@/types';
 import EditorJSRenderer from '@/components/EditorJSRenderer';
-import HeaderpermaComponent from './headerperma';
+import HeaderpermaComponent from './components/header';
 import { resolveCulturaImageUrl } from '@/lib/cultura-media';
 
 interface Props {
@@ -73,3 +73,5 @@ export default function ShowCultura({ cultura }: Props) {
     </>
   );
 }
+
+

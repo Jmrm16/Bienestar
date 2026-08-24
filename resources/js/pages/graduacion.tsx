@@ -1,9 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect } from 'react';
-import HeaderComponent from '@/../js/components/component/header-component';
-import FooterComponent from '@/../js/components/component/footer-component';
-import HeaderpermaComponent from './Permanencia_vistas/headerperma';
-import HeroCarousel from './Permanencia_vistas/HeroCarousel ';
+import HeaderComponent from '@/components/marketing/header';
+import FooterComponent from '@/components/marketing/footer';
+import HeaderpermaComponent from './Permanencia_vistas/components/header';
+import HeroCarousel from './Permanencia_vistas/components/hero-carousel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const serviceLines = [
@@ -286,3 +286,5 @@ function ActionLink({
     </Link>
   );
 }
+
+

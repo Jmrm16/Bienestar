@@ -43,6 +43,13 @@ class EstudianteController extends Controller
         $periodId = (int) $estudiante->period_id;
         $identificacion = trim((string) $estudiante->identificacion);
         $returnPeriodId = (int) ($request->query('period_id') ?: $periodId);
+        $returnFilters = [
+            'period_id' => $returnPeriodId,
+            'q' => trim((string) $request->query('q', '')),
+            'servicio' => trim((string) $request->query('servicio', '')),
+            'trimestre' => trim((string) $request->query('trimestre', '')),
+            'page' => max(1, (int) $request->query('page', 1)),
+        ];
 
         $asistenciasPorGrupo = Asistencia::query()
             ->where('period_id', $periodId)
@@ -170,6 +177,7 @@ class EstudianteController extends Controller
                     : null,
             ],
             'return_period_id' => $returnPeriodId,
+            'return_filters' => $returnFilters,
             'grupos' => $grupos,
             'notas' => $notas,
         ]);
@@ -538,6 +546,10 @@ class EstudianteController extends Controller
         $periods = ReportPeriod::orderByDesc('id')->get(['id', 'code', 'name']);
 
         $selectedPeriodId = (int) ($request->query('period_id') ?: ($periods->first()->id ?? 0));
+        $search = trim((string) $request->query('q', ''));
+        $servicio = trim((string) $request->query('servicio', ''));
+        $trimestre = trim((string) $request->query('trimestre', ''));
+        $page = max(1, (int) $request->query('page', 1));
 
         $rows = $selectedPeriodId
             ? Estudiante::where('period_id', $selectedPeriodId)
@@ -552,6 +564,12 @@ class EstudianteController extends Controller
             'periods' => $periods,
             'selected_period_id' => $selectedPeriodId,
             'rows' => $rows,
+            'return_filters' => [
+                'q' => $search,
+                'servicio' => $servicio,
+                'trimestre' => $trimestre,
+                'page' => $page,
+            ],
         ];
     }
 }

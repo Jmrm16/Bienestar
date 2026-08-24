@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asistencia;
 use App\Models\Tutor;
 use App\Models\Asignatura;
 use App\Models\Carrera;
 use App\Models\GrupoT;
+use App\Models\ReportPeriod;
+use App\Models\TutorPeriodResolution;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -23,10 +26,13 @@ class TutorController extends Controller
     public function index()
     {
         $tutores = Tutor::with(['asignaturas', 'carrera'])->get();
-        $asignaturas = Asignatura::all();
+        $asignaturas = Asignatura::orderBy('nombre')->get();
         $totalTutores = Tutor::count();
         $carreras = Carrera::all();
         $grupos = GrupoT::with('carrera')->orderBy('nombre')->get();
+        $periodos = ReportPeriod::query()
+            ->orderByDesc('id')
+            ->get(['id', 'code', 'name', 'is_active']);
 
         return Inertia::render('Tutores/index', [
             'tutores' => $tutores,
@@ -34,6 +40,7 @@ class TutorController extends Controller
             'carreras' => $carreras,
             'totalTutores' => $totalTutores,
             'grupos' => $grupos,
+            'periodos' => $periodos,
         ]);
     }
 
@@ -42,8 +49,129 @@ class TutorController extends Controller
      */
     public function perfil(Tutor $tutor)
     {
+        $tutor->load([
+            'carrera:id,nombre',
+            'asignaturas:id,nombre,carrera_id',
+            'periodResolutions.period:id,code,name',
+            'grupos' => fn ($query) => $query
+                ->select('grupo_t.id', 'grupo_t.nombre', 'grupo_t.codigo', 'grupo_t.carrera_id', 'grupo_t.asignatura_id', 'grupo_t.period_id')
+                ->with([
+                    'carrera:id,nombre',
+                    'asignatura:id,nombre',
+                    'periodo:id,code,name',
+                ])
+                ->orderByDesc('period_id')
+                ->orderBy('nombre'),
+        ]);
+
+        $groupIds = $tutor->grupos
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $periodIds = $tutor->grupos
+            ->map(fn (GrupoT $grupo) => (int) ($grupo->pivot->period_id ?? $grupo->period_id))
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $attendanceMeta = collect();
+        if ($groupIds->isNotEmpty() && $periodIds->isNotEmpty()) {
+            $attendanceMeta = Asistencia::query()
+                ->whereIn('grupo_id', $groupIds)
+                ->whereIn('period_id', $periodIds)
+                ->selectRaw('grupo_id, period_id, COUNT(*) as total_asistencias, COUNT(DISTINCT identificacion) as total_estudiantes, MAX(fecha) as ultima_fecha')
+                ->groupBy('grupo_id', 'period_id')
+                ->get()
+                ->keyBy(fn ($row) => $row->grupo_id . '|' . $row->period_id);
+        }
+
+        $grupos = $tutor->grupos
+            ->map(function (GrupoT $grupo) use ($attendanceMeta) {
+                $periodId = (int) ($grupo->pivot->period_id ?? $grupo->period_id ?? 0);
+                $meta = $attendanceMeta->get($grupo->id . '|' . $periodId);
+
+                return [
+                    'id' => $grupo->id,
+                    'nombre' => $grupo->nombre,
+                    'codigo' => $grupo->codigo,
+                    'rol' => $grupo->pivot->rol ?? null,
+                    'period' => $grupo->periodo
+                        ? [
+                            'id' => $grupo->periodo->id,
+                            'code' => $grupo->periodo->code,
+                            'name' => $grupo->periodo->name,
+                        ]
+                        : null,
+                    'carrera' => $grupo->carrera
+                        ? [
+                            'id' => $grupo->carrera->id,
+                            'nombre' => $grupo->carrera->nombre,
+                        ]
+                        : null,
+                    'asignatura' => $grupo->asignatura
+                        ? [
+                            'id' => $grupo->asignatura->id,
+                            'nombre' => $grupo->asignatura->nombre,
+                        ]
+                        : null,
+                    'total_asistencias' => (int) ($meta->total_asistencias ?? 0),
+                    'total_estudiantes' => (int) ($meta->total_estudiantes ?? 0),
+                    'ultima_fecha' => $meta->ultima_fecha ?? null,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Tutores/tutorprofile', [
-            'tutor' => $tutor->load(['asignaturas', 'carrera']),
+            'tutor' => [
+                'id' => $tutor->id,
+                'codigo' => $tutor->codigo,
+                'nombre' => $tutor->nombre,
+                'apellido' => $tutor->apellido,
+                'tipo_documento' => $tutor->tipo_documento,
+                'documento' => $tutor->documento,
+                'lugar_expedicion' => $tutor->lugar_expedicion,
+                'sexo' => $tutor->sexo,
+                'grupo_priorizado' => $tutor->grupo_priorizado,
+                'sede' => $tutor->sede,
+                'correo' => $tutor->correo,
+                'telefono' => $tutor->telefono,
+                'activo' => (bool) $tutor->activo,
+                'carrera' => $tutor->carrera
+                    ? [
+                        'id' => $tutor->carrera->id,
+                        'nombre' => $tutor->carrera->nombre,
+                    ]
+                    : null,
+                'asignaturas' => $tutor->asignaturas
+                    ->map(fn (Asignatura $asignatura) => [
+                        'id' => $asignatura->id,
+                        'nombre' => $asignatura->nombre,
+                    ])
+                    ->values(),
+                'period_resolutions' => $tutor->periodResolutions
+                    ->sortByDesc('period_id')
+                    ->map(fn ($resolution) => [
+                        'period_id' => (int) $resolution->period_id,
+                        'tipo_resolucion' => $resolution->tipo_resolucion,
+                        'period' => $resolution->period
+                            ? [
+                                'id' => $resolution->period->id,
+                                'code' => $resolution->period->code,
+                                'name' => $resolution->period->name,
+                            ]
+                            : null,
+                    ])
+                    ->values(),
+                'grupos' => $grupos,
+            ],
+            'resumen' => [
+                'total_grupos' => $grupos->count(),
+                'grupos_con_asistencias' => $grupos->where('total_asistencias', '>', 0)->count(),
+                'total_estudiantes' => (int) $grupos->sum('total_estudiantes'),
+                'total_asistencias' => (int) $grupos->sum('total_asistencias'),
+            ],
         ]);
     }
 
@@ -54,7 +182,6 @@ class TutorController extends Controller
     {
         $request->validate([
             'codigo'            => 'required|string|max:50|unique:tutors,codigo',
-            'tipo_resolucion'   => 'required|in:R1,R2', // ✅ NUEVO
             'nombre'            => 'required|string|max:255',
             'apellido'          => 'required|string|max:255',
             'tipo_documento'    => 'required|string|max:50',
@@ -71,9 +198,11 @@ class TutorController extends Controller
             'activo'            => 'nullable|boolean',
         ]);
 
+        $subjectIds = array_values(array_unique(array_map('intval', $request->input('asignaturas', []))));
+        $this->assertSubjectsMatchCareer((int) $request->carrera_id, $subjectIds);
+
         $tutor = Tutor::create([
             'codigo'           => $request->codigo,
-            'tipo_resolucion'  => $request->tipo_resolucion, // ✅ NUEVO
             'nombre'           => $request->nombre,
             'apellido'         => $request->apellido,
             'tipo_documento'   => $request->tipo_documento,
@@ -89,7 +218,7 @@ class TutorController extends Controller
             'activo'           => $request->boolean('activo', true),
         ]);
 
-        $tutor->asignaturas()->sync($request->asignaturas);
+        $tutor->asignaturas()->sync($subjectIds);
 
         return redirect()->back()->with('success', 'Tutor registrado exitosamente.');
     }
@@ -151,12 +280,7 @@ class TutorController extends Controller
 
             $foundHeader = true;
             $columnMap = $this->buildColumnMap($rows[$headerRowIndex] ?? [], $headerMappings, $ignoredHeaders);
-            $defaultResolution = $this->detectResolutionDefault(
-                $uploadedFile->getClientOriginalName(),
-                $sheet->getTitle()
-            );
-
-            foreach ($rows as $rowIndex => $row) {
+                    foreach ($rows as $rowIndex => $row) {
                 if ($rowIndex <= $headerRowIndex || $this->rowIsEmpty($row)) {
                     continue;
                 }
@@ -173,11 +297,10 @@ class TutorController extends Controller
 
                 try {
                     [$payload, $subjectIds] = $this->normalizeImportedTutorRow(
-                        $rowData,
-                        $careerLookup,
-                        $subjectLookup,
-                        $defaultResolution
-                    );
+                            $rowData,
+                            $careerLookup,
+                            $subjectLookup
+                        );
                     $existingTutor = $this->findExistingTutorForImport($payload);
 
                     $conflictExists = Tutor::query()
@@ -253,6 +376,154 @@ class TutorController extends Controller
     }
 
     /**
+     * Importar resoluciones por período desde Excel.
+     */
+    public function importPeriodResolutions(Request $request)
+    {
+        $request->validate([
+            'period_id' => ['required', 'exists:report_periods,id'],
+            'archivo' => ['required', 'file', 'mimes:xlsx,xls'],
+        ]);
+
+        $period = ReportPeriod::query()->findOrFail((int) $request->input('period_id'));
+        $uploadedFile = $request->file('archivo');
+        $spreadsheet = IOFactory::load($uploadedFile->getPathname());
+        $ignoredHeaders = $this->ignoredImportHeaders();
+
+        $headerMappings = [
+            'codigo' => ['codigo', 'codigo tutor', 'cod tutor', 'cod'],
+            'tipo_resolucion' => ['tipo resolucion', 'tipo de resolucion', 'resolucion', 'resolucion tutor'],
+            'nombre' => ['nombre', 'nombres'],
+            'apellido' => ['apellido', 'apellidos'],
+            'nombre_completo' => ['nombre completo', 'nombres y apellidos', 'tutor', 'docente'],
+            'documento' => ['documento', 'identificacion', 'identificación', 'cedula', 'cédula', 'numero documento', 'número documento'],
+            'correo' => ['correo', 'email', 'correo electronico', 'correo electrónico'],
+        ];
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $errors = [];
+        $foundHeader = false;
+
+        foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
+            $rows = $sheet->toArray(null, true, true, true);
+            if (count($rows) < 2) {
+                continue;
+            }
+
+            $headerRowIndex = $this->detectHeaderRow($rows, $headerMappings, $ignoredHeaders);
+            if ($headerRowIndex === null) {
+                continue;
+            }
+
+            $foundHeader = true;
+            $columnMap = $this->buildColumnMap($rows[$headerRowIndex] ?? [], $headerMappings, $ignoredHeaders);
+            $defaultResolution = $this->detectResolutionHint(
+                $uploadedFile->getClientOriginalName(),
+                $sheet->getTitle()
+            );
+
+            foreach ($rows as $rowIndex => $row) {
+                if ($rowIndex <= $headerRowIndex || $this->rowIsEmpty($row)) {
+                    continue;
+                }
+
+                $rowData = [];
+                foreach ($row as $column => $value) {
+                    $field = $columnMap[$column] ?? null;
+                    if ($field === null) {
+                        continue;
+                    }
+
+                    $rowData[$field] = $this->stringifyImportValue($value);
+                }
+
+                try {
+                    $resolution = $this->normalizeOptionalResolution($rowData['tipo_resolucion'] ?? null)
+                        ?? $defaultResolution;
+
+                    if ($resolution === null) {
+                        throw ValidationException::withMessages([
+                            'archivo' => 'No se encontró una resolución válida (R1 o R2) en la fila ni en el nombre del archivo.',
+                        ]);
+                    }
+
+                    $tutor = $this->findExistingTutorForResolutionImport($rowData);
+                    if (! $tutor) {
+                        throw ValidationException::withMessages([
+                            'archivo' => 'No se encontró un tutor existente para la fila usando código, documento, correo o nombre.',
+                        ]);
+                    }
+
+                    DB::transaction(function () use ($period, $tutor, $resolution, &$created, &$updated) {
+                        $existing = TutorPeriodResolution::query()
+                            ->where('period_id', $period->id)
+                            ->where('tutor_id', $tutor->id)
+                            ->first();
+
+                        if ($existing) {
+                            if ((string) $existing->tipo_resolucion !== $resolution) {
+                                $existing->update(['tipo_resolucion' => $resolution]);
+                            }
+                            $updated++;
+
+                            return;
+                        }
+
+                        TutorPeriodResolution::query()->create([
+                            'period_id' => $period->id,
+                            'tutor_id' => $tutor->id,
+                            'tipo_resolucion' => $resolution,
+                        ]);
+
+                        $created++;
+                    });
+                } catch (ValidationException $exception) {
+                    $skipped++;
+                    $errors[] = sprintf(
+                        'Hoja "%s", fila %s: %s',
+                        $sheet->getTitle(),
+                        $rowIndex,
+                        $exception->validator->errors()->first()
+                    );
+                } catch (\Throwable $exception) {
+                    $skipped++;
+                    $errors[] = sprintf(
+                        'Hoja "%s", fila %s: %s',
+                        $sheet->getTitle(),
+                        $rowIndex,
+                        $exception->getMessage()
+                    );
+                }
+            }
+        }
+
+        if (! $foundHeader) {
+            throw ValidationException::withMessages([
+                'archivo' => 'No se encontró una fila de encabezados válida en el Excel de resoluciones.',
+            ]);
+        }
+
+        if ($created === 0 && $updated === 0) {
+            throw ValidationException::withMessages([
+                'archivo' => $errors[0] ?? 'No se pudo importar ninguna resolución del archivo.',
+            ]);
+        }
+
+        $successMessage = "Resoluciones del período {$period->code} importadas: {$created} creadas, {$updated} actualizadas";
+        if ($skipped > 0) {
+            $successMessage .= ", {$skipped} omitidas";
+        }
+        $successMessage .= '.';
+
+        return redirect()
+            ->route('tutores.index')
+            ->with('success', $successMessage)
+            ->with('warning', $errors !== [] ? implode(' | ', array_slice($errors, 0, 3)) : null);
+    }
+
+    /**
      * Actualizar un tutor.
      */
     public function update(Request $request, $id)
@@ -261,7 +532,6 @@ class TutorController extends Controller
 
         $request->validate([
             'codigo'            => 'required|string|max:50|unique:tutors,codigo,' . $tutor->id,
-            'tipo_resolucion'   => 'required|in:R1,R2', // ✅ NUEVO
             'nombre'            => 'required|string|max:255',
             'apellido'          => 'required|string|max:255',
             'tipo_documento'    => 'required|string|max:50',
@@ -279,9 +549,11 @@ class TutorController extends Controller
             'reset_password'    => 'nullable|boolean',
         ]);
 
+        $subjectIds = array_values(array_unique(array_map('intval', $request->input('asignaturas', []))));
+        $this->assertSubjectsMatchCareer((int) $request->carrera_id, $subjectIds);
+
         $payload = [
             'codigo'           => $request->codigo,
-            'tipo_resolucion'  => $request->tipo_resolucion, // ✅ NUEVO
             'nombre'           => $request->nombre,
             'apellido'         => $request->apellido,
             'tipo_documento'   => $request->tipo_documento,
@@ -301,7 +573,7 @@ class TutorController extends Controller
         }
 
         $tutor->update($payload);
-        $tutor->asignaturas()->sync($request->asignaturas);
+        $tutor->asignaturas()->sync($subjectIds);
 
         return redirect()->route('tutores.index')->with('success', 'Tutor actualizado correctamente.');
     }
@@ -383,8 +655,7 @@ class TutorController extends Controller
     private function normalizeImportedTutorRow(
         array $rowData,
         array $careerLookup,
-        array $subjectLookup,
-        string $defaultResolution
+        array $subjectLookup
     ): array
     {
         $documento = preg_replace('/\s+/', '', (string) ($rowData['documento'] ?? ''));
@@ -412,11 +683,11 @@ class TutorController extends Controller
             ]);
         }
 
-        $subjectIds = $this->resolveSubjectIds($rowData, $subjectLookup);
+        $subjectIds = $this->resolveSubjectIds($rowData, $subjectLookup, $resolvedCareerId);
 
         return [[
             'codigo' => $codigo !== '' ? $codigo : $documento,
-            'tipo_resolucion' => $this->normalizeResolution($rowData['tipo_resolucion'] ?? null, $defaultResolution),
+            'tipo_resolucion' => null,
             'nombre' => $nombre,
             'apellido' => $apellido,
             'tipo_documento' => $this->normalizeDocumentType($rowData['tipo_documento'] ?? null),
@@ -440,6 +711,53 @@ class TutorController extends Controller
             ->orWhere('correo', $payload['correo'])
             ->orWhere('codigo', $payload['codigo'])
             ->first();
+    }
+
+    private function findExistingTutorForResolutionImport(array $rowData): ?Tutor
+    {
+        $documento = preg_replace('/\s+/', '', (string) ($rowData['documento'] ?? ''));
+        $correo = Str::lower(trim((string) ($rowData['correo'] ?? '')));
+        $codigo = trim((string) ($rowData['codigo'] ?? ''));
+        $nombre = trim((string) ($rowData['nombre'] ?? ''));
+        $apellido = trim((string) ($rowData['apellido'] ?? ''));
+
+        if (($nombre === '' || $apellido === '') && ! empty($rowData['nombre_completo'])) {
+            [$nombre, $apellido] = $this->splitFullName((string) $rowData['nombre_completo']);
+        }
+
+        $query = Tutor::query();
+        $hasIdentity = false;
+
+        if ($documento !== '') {
+            $query->orWhere('documento', $documento);
+            $hasIdentity = true;
+        }
+
+        if ($correo !== '') {
+            $query->orWhere('correo', $correo);
+            $hasIdentity = true;
+        }
+
+        if ($codigo !== '') {
+            $query->orWhere('codigo', $codigo);
+            $hasIdentity = true;
+        }
+
+        if ($hasIdentity) {
+            $match = $query->first();
+            if ($match) {
+                return $match;
+            }
+        }
+
+        if ($nombre !== '' && $apellido !== '') {
+            return Tutor::query()
+                ->whereRaw('LOWER(TRIM(nombre)) = ?', [Str::lower($nombre)])
+                ->whereRaw('LOWER(TRIM(apellido)) = ?', [Str::lower($apellido)])
+                ->first();
+        }
+
+        return null;
     }
 
     private function buildCareerLookup(): array
@@ -467,7 +785,7 @@ class TutorController extends Controller
 
     private function buildSubjectLookup(): array
     {
-        $select = ['id', 'nombre'];
+        $select = ['id', 'nombre', 'carrera_id'];
         $hasCodeColumn = Schema::hasColumn('asignaturas', 'codigo');
         if ($hasCodeColumn) {
             $select[] = 'codigo';
@@ -475,11 +793,13 @@ class TutorController extends Controller
 
         $lookup = [];
         foreach (Asignatura::query()->get($select) as $subject) {
-            $lookup[(string) $subject->id] = $subject->id;
-            $lookup[$this->normalizeImportText($subject->nombre)] = $subject->id;
+            $careerKey = (string) $subject->carrera_id;
+            $lookup[$careerKey] ??= [];
+            $lookup[$careerKey][(string) $subject->id] = $subject->id;
+            $lookup[$careerKey][$this->normalizeImportText($subject->nombre)] = $subject->id;
 
             if ($hasCodeColumn && ! empty($subject->codigo)) {
-                $lookup[$this->normalizeImportText($subject->codigo)] = $subject->id;
+                $lookup[$careerKey][$this->normalizeImportText($subject->codigo)] = $subject->id;
             }
         }
 
@@ -503,7 +823,7 @@ class TutorController extends Controller
         return null;
     }
 
-    private function resolveSubjectIds(array $rowData, array $subjectLookup): array
+    private function resolveSubjectIds(array $rowData, array $subjectLookup, int $careerId): array
     {
         $rawSubjects = trim(implode('|', array_filter([
             $rowData['asignaturas'] ?? null,
@@ -516,6 +836,7 @@ class TutorController extends Controller
 
         $subjects = preg_split('/[\n,;|]+/', $rawSubjects) ?: [];
         $ids = [];
+        $careerSubjects = $subjectLookup[(string) $careerId] ?? [];
 
         foreach ($subjects as $subject) {
             $value = trim((string) $subject);
@@ -524,12 +845,30 @@ class TutorController extends Controller
             }
 
             $key = is_numeric($value) ? (string) (int) $value : $this->normalizeImportText($value);
-            if (isset($subjectLookup[$key])) {
-                $ids[] = $subjectLookup[$key];
+            if (isset($careerSubjects[$key])) {
+                $ids[] = $careerSubjects[$key];
             }
         }
 
         return array_values(array_unique($ids));
+    }
+
+    private function assertSubjectsMatchCareer(int $careerId, array $subjectIds): void
+    {
+        if ($subjectIds === []) {
+            return;
+        }
+
+        $validCount = Asignatura::query()
+            ->where('carrera_id', $careerId)
+            ->whereIn('id', $subjectIds)
+            ->count();
+
+        if ($validCount !== count($subjectIds)) {
+            throw ValidationException::withMessages([
+                'asignaturas' => 'Solo puedes asignar asignaturas de la carrera seleccionada.',
+            ]);
+        }
     }
 
     private function splitFullName(string $fullName): array
@@ -558,6 +897,13 @@ class TutorController extends Controller
         $normalized = strtoupper(trim((string) $value));
 
         return in_array($normalized, ['R1', 'R2'], true) ? $normalized : $default;
+    }
+
+    private function normalizeOptionalResolution(mixed $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return in_array($normalized, ['R1', 'R2'], true) ? $normalized : null;
     }
 
     private function normalizeDocumentType(mixed $value): string
@@ -711,19 +1057,39 @@ class TutorController extends Controller
 
     private function detectResolutionDefault(string $fileName, string $sheetTitle): string
     {
+        return $this->detectResolutionHint($fileName, $sheetTitle) ?? 'R1';
+    }
+
+    private function detectResolutionHint(string $fileName, string $sheetTitle): ?string
+    {
         $context = $this->normalizeImportText($fileName . ' ' . $sheetTitle);
 
-        if (str_contains($context, '2 resolucion') || str_contains($context, 'resolucion 2')) {
+        if (
+            str_contains($context, 'r2') ||
+            str_contains($context, '2 resolucion') ||
+            str_contains($context, 'resolucion 2') ||
+            str_contains($context, 'segunda resolucion')
+        ) {
             return 'R2';
         }
 
-        return 'R1';
+        if (
+            str_contains($context, 'r1') ||
+            str_contains($context, '1 resolucion') ||
+            str_contains($context, 'resolucion 1') ||
+            str_contains($context, 'primera resolucion')
+        ) {
+            return 'R1';
+        }
+
+        return null;
     }
 
     private function careerAliases(): array
     {
         return [
             'lic educacion infantil' => 'LICENCIATURA EN EDUCACION INFANTIL',
+            'ingenieria de sistema' => 'INGENIERIA DE SISTEMAS',
         ];
     }
 }

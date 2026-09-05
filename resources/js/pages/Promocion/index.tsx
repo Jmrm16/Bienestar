@@ -4,7 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { HandCoins } from 'lucide-react';
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Promoción Socioeconómica', href: '/promocion-socioeconomica' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Promoción_Socioeconómica', href: '/promocion-socioeconomica' }];
 
 export default function PromocionIndex() {
     return (

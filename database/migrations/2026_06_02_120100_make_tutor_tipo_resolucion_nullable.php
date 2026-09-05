@@ -1,26 +1,42 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
-        if (! Schema::hasTable('tutors') || ! Schema::hasColumn('tutors', 'tipo_resolucion')) {
+        if (
+            ! Schema::hasTable('tutors') ||
+            ! Schema::hasColumn('tutors', 'tipo_resolucion')
+        ) {
             return;
         }
 
-        DB::statement("ALTER TABLE tutors MODIFY tipo_resolucion ENUM('R1','R2') NULL DEFAULT NULL");
+        Schema::table('tutors', function (Blueprint $table) {
+            $table->enum('tipo_resolucion', ['R1', 'R2'])
+                ->nullable()
+                ->default(null)
+                ->change();
+        });
     }
 
     public function down(): void
     {
-        if (! Schema::hasTable('tutors') || ! Schema::hasColumn('tutors', 'tipo_resolucion')) {
+        if (
+            ! Schema::hasTable('tutors') ||
+            ! Schema::hasColumn('tutors', 'tipo_resolucion')
+        ) {
             return;
         }
 
-        DB::statement("UPDATE tutors SET tipo_resolucion = 'R1' WHERE tipo_resolucion IS NULL");
-        DB::statement("ALTER TABLE tutors MODIFY tipo_resolucion ENUM('R1','R2') NOT NULL DEFAULT 'R1'");
+        Schema::table('tutors', function (Blueprint $table) {
+            $table->enum('tipo_resolucion', ['R1', 'R2'])
+                ->nullable(false)
+                ->default('R1')
+                ->change();
+        });
     }
 };

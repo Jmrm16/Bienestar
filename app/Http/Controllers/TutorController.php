@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Asistencia;
-use App\Models\Tutor;
 use App\Models\Asignatura;
+use App\Models\Asistencia;
 use App\Models\Carrera;
 use App\Models\GrupoT;
 use App\Models\ReportPeriod;
+use App\Models\Tutor;
 use App\Models\TutorPeriodResolution;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,13 +84,13 @@ class TutorController extends Controller
                 ->selectRaw('grupo_id, period_id, COUNT(*) as total_asistencias, COUNT(DISTINCT identificacion) as total_estudiantes, MAX(fecha) as ultima_fecha')
                 ->groupBy('grupo_id', 'period_id')
                 ->get()
-                ->keyBy(fn ($row) => $row->grupo_id . '|' . $row->period_id);
+                ->keyBy(fn ($row) => $row->grupo_id.'|'.$row->period_id);
         }
 
         $grupos = $tutor->grupos
             ->map(function (GrupoT $grupo) use ($attendanceMeta) {
                 $periodId = (int) ($grupo->pivot->period_id ?? $grupo->period_id ?? 0);
-                $meta = $attendanceMeta->get($grupo->id . '|' . $periodId);
+                $meta = $attendanceMeta->get($grupo->id.'|'.$periodId);
 
                 return [
                     'id' => $grupo->id,
@@ -181,41 +181,41 @@ class TutorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'codigo'            => 'required|string|max:50|unique:tutors,codigo',
-            'nombre'            => 'required|string|max:255',
-            'apellido'          => 'required|string|max:255',
-            'tipo_documento'    => 'required|string|max:50',
-            'documento'         => 'required|string|max:50|unique:tutors,documento',
-            'lugar_expedicion'  => 'required|string|max:255',
-            'sexo'              => 'required|string|max:10',
-            'grupo_priorizado'  => 'required|string|max:255',
-            'sede'              => 'required|string|max:255',
-            'carrera_id'        => 'required|exists:carreras,id',
-            'correo'            => 'required|email|unique:tutors,correo',
-            'telefono'          => 'required|string|max:20',
-            'asignaturas'       => 'required|array',
-            'asignaturas.*'     => 'exists:asignaturas,id',
-            'activo'            => 'nullable|boolean',
+            'codigo' => 'required|string|max:50|unique:tutors,codigo',
+            'nombre' => 'required|string|max:255',
+            'apellido' => 'required|string|max:255',
+            'tipo_documento' => 'required|string|max:50',
+            'documento' => 'required|string|max:50|unique:tutors,documento',
+            'lugar_expedicion' => 'required|string|max:255',
+            'sexo' => 'required|string|max:10',
+            'grupo_priorizado' => 'required|string|max:255',
+            'sede' => 'required|string|max:255',
+            'carrera_id' => 'required|exists:carreras,id',
+            'correo' => 'required|email|unique:tutors,correo',
+            'telefono' => 'required|string|max:20',
+            'asignaturas' => 'required|array',
+            'asignaturas.*' => 'exists:asignaturas,id',
+            'activo' => 'nullable|boolean',
         ]);
 
         $subjectIds = array_values(array_unique(array_map('intval', $request->input('asignaturas', []))));
         $this->assertSubjectsMatchCareer((int) $request->carrera_id, $subjectIds);
 
         $tutor = Tutor::create([
-            'codigo'           => $request->codigo,
-            'nombre'           => $request->nombre,
-            'apellido'         => $request->apellido,
-            'tipo_documento'   => $request->tipo_documento,
-            'documento'        => $request->documento,
-            'cedula_hash'      => Hash::make($request->documento),
+            'codigo' => $request->codigo,
+            'nombre' => $request->nombre,
+            'apellido' => $request->apellido,
+            'tipo_documento' => $request->tipo_documento,
+            'documento' => $request->documento,
+            'cedula_hash' => Hash::make($request->documento),
             'lugar_expedicion' => $request->lugar_expedicion,
-            'sexo'             => $request->sexo,
+            'sexo' => $request->sexo,
             'grupo_priorizado' => $request->grupo_priorizado,
-            'sede'             => $request->sede,
-            'carrera_id'       => $request->carrera_id,
-            'correo'           => $request->correo,
-            'telefono'         => $request->telefono,
-            'activo'           => $request->boolean('activo', true),
+            'sede' => $request->sede,
+            'carrera_id' => $request->carrera_id,
+            'correo' => $request->correo,
+            'telefono' => $request->telefono,
+            'activo' => $request->boolean('activo', true),
         ]);
 
         $tutor->asignaturas()->sync($subjectIds);
@@ -279,8 +279,19 @@ class TutorController extends Controller
             }
 
             $foundHeader = true;
-            $columnMap = $this->buildColumnMap($rows[$headerRowIndex] ?? [], $headerMappings, $ignoredHeaders);
-                    foreach ($rows as $rowIndex => $row) {
+
+            $columnMap = $this->buildColumnMap(
+                $rows[$headerRowIndex] ?? [],
+                $headerMappings,
+                $ignoredHeaders
+            );
+
+            $defaultResolution = $this->detectResolutionDefault(
+                $uploadedFile->getClientOriginalName(),
+                $sheet->getTitle()
+            );
+
+            foreach ($rows as $rowIndex => $row) {
                 if ($rowIndex <= $headerRowIndex || $this->rowIsEmpty($row)) {
                     continue;
                 }
@@ -297,10 +308,11 @@ class TutorController extends Controller
 
                 try {
                     [$payload, $subjectIds] = $this->normalizeImportedTutorRow(
-                            $rowData,
-                            $careerLookup,
-                            $subjectLookup
-                        );
+                        $rowData,
+                        $careerLookup,
+                        $subjectLookup,
+                        $defaultResolution
+                    );
                     $existingTutor = $this->findExistingTutorForImport($payload);
 
                     $conflictExists = Tutor::query()
@@ -531,41 +543,41 @@ class TutorController extends Controller
         $tutor = Tutor::findOrFail($id);
 
         $request->validate([
-            'codigo'            => 'required|string|max:50|unique:tutors,codigo,' . $tutor->id,
-            'nombre'            => 'required|string|max:255',
-            'apellido'          => 'required|string|max:255',
-            'tipo_documento'    => 'required|string|max:50',
-            'documento'         => 'required|string|max:50|unique:tutors,documento,' . $tutor->id,
-            'lugar_expedicion'  => 'required|string|max:255',
-            'sexo'              => 'required|string|max:10',
-            'grupo_priorizado'  => 'required|string|max:255',
-            'sede'              => 'required|string|max:255',
-            'carrera_id'        => 'required|exists:carreras,id',
-            'correo'            => 'required|email|unique:tutors,correo,' . $tutor->id,
-            'telefono'          => 'required|string|max:20',
-            'asignaturas'       => 'required|array',
-            'asignaturas.*'     => 'exists:asignaturas,id',
-            'activo'            => 'nullable|boolean',
-            'reset_password'    => 'nullable|boolean',
+            'codigo' => 'required|string|max:50|unique:tutors,codigo,'.$tutor->id,
+            'nombre' => 'required|string|max:255',
+            'apellido' => 'required|string|max:255',
+            'tipo_documento' => 'required|string|max:50',
+            'documento' => 'required|string|max:50|unique:tutors,documento,'.$tutor->id,
+            'lugar_expedicion' => 'required|string|max:255',
+            'sexo' => 'required|string|max:10',
+            'grupo_priorizado' => 'required|string|max:255',
+            'sede' => 'required|string|max:255',
+            'carrera_id' => 'required|exists:carreras,id',
+            'correo' => 'required|email|unique:tutors,correo,'.$tutor->id,
+            'telefono' => 'required|string|max:20',
+            'asignaturas' => 'required|array',
+            'asignaturas.*' => 'exists:asignaturas,id',
+            'activo' => 'nullable|boolean',
+            'reset_password' => 'nullable|boolean',
         ]);
 
         $subjectIds = array_values(array_unique(array_map('intval', $request->input('asignaturas', []))));
         $this->assertSubjectsMatchCareer((int) $request->carrera_id, $subjectIds);
 
         $payload = [
-            'codigo'           => $request->codigo,
-            'nombre'           => $request->nombre,
-            'apellido'         => $request->apellido,
-            'tipo_documento'   => $request->tipo_documento,
-            'documento'        => $request->documento,
+            'codigo' => $request->codigo,
+            'nombre' => $request->nombre,
+            'apellido' => $request->apellido,
+            'tipo_documento' => $request->tipo_documento,
+            'documento' => $request->documento,
             'lugar_expedicion' => $request->lugar_expedicion,
-            'sexo'             => $request->sexo,
+            'sexo' => $request->sexo,
             'grupo_priorizado' => $request->grupo_priorizado,
-            'sede'             => $request->sede,
-            'carrera_id'       => $request->carrera_id,
-            'correo'           => $request->correo,
-            'telefono'         => $request->telefono,
-            'activo'           => $request->boolean('activo', $tutor->activo),
+            'sede' => $request->sede,
+            'carrera_id' => $request->carrera_id,
+            'correo' => $request->correo,
+            'telefono' => $request->telefono,
+            'activo' => $request->boolean('activo', $tutor->activo),
         ];
 
         if ($request->documento !== $tutor->documento || $request->boolean('reset_password')) {
@@ -655,9 +667,9 @@ class TutorController extends Controller
     private function normalizeImportedTutorRow(
         array $rowData,
         array $careerLookup,
-        array $subjectLookup
-    ): array
-    {
+        array $subjectLookup,
+        string $defaultResolution
+    ): array {
         $documento = preg_replace('/\s+/', '', (string) ($rowData['documento'] ?? ''));
         $correo = Str::lower(trim((string) ($rowData['correo'] ?? '')));
         $telefono = trim((string) ($rowData['telefono'] ?? ''));
@@ -687,7 +699,10 @@ class TutorController extends Controller
 
         return [[
             'codigo' => $codigo !== '' ? $codigo : $documento,
-            'tipo_resolucion' => null,
+            'tipo_resolucion' => $this->normalizeResolution(
+                $rowData['tipo_resolucion'] ?? null,
+                $defaultResolution
+            ),
             'nombre' => $nombre,
             'apellido' => $apellido,
             'tipo_documento' => $this->normalizeDocumentType($rowData['tipo_documento'] ?? null),
@@ -1062,7 +1077,7 @@ class TutorController extends Controller
 
     private function detectResolutionHint(string $fileName, string $sheetTitle): ?string
     {
-        $context = $this->normalizeImportText($fileName . ' ' . $sheetTitle);
+        $context = $this->normalizeImportText($fileName.' '.$sheetTitle);
 
         if (
             str_contains($context, 'r2') ||

@@ -7,22 +7,12 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Layers } from 'lucide-react';
 
-type Carrera = {
-    id: number;
-    nombre: string;
-    codigo: string;
-};
-
-type Props = {
-    carreras: Carrera[];
-};
-
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Acompañamiento', href: '/acompanamiento' },
     { title: 'Carreras', href: '/acompanamiento/carreras' },
 ];
 
-export default function AcompanamientoCarrerasIndex({ carreras }: Props) {
+export default function AcompanamientoCarrerasIndex() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Carreras de Acompañamiento" />

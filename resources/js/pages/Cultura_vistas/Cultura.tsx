@@ -1,3 +1,3 @@
-import CulturaPage from "../cultura";
+import CulturaPage from '../cultura';
 
 export default CulturaPage;

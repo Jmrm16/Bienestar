@@ -7,10 +7,7 @@ import { FaBars, FaTimes } from 'react-icons/fa';
 export default function HeaderpermaComponent() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    const menuItems = [
-        { name: 'Inicio', href: '/graduacion' },
-        { name: 'Tutorias', href: '/permanencia/tutorias' },
-    ];
+    const menuItems = [{ name: 'Inicio', href: '/cultura' }];
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -56,7 +53,7 @@ export default function HeaderpermaComponent() {
                     </nav>
                     {/* Logo / Título */}
                     <motion.h1 initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
-                        Permanencia y Graduación
+                        Cultura
                     </motion.h1>
 
                     {/* Botón menú móvil */}

@@ -51,7 +51,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Index({ tutores, asignaturas, carreras, periodos }: Props) {
+export default function Index({ tutores, asignaturas, carreras }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Tutores" />

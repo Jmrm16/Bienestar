@@ -14,9 +14,7 @@ const resolveInertiaPage = (name: string) => {
         return resolvePageComponent(pagePath, pages);
     }
 
-    const caseInsensitiveMatch = Object.keys(pages).find(
-        (key) => key.toLowerCase() === pagePath.toLowerCase(),
-    );
+    const caseInsensitiveMatch = Object.keys(pages).find((key) => key.toLowerCase() === pagePath.toLowerCase());
 
     if (caseInsensitiveMatch) {
         return resolvePageComponent(caseInsensitiveMatch, pages);

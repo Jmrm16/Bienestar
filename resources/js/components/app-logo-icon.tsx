@@ -1,5 +1,3 @@
-import { SVGAttributes } from 'react';
-
 export default function AppLogoIcon(props: React.ImgHTMLAttributes<HTMLImageElement>) {
     return (
         <img
@@ -9,4 +7,3 @@ export default function AppLogoIcon(props: React.ImgHTMLAttributes<HTMLImageElem
         />
     );
 }
-

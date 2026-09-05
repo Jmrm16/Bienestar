@@ -22,69 +22,66 @@ export type Estudiante = {
     identificacion: string;
     correo_institucional: string;
     grupo_id: number;
-  };
-
-  export type Carrera = {
-    id: number;
-    nombre: string;
-  };
-  export type Tutor = {
-  id: number;
-  nombre: string;
-  apellido: string;
-  tipo_documento?: string;
-  documento?: string;
-  lugar_expedicion?: string;
-  sexo?: string;
-  grupo_priorizado?: string;
-  sede?: string;
-  programa_academico?: string;
-  correo?: string;
-  telefono?: string;
 };
 
-  
-export type Grupo = {
-  id: number;
-  nombre: string;
-  codigo: string;
-  carrera_id: number;
-  carrera: {
+export type Carrera = {
     id: number;
     nombre: string;
-  };
-  tutor_id?: number; // opcional, por si se va a asignar más adelante
-  asignatura_id: number;
+};
+export type Tutor = {
+    id: number;
+    nombre: string;
+    apellido: string;
+    tipo_documento?: string;
+    documento?: string;
+    lugar_expedicion?: string;
+    sexo?: string;
+    grupo_priorizado?: string;
+    sede?: string;
+    programa_academico?: string;
+    correo?: string;
+    telefono?: string;
+};
+
+export type Grupo = {
+    id: number;
+    nombre: string;
+    codigo: string;
+    carrera_id: number;
+    carrera: {
+        id: number;
+        nombre: string;
+    };
+    tutor_id?: number; // opcional, por si se va a asignar más adelante
+    asignatura_id: number;
 };
 export type GrupoExtendido = {
-  id: number;
-  nombre: string;
-  codigo: string;
-  carrera_id: number;
-  asignatura_id: number;
-  carrera: {
     id: number;
     nombre: string;
-  };
-  tipo?: string;
+    codigo: string;
+    carrera_id: number;
+    asignatura_id: number;
+    carrera: {
+        id: number;
+        nombre: string;
+    };
+    tipo?: string;
 };
 
-
-
-  // src/types/index.ts
+// src/types/index.ts
 
 export interface Cultura {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  tipo: string;
-  fecha: string; // formato ISO, por ejemplo "2025-06-05T00:00:00.000000Z"
-  imagen_banner?: string;
-  imagen_url?: string | null;
-  contenido_json?: unknown; // JSON de bloques Editor.js
+    id: number;
+    titulo: string;
+    descripcion: string;
+    tipo: string;
+    fecha: string; // formato ISO, por ejemplo "2025-06-05T00:00:00.000000Z"
+    imagen_banner?: string;
+    imagen_url?: string | null;
+    contenido_json?: unknown; // JSON de bloques Editor.js
 }
 
-  export interface NavItem {
+export interface NavItem {
     title: string;
     url?: string; // <- puede no tener url si tiene hijos
     icon?: LucideIcon | null;
@@ -92,7 +89,7 @@ export interface Cultura {
     children?: NavItem[]; // <- para submenús
 }
 
-export interface Asignatura{
+export interface Asignatura {
     id: number;
     nombre: string;
     codigo: string;

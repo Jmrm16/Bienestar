@@ -5,14 +5,14 @@ import { Head, router } from '@inertiajs/react';
 import { MetricCard } from '@/components/shared/metric-card';
 import { PageContainer, PageHeader, SectionHeader } from '@/components/shared/page-shell';
 import { motion } from 'framer-motion';
-import { Activity, ArrowRight, HeartPulse, Smile, Stethoscope } from 'lucide-react';
+import { Activity, ArrowRight, HeartPulse, Smile, Stethoscope, type LucideIcon } from 'lucide-react';
 
 type SaludArea = {
     key: string;
     title: string;
     description: string;
     href: string;
-    icon: any;
+    icon: LucideIcon;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Salud', href: '/salud' }];

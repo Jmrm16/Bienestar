@@ -1,26 +1,26 @@
 import { OutputData } from '@editorjs/editorjs';
-import { useEffect, useRef } from 'react';
 import edjsHTML from 'editorjs-html';
+import { useEffect, useRef } from 'react';
 
 interface Props {
-  data: OutputData;
+    data: OutputData;
 }
 
 export default function EditorJSRenderer({ data }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!data || !containerRef.current) return;
+    useEffect(() => {
+        if (!data || !containerRef.current) return;
 
-    const edjsParser = edjsHTML();
-    const parsed = edjsParser.parse(data); // 👈 Devuelve un array de strings
+        const edjsParser = edjsHTML();
+        const parsed = edjsParser.parse(data); // 👈 Devuelve un array de strings
 
-    if (Array.isArray(parsed)) {
-      containerRef.current.innerHTML = parsed.join('');
-    } else {
-      containerRef.current.innerHTML = parsed; // fallback
-    }
-  }, [data]);
+        if (Array.isArray(parsed)) {
+            containerRef.current.innerHTML = parsed.join('');
+        } else {
+            containerRef.current.innerHTML = parsed; // fallback
+        }
+    }, [data]);
 
-  return <div ref={containerRef} />;
+    return <div ref={containerRef} />;
 }
